@@ -1,0 +1,762 @@
+---
+title: "Bayesian Evidence Aggregation for Spam Detection"
+author: "Ángela Lomas Anglada"
+format: html
+editor: visual
+---
+
+# LIBRERÍAS
+
+```{r}
+
+#install.packages(c( "e1071", "quanteda", "tidymodels","textrecipes","readr","caret","glmnet","Matrix","pROC","dplyr","ggplot2","ggpubr", "here"))
+
+```
+
+```{r}
+library(e1071)
+library(quanteda)
+library(tidymodels)
+library(textrecipes)
+library(readr)
+library(caret)
+library(glmnet)
+library(Matrix)
+library(pROC)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(here)
+
+```
+
+# DATASET
+
+```{r}
+library(readr)
+spam <- read.csv(here::here("spam.csv"), fileEncoding = "Latin1")
+
+View(spam)
+head(spam)
+```
+
+# LIMPIAR DATA SET
+
+```{r}
+spam <- spam[, c("v1", "v2")]
+```
+
+```{r}
+ colnames(spam)[1] <- "spam"
+ colnames(spam)[2] <- "text"
+```
+
+```{r}
+library(stopwords)
+library(quanteda)
+spam$spam <- factor(spam$spam)
+stop_words_list <- stopwords(language = "en")
+
+toks <- tokens(
+  spam$text,
+  what = "word",
+  remove_numbers = TRUE,
+  remove_punct = TRUE,
+  remove_symbols = TRUE,
+  remove_separators = TRUE,
+  split_hyphens = TRUE
+)
+
+toks <- tokens_tolower(toks)
+matriz_dfm <- toks |> 
+   dfm () |> 
+   dfm_remove(pattern = stop_words_list) 
+
+matriz_dfm <- convert(matriz_dfm, to = "data.frame")
+
+matriz_dfm$spam <- spam$spam
+
+matriz_dfm <- matriz_dfm[, c("spam", setdiff(names(matriz_dfm), "spam"))]
+
+View(matriz_dfm)
+```
+
+Sacar distintos modelos (tres modelos, sacr los aciertos siendo aciertos y de esas filas, podemos
+
+para el modelo 1 cuáles son las palabras más probables para que si que sean spam. Más usadas del global y una vez hecho eso diferneciarlos.
+
+```{r}
+matriz_dfm$spam <- factor(spam$spam, levels = c("ham", "spam"))
+
+```
+
+# PROCESAMIENTO DEL TEXTO
+
+```{r}
+library(caret)
+set.seed(123)  # para reproducibilidad
+train_index <- createDataPartition(matriz_dfm$spam, p = 0.8, list = FALSE)
+train_data <- matriz_dfm[train_index, ]
+test_data  <- matriz_dfm[-train_index, ]
+
+```
+
+# MODELOS
+
+## MODELO SVM BINARIO (Spam / No Spam)
+
+```{r}
+if ("doc_id" %in% colnames(train_data)) {
+  train_data <- subset(train_data, select = -doc_id)
+  test_data  <- subset(test_data,  select = -doc_id)
+}
+
+#Entrenar el modelo SVM 
+set.seed(123)
+svm_model <- svm(
+  spam ~ ., 
+  data = train_data,
+  kernel = "linear",     # kernel "linear" para texto (rápido y efectivo)
+  cost = 1,              # parámetro de penalización
+  probability = TRUE
+)
+
+#Predicciones
+svm_pred <- predict(svm_model, newdata = test_data, probability = TRUE)
+
+#Evaluación del modelo
+conf_matrix_svm <- confusionMatrix(svm_pred, test_data$spam, positive = "spam")
+print(conf_matrix_svm)
+
+#Añadir predicciones a la matriz 
+# Si quieres tener una columna con las predicciones del SVM:
+matriz_dfm$modelo_SVM <- predict(svm_model, newdata = matriz_dfm)
+
+#Distribución de predicciones
+table(matriz_dfm$modelo_SVM)
+```
+
+## LOGÍSTICO BINARIO (LASSO - GLMNET) + MATRIZ CONFUSIÓN + GLOBAL
+
+```{r}
+set.seed(1)
+
+#Preparación (TRAIN)
+stopifnot("spam" %in% names(train_data))
+
+# y (1=spam, 0=ham)
+train_data$spam_num <- ifelse(train_data$spam == "spam", 1L, 0L)
+y_train <- as.numeric(train_data$spam_num)
+
+# columnas de features (excluye objetivo y derivadas)
+feat_cols <- setdiff(colnames(train_data), c("spam", "spam_num"))
+stopifnot(length(feat_cols) > 0)
+
+# X train y limpieza de NA
+x_train <- as(as.matrix(sapply(train_data[, feat_cols, drop = FALSE], as.numeric)), "dgCMatrix")
+x_train[is.na(x_train)] <- 0
+stopifnot(nrow(x_train) == length(y_train))
+
+#CV (LASSO)
+cvfit <- cv.glmnet(
+  x = x_train,
+  y = y_train,
+  family = "binomial",
+  alpha = 1,             # LASSO
+  type.measure = "auc"
+)
+cat("lambda.min:", cvfit$lambda.min, " | lambda.1se:", cvfit$lambda.1se, "\n")
+
+
+#MATRIZ DE CONFUSIÓN EN TEST (0.5 y YOUDEN)
+stopifnot("spam" %in% names(test_data))
+y_test <- ifelse(test_data$spam == "spam", 1L, 0L)
+
+# Alinear TEST a feat_cols (añadir faltantes, quitar extras, ordenar)
+faltan_en_test <- setdiff(feat_cols, colnames(test_data))
+if (length(faltan_en_test) > 0) {
+  for (cn in faltan_en_test) test_data[[cn]] <- 0
+}
+Xte_df <- test_data[, feat_cols, drop = FALSE]
+
+x_test <- as(as.matrix(sapply(Xte_df, as.numeric)), "dgCMatrix")
+x_test[is.na(x_test)] <- 0
+
+# Probabilidades y etiquetas con umbral 0.5
+pred_probs_test <- as.numeric(predict(cvfit, newx = x_test, s = cvfit$lambda.min, type = "response"))
+pred_labels_test <- ifelse(pred_probs_test > 0.5, 1L, 0L)
+
+cm_05 <- confusionMatrix(
+  factor(pred_labels_test, levels = c(0, 1)),
+  factor(y_test,          levels = c(0, 1)),
+  positive = "1"
+)
+cat("\n Matriz de confusión (umbral 0.5):\n")
+print(cm_05)
+
+# AUC en test
+roc_test <- pROC::roc(y_test, pred_probs_test)
+cat("AUC Test (lambda.min):", round(pROC::auc(roc_test), 4), "\n")
+
+# Umbral óptimo de Youden (robusto)
+thr_youden_vec <- as.numeric(coords(roc_test, "best", best.method = "youden",
+                                    ret = "threshold", transpose = FALSE))
+thr_youden <- thr_youden_vec[1]  # si hay varios, toma el primero
+cat("Umbral Youden sugerido:", round(thr_youden, 4), "\n")
+
+pred_labels_test_youden <- ifelse(pred_probs_test >= thr_youden, 1L, 0L)
+cm_youden <- confusionMatrix(
+  factor(pred_labels_test_youden, levels = c(0, 1)),
+  factor(y_test,                  levels = c(0, 1)),
+  positive = "1"
+)
+cat("\n Matriz de confusión (umbral Youden):\n")
+print(cm_youden)
+
+#PREDICCIONES GLOBALES (train + test) y anexo a matriz_dfm
+# Verifica que matriz_dfm tenga las columnas de entrenamiento
+stopifnot(all(feat_cols %in% colnames(matriz_dfm)))
+
+# Construir X_all a partir de feat_cols y alinear
+matriz_pred <- matriz_dfm[, feat_cols, drop = FALSE]
+x_all <- as(as.matrix(sapply(matriz_pred, as.numeric)), "dgCMatrix")
+x_all[is.na(x_all)] <- 0
+
+# Alineación por seguridad (mismo orden que feat_cols)
+x_all_aligned <- Matrix(0, nrow = nrow(x_all), ncol = length(feat_cols), sparse = TRUE)
+colnames(x_all_aligned) <- feat_cols
+common <- intersect(feat_cols, colnames(x_all))
+x_all_aligned[, common] <- x_all[, common]
+
+# Probabilidades globales y etiquetas con 0.5
+prob_logit_all <- as.numeric(predict(cvfit, newx = x_all_aligned, s = cvfit$lambda.min, type = "response"))
+cat("\n summary(prob_logit_all):\n")
+print(summary(prob_logit_all))
+
+matriz_dfm$modelo_logistico <- ifelse(prob_logit_all > 0.5, "spam", "ham")
+
+cat("\n Distribución de predicciones del modelo logístico (global):\n")
+print(table(matriz_dfm$modelo_logistico))
+
+if ("spam" %in% names(matriz_dfm)) {
+  cat("\n Vista previa etiquetas reales vs predichas:\n")
+  print(head(matriz_dfm[, c("spam", "modelo_logistico")]))
+} else {
+  cat("\nℹ  'matriz_dfm' no contiene 'spam'; se omite la comparación real vs. pred.\n")
+}
+
+```
+
+```{r}
+# Reordenar columnas: spam, modelo_logistico, modelo_SVM al inicio
+
+
+# Verificar que las columnas existen antes de reordenar
+cols_principales <- c("spam", "modelo_logistico", "modelo_SVM")
+
+# Filtrar solo las columnas que realmente existen
+cols_principales <- cols_principales[cols_principales %in% names(matriz_dfm)]
+
+# Crear nuevo orden: las principales primero + todas las demás después
+nuevo_orden <- c(cols_principales, setdiff(names(matriz_dfm), cols_principales))
+
+# Aplicar el nuevo orden de columnas
+matriz_dfm <- matriz_dfm[, nuevo_orden]
+
+#Comprobación rápida
+cat("\n Columnas al inicio del dataframe:\n")
+print(head(names(matriz_dfm), 10))
+
+cat("\n Vista previa:\n")
+print(head(matriz_dfm[, cols_principales]))
+
+```
+
+# PROBLEMA 1:
+
+Crear un **sistema** que combine:
+
+-   las predicciones del **SVM** (modelo 1),
+
+-   las predicciones del **modelo logístico LASSO (glmnet)** (modelo 2),
+
+-   y la **evidencia de palabras** (top-k palabras “más spammy”) calculada desde frecuencias en el conjunto de entrenamiento.
+
+Calcularemos las **sensibilidades y especificidades** de cada modelo (a partir de la matriz de confusión en test_data).
+
+Calcularemos la **probabilidad de que ambos modelos alerten (positivos) dado que el email es spam** (P(both + \| spam)).
+
+Usar **Bayes** para obtener P(spam \| ambos modelos positivos).
+
+Calcularemos la **probabilidad posterior** combinando además la **evidencia de palabras** (likelihood ratios de palabras características)
+
+1.  Sensibilidad y Especificidad modelo SVM
+
+```{r}
+if (exists("conf_matrix_svm")) {
+  svm_se <- conf_matrix_svm$byClass["Sensitivity"]
+  svm_sp <- conf_matrix_svm$byClass["Specificity"]
+} else {
+  svm_pred_test <- predict(svm_model, newdata = test_data)
+  cm_svm_test <- confusionMatrix(svm_pred_test, test_data$spam, positive = "spam")
+  svm_se <- cm_svm_test$byClass["Sensitivity"]
+  svm_sp <- cm_svm_test$byClass["Specificity"]
+}
+```
+
+```{r}
+cat("Modelo SVM:\n")
+cat(sprintf("Sensibilidad: %.4f\n", svm_se))
+cat(sprintf("Especificidad: %.4f\n", svm_sp))
+```
+
+2.  Sensibilidad y Especificidad modelo LOGISTICO
+
+```{r}
+x_test <- as(as.matrix(sapply(test_data[, feat_cols, drop = FALSE], as.numeric)), "dgCMatrix")
+prob_logit_test <- as.numeric(predict(cvfit, newx = x_test, s = cvfit$lambda.min, type = "response"))
+pred_logit_test <- ifelse(prob_logit_test > 0.5, "spam", "ham")
+cm_logit_test <- confusionMatrix(factor(pred_logit_test, levels = c("ham","spam")),
+                                 test_data$spam, positive = "spam")
+logit_se <- cm_logit_test$byClass["Sensitivity"]
+logit_sp <- cm_logit_test$byClass["Specificity"]
+```
+
+```{r}
+cat("Modelo Logístico LASSO (glmnet):\n")
+cat(sprintf("Sensibilidad: %.4f\n", logit_se))
+cat(sprintf("Especificidad: %.4f\n", logit_sp))
+```
+
+La **sensibilidad** indica la capacidad del modelo de **detectar correctamente los correos spam**. El **SVM** tiene una sensibilidad algo mayor (**0.899**) frente al modelo **LASSO** (**0.8725**) lo que significa que este primero detecta un poco más de spam que el segundo modelo. Esta difernecia es relevante cuando lo que queremos es minimizar los FN, es decir, spam que se cuela sin ser detectado.
+
+La **especificidad** indica la capacidad de detectar correctamente los correos ham (!= spam) . Ambos modelos predicen este muy bien, así que casi nunca marcan un correo no spam como spam.
+
+Ninguno de nuestros modelos alcanza un 1 en sensibilidad, por lo que **no llega a detectar todos el spam**, así que queremos ver si combinándolos se puede aumnetar la probabilidad de detectar correctamente estos correos.
+
+Ahora calcularemos la probabilidad a priori de que un correo sea spam
+
+```{r}
+pi_prior <- mean(train_data$spam == "spam")
+cat("Probabildiad a priori:", pi_prior, "\n")
+```
+
+Esto significa que de mi conjutno de datos el 13.4% de los emails son spam, lo que es algo bajo (suele ser así, nos llegan muchos menos correos de spam que no spam)
+
+```{r}
+# Asumiendo independencia condicional entre modelos
+p_both_pos_given_spam <- as.numeric(svm_se) * as.numeric(logit_se)
+p_both_pos_given_ham  <- (1 - as.numeric(svm_sp)) * (1 - as.numeric(logit_sp))
+
+# LR conjunto (Likelihood Ratio)
+LR_both <- p_both_pos_given_spam / p_both_pos_given_ham
+
+prior_odds <- pi_prior / (1 - pi_prior)
+post_odds_both <- prior_odds * LR_both
+#para llegar al cálculo de probabilidad posterior:
+post_prob_both <- post_odds_both / (1 + post_odds_both)
+```
+
+-   probabilidad de que **ambos** modelos **predigan "spam" siendo realmente spam:**
+
+    P(SVM+ y LASSO+∣spam)=0.784
+
+    ```{r}
+    cat("\nP(both + | spam):", p_both_pos_given_spam, "\n")
+    ```
+
+    Esto refleja la **capacidad conjunta de los modelos** para detectar si un email es realmente spam, este valor de **0.784** indica que la combinación de modelos es bastante buena pero **no perfecta**
+
+-   Probabilidad de que **ambos** modelos **digan "spam" de forma erronea**, es decir, que digan que es **"spam" siendo "ham":**
+
+    P(SVM+ y LASSO+∣ham)=0.0001
+
+    ```{r}
+    cat("P(both + | ham):", p_both_pos_given_ham, "\n")
+    ```
+
+    Aquí estamos reflejando los falsos positivos (FP) conjuntos. Aquí se hace muy buen trabajo si queremos minimizar esos falsos positivos, lo que indica que es muy **raro** que **ambos** modelos **cometan un error simultáneamnte**
+
+-   La **Likelihood Ratio** conjunta (LR) mide c**uánto más probable** es que **ambos** modelos **digan si el correo es spam siendo ham:**
+
+    ```{r}
+    cat("Likelihood Ratio tgh:", LR_both, "\n")
+    ```
+
+-   **Probabilidad posterior**, es decir, la probabilidad de que un correo **sea** realmente **spam** **después** de observar que **ambos** **dicen que sí es spam:**
+
+    P(spam∣SVM+ y LASSO+)=0.9998
+
+    ```{r}
+    cat("P(spam | both +):", post_prob_both, "\n\n")
+    ```
+
+    Este resultado refleja que la **combinación** de modelos es muy **confiable**
+
+Calculo de probabilidades posteriores individuales, es decfir, para cada modelo por separado
+
+```{r}
+LR_svm <- as.numeric(svm_se) / (1 - as.numeric(svm_sp))
+LR_logit <- as.numeric(logit_se) / (1 - as.numeric(logit_sp))
+
+post_odds_svm <- prior_odds * LR_svm
+post_prob_svm <- post_odds_svm / (1 + post_odds_svm)
+
+post_odds_logit <- prior_odds * LR_logit
+post_prob_logit <- post_odds_logit / (1 + post_odds_logit)
+
+cat("P(spam | SVM +):", post_prob_svm, "\n")
+cat("P(spam | Logit +):", post_prob_logit, "\n")
+```
+
+-   La probabilidad de que un correo sea realmente spam si el SVM predice spam es de 0.9782
+
+-   La probabilidad de que un correo sea realmnete spam si el modelo logístico predice spam es de 0.9702
+
+Identificamos las **palabras** más "**spammy**"
+
+```{r}
+# Calculamos P(word|spam) y P(word|ham) desde train_data
+# feat_cols ya son las columnas de token/word (0/1 o counts)
+k <- 20   # top-k palabras a usar como evidencia
+#separamos los correos por clase
+train_spam_idx <- which(train_data$spam == "spam")
+train_ham_idx  <- which(train_data$spam == "ham")
+
+#contamos cuántas veces aparece cada palabra
+spam_counts <- colSums(train_data[train_spam_idx, feat_cols, drop = FALSE], na.rm = TRUE)
+ham_counts  <- colSums(train_data[train_ham_idx,  feat_cols, drop = FALSE], na.rm = TRUE)
+
+#tamaño
+N_spam_docs <- length(train_spam_idx)
+N_ham_docs  <- length(train_ham_idx)
+
+#calculamos las probbailidades condicionadas 
+#P(word|spam): probbailidad de encontrar esa palabra si es spam 
+#P(word|ham): probabilidad de encontrar esa palabra si el correo es ham
+p_word_given_spam <- (spam_counts + 1) / (sum(spam_counts) + length(feat_cols))
+p_word_given_ham  <- (ham_counts  + 1) / (sum(ham_counts)  + length(feat_cols))
+
+#LR por palabra y ordenar las más "spammy"
+lr_words <- p_word_given_spam / p_word_given_ham
+topk <- sort(lr_words, decreasing = TRUE)[1:k]
+cat("\nTop-k palabras con mayor LR (spam/ham):\n")
+print(head(topk, k))
+
+
+```
+
+Lo que conseguimos con esto es ver qu**é palabras son las que mas dicen si un correo es spam**. Estas serían las 20 palabras con mayor LR entre los correos spam y ham. Las palabras están relacionadas con premios/recompensas, ofertas/promociones o cosas de telefonía. Por lo que concluimos que los **correos de spam tienen un patrón temático** muy claro. Por ello la presencia de estas palabras aumentan frecuentemente la probabilidad posterior de spam.
+
+Lo que haremos ahora es clacular la LR basadas en las palabras que realmente aparecen en un email concreto.
+
+```{r}
+i <- 1
+words_present <- feat_cols[ which(as.numeric(test_data[i, feat_cols]) > 0) ]
+
+
+lr_obs <- prod(lr_words[intersect(names(lr_words), words_present)])
+log_lr_obs <- sum(log(lr_words[intersect(names(lr_words), words_present)]), na.rm = TRUE)
+
+cat("\nLR (palabras) observadas en test[", i, "]:", lr_obs, "\n")
+cat("log LR (palabras):", log_lr_obs, "\n")
+
+```
+
+La LR del conjunto de palabras que aparecen en el correo de prueba número 1 es de 20.89, lo que significa que las palabras en este correo son unas **21 veces más probables si el correo es spam que si es ham.**
+
+En este último paso **sumamos** la **evidencia de palabras** a la c**ombinación de los dos modelos**
+
+```{r}
+# log prior odds
+log_prior_odds <- log(prior_odds)
+log_lr_models <- log(LR_both) # si quieres LR de ambos
+# total log posterior odds:
+log_post_total <- log_prior_odds + log_lr_models + log_lr_obs
+post_prob_total <- exp(log_post_total) / (1 + exp(log_post_total))
+
+cat("\nP(spam | SVM+ & Logit+ & palabras_observadas):", post_prob_total, "\n")
+
+```
+
+El resultado de 0.999 es la probabilidad posterior calculada con el teorema de Bayes**, P(spam\|ambos modelos + palabras)**
+
+# PROBELMA 2:
+
+Evaluación comparativa de la coherencia bayesiana y la calibración probabilística entre modelos de Regresión Logística (LASSO) y SVM en la detección de mensajes spam:El presente análisis tuvo como objetivo determinar qué modelo —Regresión Logística (LASSO) o SVM— produce probabilidades más coherentes con el teorema de Bayes, es decir, qué modelo está mejor calibrado bayesianamente en la tarea de clasificar mensajes como *spam* o *no spam*.
+
+```{r}
+#COMPARACIÓN BAYESIANA ENTRE MODELO LOGÍSTICO Y SVM
+
+if (exists("svm_model")) {
+
+  #Probabilidades SVM
+  pred_svm_obj <- predict(svm_model, newdata = matriz_dfm, probability = TRUE)
+  probs_attr <- attr(pred_svm_obj, "probabilities")
+
+  if (is.null(probs_attr)) {
+    stop("El modelo SVM no fue entrenado con probability = TRUE.")
+  }
+  if (!"spam" %in% colnames(probs_attr)) {
+    stop("La matriz de probabilidades SVM no contiene la columna 'spam'.")
+  }
+  prob_svm_all <- probs_attr[, "spam"]
+
+  #Dataframe conjunto
+  stopifnot("spam" %in% names(matriz_dfm))
+  df_all <- data.frame(
+    spam_real  = matriz_dfm$spam,
+    prob_logit = prob_logit_all,
+    prob_svm   = prob_svm_all
+  )
+  df_all$spam_num <- ifelse(df_all$spam_real == "spam", 1, 0)
+
+  #AUC 
+  roc_logit <- pROC::roc(df_all$spam_num, df_all$prob_logit)
+  roc_svm   <- pROC::roc(df_all$spam_num, df_all$prob_svm)
+
+  auc_logit <- round(pROC::auc(roc_logit), 4)
+  auc_svm   <- round(pROC::auc(roc_svm), 4)
+
+  cat("\n AUC Logístico:", auc_logit, "\n")
+  cat(" AUC SVM:       ", auc_svm, "\n")
+
+  #Brier Score
+  brier_logit <- mean((df_all$spam_num - df_all$prob_logit)^2)
+  brier_svm   <- mean((df_all$spam_num - df_all$prob_svm)^2)
+  cat("Brier Logit:", round(brier_logit, 4), " | Brier SVM:", round(brier_svm, 4), "\n")
+
+  #Calibración bayesiana por bins
+  df_calib <- df_all %>%
+    mutate(bin_logit = cut(prob_logit, breaks = seq(0, 1, 0.1), include.lowest = TRUE),
+           bin_svm   = cut(prob_svm,   breaks = seq(0, 1, 0.1), include.lowest = TRUE))
+
+  calib_logit <- df_calib %>%
+    group_by(bin_logit) %>%
+    summarise(prob_media = mean(prob_logit),
+              spam_real = mean(spam_num),
+              n = n(),
+              .groups = "drop") %>%
+    arrange(prob_media)
+
+  calib_svm <- df_calib %>%
+    group_by(bin_svm) %>%
+    summarise(prob_media = mean(prob_svm),
+              spam_real = mean(spam_num),
+              n = n(),
+              .groups = "drop") %>%
+    arrange(prob_media)
+
+  #ECE y MCE 
+  ECE <- function(calib) {
+    w <- calib$n / sum(calib$n)
+    sum(w * abs(calib$spam_real - calib$prob_media))
+  }
+  MCE <- function(calib) max(abs(calib$spam_real - calib$prob_media))
+
+  ece_logit <- ECE(calib_logit)
+  ece_svm   <- ECE(calib_svm)
+  mce_logit <- MCE(calib_logit)
+  mce_svm   <- MCE(calib_svm)
+
+  cat("ECE Logit:", round(ece_logit, 4), " | ECE SVM:", round(ece_svm, 4), "\n")
+  cat("MCE Logit:", round(mce_logit, 4), " | MCE SVM:", round(mce_svm, 4), "\n")
+
+  #Gráficos de calibración bayesiana 
+  plot_logit <- ggplot(calib_logit, aes(x = prob_media, y = spam_real)) +
+    geom_point(size = 2, alpha = 0.8) +
+    geom_line(linewidth = 1) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+    labs(title = " Calibración Bayesiana - Regresión Logística",
+         x = "Probabilidad predicha de Spam",
+         y = "Proporción real de Spam") +
+    theme_classic(base_size = 13)
+
+  plot_svm <- ggplot(calib_svm, aes(x = prob_media, y = spam_real)) +
+    geom_point(size = 2, alpha = 0.8) +
+    geom_line(linewidth = 1) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+    labs(title = "Calibración Bayesiana - SVM",
+         x = "Probabilidad predicha de Spam",
+         y = "Proporción real de Spam") +
+    theme_classic(base_size = 13)
+
+  #Arreglo: dos columnas y título con annotate_figure/text_grob
+  comparacion_calibracion <- ggpubr::ggarrange(
+    plot_logit, plot_svm,
+    ncol = 2, nrow = 1,
+    labels = c("A", "B"),
+    common.legend = FALSE
+  )
+
+  comparacion_calibracion <- ggpubr::annotate_figure(
+    comparacion_calibracion,
+    top = ggpubr::text_grob(
+      "Comparación de calibración bayesiana entre modelos",
+      face = "bold", size = 14
+    )
+  )
+
+  print(comparacion_calibracion)
+
+  #Desviación media de calibración
+  desv_logit <- mean(abs(calib_logit$spam_real - calib_logit$prob_media), na.rm = TRUE)
+  desv_svm   <- mean(abs(calib_svm$spam_real   - calib_svm$prob_media),   na.rm = TRUE)
+
+  cat("\n Desviación media de calibración (|obs - pred|):\n")
+  cat("   Logístico:", round(desv_logit, 4), "\n")
+  cat("   SVM:      ", round(desv_svm, 4), "\n")
+
+  #Conclusión final
+  cat("\n CONCLUSIÓN FINAL:\n")
+  if (desv_logit < desv_svm & ece_logit < ece_svm) {
+    cat("  El modelo LOGÍSTICO presenta mejor calibración bayesiana (más coherente con P(Spam|Modelo)).\n")
+  } else if (desv_logit > desv_svm & ece_logit > ece_svm) {
+    cat("El modelo SVM produce probabilidades más coherentes con el teorema de Bayes.\n")
+  } else {
+    cat("Ambos modelos presentan un rendimiento bayesiano similar.\n")
+  }
+
+} else {
+  cat("\n No existe 'svm_model' en el entorno. Se omite la comparación.\n")
+}
+
+```
+
+El presente análisis tiene como objetivo determinar **qué modelo —Regresión Logística (LASSO) o SVM— produce probabilidades más coherentes con el teorema de Bayes**, es decir, cuál de ellos presenta **una calibración bayesiana más precisa** en la tarea de clasificar mensajes como *spam* o *no spam*.
+
+Desde una perspectiva bayesiana, un modelo se considera bien calibrado cuando las probabilidades que estima coinciden con las frecuencias reales observadas. En otras palabras, se cumple empíricamente la relación P(Spam∣Modelo)≈P(Spam real). Esto significa que, si el modelo predice una probabilidad de 0.8 de que un mensaje sea *spam*, aproximadamente el 80 % de los correos con esa probabilidad deberían ser realmente *spam*.
+
+Para evaluar esta coherencia bayesiana, se compararon ambos modelos mediante tres tipos de indicadores: **capacidad discriminante (AUC)**, **precisión probabilística (Brier Score)** y **errores de calibración (ECE y MCE)**.
+
+En primer lugar, la **capacidad discriminante**, medida con el AUC, fue muy alta para ambos modelos: **AUC Logístico = 0.9939** y **AUC SVM = 0.9972**. Ambos clasifican con una precisión casi perfecta entre correos *spam* y *no spam*, aunque el **SVM obtiene un valor ligeramente superior**, lo que indica una mejor capacidad para distinguir entre ambas clases.
+
+En segundo lugar, la **precisión probabilística**, evaluada mediante el *Brier Score*, fue de **0.0046 para el modelo Logístico** y **0.0033 para el SVM**. Como valores más bajos indican mayor exactitud, el **SVM muestra una correspondencia más fiel entre las probabilidades predichas y los resultados reales**, reflejando una mayor coherencia con la frecuencia observada de *spam*.
+
+En cuanto a la **calibración bayesiana**, se analizaron los errores **ECE (Expected Calibration Error)** y **MCE (Max Calibration Error)**. El **ECE**, que mide el error medio ponderado entre la probabilidad estimada y la proporción real observada, fue menor para el SVM (**0.0048**) que para el Logístico (**0.0090**), indicando que el **SVM está mejor calibrado en promedio**. En cambio, el **MCE**, que refleja la desviación máxima, fue ligeramente mejor para el Logístico (**0.2659** frente a **0.3121**), lo que sugiere que el Logístico mantiene un comportamiento algo más estable en los extremos de probabilidad, aunque la diferencia es mínima.
+
+Los **gráficos de calibración bayesiana** muestran visualmente esta relación. En ellos, la línea diagonal discontinua (y = x) representa la calibración perfecta. El **modelo Logístico** tiende a subestimar ligeramente la probabilidad de *spam* en los niveles intermedios, mientras que el **SVM sigue la diagonal con mayor fidelidad**, ajustándose mejor a la probabilidad real de *spam*.
+
+# PROBLEMA 3:
+
+Análisis Bayesiano Detallado de la Influencia Léxica en la Clasificación de Mensajes Spam y No Spam:
+
+-   Estimación de Probabilidades Condicionales P(Spam∣Palabra)
+
+-   Identificación de Palabras Discriminativas
+
+-   Evaluación del Impacto de la Frecuencia Léxica en la Inferencia Posterior
+
+```{r}
+matriz_dfm <- as.data.frame(matriz_dfm)
+
+#matriz_dfm$spam <- as.numeric(as.character(matriz_dfm$spam))
+
+
+matriz_dfm$spam <- ifelse(matriz_dfm$spam == "spam", 1, 0)
+
+
+cat("Conteo de clases:\n")
+print(table(matriz_dfm$spam))
+
+
+cols_no_texto <- c("spam", "doc_id", "modelo_logistico", "modelo_SVM")
+word_cols <- setdiff(names(matriz_dfm), cols_no_texto)
+
+
+matriz_dfm[word_cols] <- lapply(matriz_dfm[word_cols], function(x) as.numeric(as.character(x)))
+
+
+spam_docs <- subset(matriz_dfm, spam == 1)
+nospam_docs <- subset(matriz_dfm, spam == 0)
+
+n_spam <- nrow(spam_docs)
+n_no_spam <- nrow(nospam_docs)
+
+if (n_spam == 0 | n_no_spam == 0) {
+  stop("no hay ejemplos suficientes de spam o no spam para calcular probabilidades.")
+}
+
+
+P_spam <- n_spam / (n_spam + n_no_spam)
+alpha <- 1  
+
+
+P_word_given_spam <- (colSums(spam_docs[, word_cols] > 0) + alpha) / (n_spam + 2 * alpha)
+P_word_given_no_spam <- (colSums(nospam_docs[, word_cols] > 0) + alpha) / (n_no_spam + 2 * alpha)
+
+
+top3_spam <- names(sort(P_word_given_spam, decreasing = TRUE))[1:3]
+bottom3_spam <- names(sort(P_word_given_spam, decreasing = FALSE))[1:3]
+top3_no_spam <- names(sort(P_word_given_no_spam, decreasing = TRUE))[1:3]
+bottom3_no_spam <- names(sort(P_word_given_no_spam, decreasing = FALSE))[1:3]
+
+cat("\nPalabras más frecuentes en SPAM:", paste(top3_spam, collapse = ", "), "\n")
+cat("Palabras menos frecuentes en SPAM:", paste(bottom3_spam, collapse = ", "), "\n")
+cat("Palabras más frecuentes en NO SPAM:", paste(top3_no_spam, collapse = ", "), "\n")
+cat("Palabras menos frecuentes en NO SPAM:", paste(bottom3_no_spam, collapse = ", "), "\n")
+
+
+P_word <- P_word_given_spam * P_spam + P_word_given_no_spam * (1 - P_spam)
+P_spam_given_word <- (P_word_given_spam * P_spam) / P_word
+efecto <- ifelse(P_spam_given_word > P_spam, "Aumenta", "Reduce")
+
+resumen <- data.frame(
+  palabra = word_cols,
+  P_spam_dado_palabra = round(P_spam_given_word, 4),
+  efecto = efecto
+)
+
+
+prob_spam_dado_3 <- function(words) {
+  p_w_spam <- prod(P_word_given_spam[words])
+  p_w_no_spam <- prod(P_word_given_no_spam[words])
+  (p_w_spam * P_spam) / (p_w_spam * P_spam + p_w_no_spam * (1 - P_spam))
+}
+
+P_spam_top3 <- prob_spam_dado_3(top3_spam)
+P_spam_bottom3 <- prob_spam_dado_3(bottom3_spam)
+
+
+cat("\n INTERPRETACIÓN BAYESIANA:\n")
+cat("- P(Spam) global =", round(P_spam, 3), "\n")
+cat("- Si aparecen las 3 palabras más frecuentes de spam (", paste(top3_spam, collapse = ", "),
+    "), la probabilidad de spam aumenta a", round(P_spam_top3, 3), "\n")
+cat("- Si aparecen las 3 menos frecuentes de spam (", paste(bottom3_spam, collapse = ", "),
+    "), la probabilidad baja a", round(P_spam_bottom3, 3), "\n")
+
+if (P_spam_top3 > P_spam_bottom3) {
+  cat("\n Conclusión: las palabras más frecuentes en spam aumentan significativamente la probabilidad posterior de que un mensaje sea spam.\n")
+} else {
+  cat("\n Conclusión: las palabras más frecuentes no son buenos predictores del spam en este corpus.\n")
+}
+
+
+cat("\n Top 10 palabras que MÁS aumentan la probabilidad de spam:\n")
+print(head(resumen[order(-resumen$P_spam_dado_palabra), ], 10))
+
+cat("\n Top 10 palabras que MÁS reducen la probabilidad de spam:\n")
+print(head(resumen[order(resumen$P_spam_dado_palabra), ], 10))
+
+
+```
+
+El análisis bayesiano aplicado a la base de datos de mensajes tiene como objetivo entender cómo ciertas palabras modifican la probabilidad de que un mensaje sea clasificado como spam. Inicialmente, la proporción de mensajes spam dentro del conjunto total es del **13,4 %**, es decir, P(Spam)=0.134. Esto representa la probabilidad *a priori*, antes de observar ninguna palabra del texto.
+
+Al examinar la distribución de términos, las **palabras más frecuentes en los mensajes spam** son **“call”**, **“å”** y **“now”**, mientras que las **menos frecuentes** son **“jurong”**, **“point”** y **“bugis”**. En contraste, los mensajes no spam suelen incluir con más frecuencia **“u”**, **“can”** y **“now”**, y con menor frecuencia **“entry”**, **“wkly”** y **“fa”**. Este patrón indica que algunos términos son marcadores muy característicos de contenido promocional o automatizado, mientras que otros son específicos de conversaciones personales.
+
+Cuando se calculan las probabilidades condicionales, los resultados muestran que la presencia de palabras muy comunes en spam **incrementa drásticamente la probabilidad posterior** de que un mensaje sea spam. Concretamente:
+
+-   P(Spam)=0.134 (probabilidad inicial o *a priori*)
+
+-   P(Spam∣call, a˚, now)=0.999
+
+-   P(Spam∣jurong, point, bugis)=0.156
+
+Esto significa que, antes de observar el texto, la probabilidad de que un mensaje sea spam era del 13,4 %, pero al detectar simultáneamente las palabras **“call”**, **“å”** y **“now”**, la probabilidad posterior se eleva al **99,9 %**, prácticamente certeza. Por el contrario, si aparecen las palabras **“jurong”**, **“point”** y **“bugis”**, la probabilidad disminuye levemente hasta el **15,6 %**, sugiriendo que son términos asociados a mensajes no promocionales.
+
+Este comportamiento refleja con precisión el **principio del teorema de Bayes**, donde las evidencias (las palabras) actualizan la creencia previa sobre la clase del mensaje. Las palabras más características de spam poseen una probabilidad condicional P(Palabra∣Spam) mucho mayor que P(Palabra∣No Spam), lo que hace que la razón bayesiana se incline fuertemente hacia la categoría spam.
+
+El ranking de términos más influyentes refuerza esta conclusión. Las palabras **“claim”**, **“prize”**, **“won”**, **“guaranteed”** y **“awarded”** presentan las probabilidades condicionales más altas de spam (por encima de 0.97), lo que las convierte en **indicadores casi inequívocos de contenido publicitario o fraudulento**. En cambio, palabras como **“lt”**, **“gt”**, **“lor”**, **“later”**, **“say”** o **“morning”** tienen probabilidades inferiores al 0.02, lo que indica que **reducen la probabilidad de spam** y son más propias de lenguaje conversacional o cotidiano.
+
+En conjunto, el modelo muestra que las **palabras más frecuentes y características del spam aumentan de manera muy significativa la probabilidad posterior** de que un mensaje sea spam. Esto valida la hipótesis bayesiana de que ciertos patrones léxicos actúan como señales predictivas claras. En términos prácticos, un mensaje que contenga varias de estas palabras (“call”, “claim”, “win”, “prize”, “guaranteed”) puede clasificarse como spam con altísima confianza.
