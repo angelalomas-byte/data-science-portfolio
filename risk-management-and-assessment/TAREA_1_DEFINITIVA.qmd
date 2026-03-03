@@ -1,0 +1,519 @@
+---
+title: "TAREA_1_DEFINITIVA"
+author: "Ángela Lomas Anglada"
+format: html
+editor: visual
+---
+
+```{r}
+#--------------------------------------------------------------------
+                          #TAREA 1.1
+#--------------------------------------------------------------------
+
+#FASES:
+#0) Preparación
+#1) Descarga de datos
+#2) Visualización
+#3) Tabla de exploración
+#4) Creación de carteras
+
+
+
+# -------------------------
+# 0) Preparación del enviroment
+# -------------------------
+rm(list = ls())
+options(stringsAsFactors = FALSE)
+
+# Librerías necesarias
+pkgs <- c("quantmod","dplyr","PerformanceAnalytics","ggplot2","ggfortify","dygraphs","qcc","xts","zoo", "tseries", "forecast", "pracma", "tseriesChaos", "nortest", "stats")
+
+# Paquetes no instalados
+missing_pkgs <- pkgs[!(pkgs %in% installed.packages()[,"Package"])]
+
+# Instalación de paquetes no instalados
+if(length(missing_pkgs)) install.packages(missing_pkgs)
+invisible(lapply(pkgs, require, character.only = TRUE))
+
+# Carpeta de salida 
+out_dir <- "TAREA_1_RESULTADOS"
+if(!dir.exists(out_dir)) dir.create(out_dir)
+
+
+
+# -------------------------
+# 1) Descarga de datos
+# -------------------------
+# Variable tickers con todos los activos
+tickers <- c("^IBEX", "SAN.MC","BBVA.MC","ITX.MC","TEF.MC","IBE.MC","REP.MC","ACS.MC", "AENA.MC","FER.MC","GRF.MC","MTS.MC","CABK.MC","COL.MC","MAP.MC","PHM.MC", "BKT.MC","CLNX.MC","AMS.MC","VIS.MC","ELE.MC","ENG.MC","NTGY.MC", "UNI.MC","SLR.MC","TRE.MC","SAB.MC","IDR.MC","ACX.MC","FCC.MC", "LOG.MC","RED.MC","FDR.MC","ROVI.MC","SCYR.MC","MEL.MC")
+
+# Descarga de todo el histórico
+from_date <- "1990-01-01"
+for(tk in tickers){
+  cat("Descargando:", tk, "...\n")
+  tryCatch({
+    getSymbols(tk, from = from_date, auto.assign = TRUE, warnings = FALSE)
+  }, error = function(e){
+    cat("  ERROR descargando:", tk, "\n")
+  })
+}
+
+# Crear lista con los objetos descargados
+activos_xts <- list()
+for(tk in tickers){
+  objname <- gsub("\\^", "", tk)  # quitar ^ si existe
+  if(exists(objname)){
+    activos_xts[[tk]] <- get(objname)
+  } else if (exists(tk)){
+    activos_xts[[tk]] <- get(tk)
+  } else {
+    cat("  No se encontró objeto para:", tk, "\n")
+  }
+}
+
+
+
+# -------------------------
+# 2) Visualización
+# -------------------------
+### Construir matriz de Adjusted de todos los activos
+lista_adj <- lapply(activos_xts, function(x) Ad(x))
+for(n in names(lista_adj)) colnames(lista_adj[[n]]) <- n
+cartera_adj <- do.call(merge, c(lista_adj, all = TRUE))
+
+# -------------------------
+# GRÁFICO 1: 35 ACTIVOS (sin IBEX)
+# -------------------------
+# Excluir IBEX
+# Crear cartera sin IBEX-35
+cartera_sin_ibex <- cartera_adj[, !(colnames(cartera_adj) %in% "X.IBEX")]
+
+# Detectar activos que despuntan automáticamente
+# -------------------------
+# Definir umbral: si el precio máximo es > 2 veces la mediana de máximos, lo consideramos "despuntador"
+maximos <- apply(cartera_sin_ibex, 2, max, na.rm = TRUE)
+umbral <- 2 * median(maximos)
+activos_despuntan <- names(maximos[maximos > umbral])
+activos_normales <- names(maximos[maximos <= umbral])
+
+# -------------------------
+# Gráfica de activos normales
+# -------------------------
+cartera_normales <- cartera_sin_ibex[, activos_normales]
+
+#cartera_plot <- cartera_normales
+#cartera_plot[is.na(cartera_plot)] <- NaN
+
+autoplot(cartera_normales, facets = FALSE) +
+  ggtitle("GRÁFICA 1 - 35 ACTIVOS") +
+  xlab("Fecha") + ylab("Precio Ajustado") +
+  theme_minimal() + theme(legend.text = element_text(size = 5), axis.title.x = element_text(size = 7), axis.title.y = element_text(size = 7),axis.text.x  = element_text(size = 5), axis.text.y  = element_text(size = 5))
+
+ggsave(
+  filename = file.path(out_dir, "GRÁFICA_1.png"), width = 10, height = 6)
+
+
+# -------------------------
+# Gráficas de activos que despuntan por separado
+# -------------------------
+for(act in activos_despuntan){
+  cartera_act <- cartera_sin_ibex[, act, drop = FALSE]
+    g <- autoplot(cartera_act, facets = FALSE) +
+    ggtitle(paste("GRÁFICA 1.1", act)) +
+    xlab("Fecha") + ylab("Precio Ajustado") +
+    theme_minimal()
+  print(g)
+  ggsave(
+  filename = file.path(out_dir, paste0("GRÁFICA_1.1", act, ".png")), plot = g, width = 10, height = 6
+  )
+
+}
+
+
+
+# -------------------------
+# GRÁFICO 2: IBEX-35
+# -------------------------
+if("IBEX" %in% colnames(cartera_adj)){
+  ibex <- cartera_adj[, "IBEX"]
+} else if("^IBEX" %in% names(activos_xts)){
+  ibex <- Ad(activos_xts[["^IBEX"]])
+} else {
+  stop("No se encontró el IBEX")
+}
+
+autoplot(ibex) +
+  ggtitle("GRÁFICA 2 - IBEX35") +
+  xlab("Fecha") + ylab("Precio Ajustado") +
+  theme_minimal()
+
+ggsave(
+  filename = file.path(out_dir, "GRÁFICA_2.png"),
+  width = 10, height = 6
+)
+
+
+
+# -------------------------
+# GRÁFICO 3: CLOSE VS ADJUSTED de cada activo
+# -------------------------
+for(tk in names(cartera_sin_ibex)){
+  x <- activos_xts[[tk]]
+  
+  cl <- Cl(x)
+  ad <- Ad(x)
+  
+  df <- merge(cl, ad)
+  colnames(df) <- c("Close", "Adjusted")
+  g <- autoplot(df, facets = FALSE) +
+      ggtitle(paste0(tk, " – Close vs Adjusted")) +
+      xlab("Fecha") + ylab("Precio") +
+      theme_minimal()
+  print (g)
+  ggsave(
+  filename = file.path(out_dir, paste0("GRÁFICA_3", tk, ".png")), plot = g, width = 10, height = 6)
+
+}
+
+
+# ---------------------------------------------------------------
+# 3) Tabla de exploración
+# ---------------------------------------------------------------
+#Creación de la función
+resumen_activo <- function(ticker, lista_xts){
+
+  x <- lista_xts[[ticker]]
+
+  # 1) ¿Close o Adjusted?
+  pct_neg <- mean(Ad(x) < 0, na.rm = TRUE) * 100
+  
+  if(pct_neg > 5){
+    serie <- Cl(x)
+    tipo  <- "Close"
+  } else {
+    serie <- Ad(x)
+    tipo  <- "Adjusted"
+  }
+
+  # 2) Fechas de inicio y fin
+  F_ini <- as.Date(start(serie))
+  F_fin <- as.Date(end(serie))
+
+  # 3) Rendimiento logarítmico
+  rend <- diff(log(serie))
+  rend <- as.numeric(rend)
+  
+  # T0 observaciones iniciales
+  T0 <- sum(!is.na(rend))
+
+  # 4) Porcentaje de NA
+  pct_NA <- mean(is.na(rend)) * 100
+
+  # 5) Outliers con C = 3 y C = 5
+  z <- scale(rend)
+  out3 <- sum(abs(z) > 3, na.rm = TRUE)
+  out5 <- sum(abs(z) > 5, na.rm = TRUE)
+
+  # 6) T1 tras limpiar con C = 5
+  rend_clean <- rend[abs(z) <= 5]
+  T1 <- sum(!is.na(rend_clean))
+
+  # Tabla final para este activo
+  data.frame(
+    Ticker   = ticker,
+    Serie    = tipo,
+    Fecha_Inicio    = F_ini,
+    Fecha_Fin    = F_fin,
+    Tamaño_Inicial      = T0,
+    Porcentaje_NaN   = round(pct_NA, 2),
+    C3       = out3,
+    C5       = out5,
+    Tamaño_Final       = T1,
+    stringsAsFactors = FALSE
+  )
+}
+
+
+#Tabla final
+tickers_analisis <- names(cartera_sin_ibex)
+
+tabla_final <- do.call(
+  rbind,
+  lapply(tickers_analisis, resumen_activo, lista_xts = activos_xts)
+)
+
+#print(tabla_final)
+
+write.csv(
+  tabla_final,
+  file = file.path(out_dir, "TABLA.csv"),
+  row.names = FALSE
+)
+
+
+
+# -------------------------
+# 4) Guardar precios originales y rendimientos limpios (2 archivos)
+# -------------------------
+# Lista para precios originales
+precios_originales <- list()
+# Lista para rendimientos limpios
+rendimientos_limpios <- list()
+
+for(tk in names(cartera_sin_ibex)) {
+
+  x <- activos_xts[[tk]]
+
+  # -------------------------
+  # 4.1) Serie de precios original (Adjusted)
+  # -------------------------
+  adj <- Ad(x)
+  precios_originales[[tk]] <- adj
+
+  # -------------------------
+  # 4.2) Rendimientos limpios
+  # -------------------------
+  pct_neg <- mean(Ad(x) < 0, na.rm = TRUE) * 100
+  serie <- if(pct_neg > 5) Cl(x) else Ad(x)
+
+  rend <- diff(log(serie))
+  
+  # Limpiar outliers con C = 5
+  z <- scale(rend)
+  rend_clean <- rend[abs(z) <= 5]
+  rend_clean <- na.omit(rend_clean)
+
+  rendimientos_limpios[[tk]] <- rend_clean
+
+  cat("Procesado:", tk, "\n")
+}
+
+# Guardar listas completas en dos archivos RData
+save(precios_originales, file = "precios_originales.RData")
+save(rendimientos_limpios, file = "rendimientos_limpios.RData")
+
+
+
+#--------------------------------------------------------------------
+                          #TAREA 1.2
+#--------------------------------------------------------------------
+
+#FASES:
+#5) Función para etsudiar HME
+#6) Aplicación de la función
+
+
+# Función para analizar la HME de cada activo
+analizar_activo <- function(precio, rend, nombre_activo = 'Activo') {
+  
+
+# ----------------------
+# ESTACIONARIEDAD PRECIOS
+# ----------------------
+precio_clean <- na.omit(precio)  # elimina NAs
+adf_val_precio <- tryCatch(adf.test(precio_clean)$p.value, error = function(e) NA)
+pp_val_precio  <- tryCatch(pp.test(precio_clean)$p.value,  error = function(e) NA)
+kpss_val_precio <- tryCatch(kpss.test(precio_clean)$p.value, error = function(e) NA)
+
+estacionariedad_precio <- if(!is.na(adf_val_precio) & !is.na(pp_val_precio) & !is.na(kpss_val_precio)) {
+  if(adf_val_precio < 0.05 & pp_val_precio < 0.05 & kpss_val_precio > 0.05) {
+    "Precios estacionarios"
+  } else {
+    "Precios no estacionarios"
+  }
+} else {
+  "Error test estacionariedad"
+}
+
+
+# ----------------------
+# ESTACIONARIEDAD RENDIMIENTOS
+# ----------------------
+adf_val <- adf.test(rend)$p.value
+pp_val  <- pp.test(rend)$p.value
+kpss_val <- kpss.test(rend)$p.value
+
+estacionariedad_rend <- if(adf_val < 0.05 & pp_val < 0.05 & kpss_val > 0.05) {
+  "Rendimientos estacionarios"
+} else {
+  "No estacionario"
+}
+
+
+# ----------------------
+# INCORRELACIÓN
+# ----------------------
+ljung <- Box.test(rend, lag = 5, type = "Ljung-Box")$p.value
+
+incorrelacion_rend <- if(ljung > 0.05) {
+  "A favor HME"
+} else {
+  "En contra HME"
+}
+
+
+
+# ----------------------
+# INCORRELACIÓN rendimientos al cuadrado
+# ----------------------
+ljung2 <- Box.test(rend^2, lag = 5, type = "Ljung-Box")$p.value
+
+incorrelacion_rend2 <- if(ljung2 > 0.05) {
+  "A favor HME"
+} else {
+  "En contra HME"
+}
+
+  
+# ----------------------
+# EXPONENTE DE HURST
+# ----------------------
+hurst_val <- tryCatch(hurstexp(rend)$Hs, error=function(e) NA)
+  hurst <- if(!is.na(hurst_val)) {
+    if(hurst_val < 0.5) "RR. No cumple HME"
+    else if(hurst_val == 0.5) "RB. Se cumple HME"
+    else "RN. No cumple HME"
+  } else {
+    "Error Hurst"
+  }
+  
+# ----------------------
+# TEST DE BDS
+# ----------------------
+bds_val <- tryCatch(bds.test(rend)$p.value, error = function(e) NA)
+
+bds <- if (any(is.na(bds_val))) {
+  "Error BDS"
+} else if (all(bds_val > 0.05)) {
+  "Se cumple HME"
+} else {
+  "No cumple HME"
+}
+
+  
+# ----------------------
+# NORMALIDAD
+# ----------------------
+jb_val <- tryCatch(jarque.bera.test(rend)$p.value, error = function(e) NA)
+normalidad <- if (is.na(jb_val)) {
+  "Error normalidad"
+} else if (jb_val > 0.05) {
+  "Normalidad compatible RB"
+} else {
+  "Distribución no normal"
+}
+
+
+# ----------------------
+# Determinar HME resumen
+# ----------------------
+hme_resumen <- if(
+    incorrelacion_rend == "A favor HME" &
+    incorrelacion_rend2 == "A favor HME" &
+    grepl("RB", hurst) &
+    bds == "Se cumple HME"
+  ) "Sí" else "No"
+
+
+# ----------------------
+#MODELO
+# ----------------------
+modelo <- if(incorrelacion_rend == "En contra HME" & incorrelacion_rend2 == "En contra HME") {
+    "ARMA-GARCH"
+  } else if(incorrelacion_rend == "A favor HME" & incorrelacion_rend2 == "En contra HME") {
+    "GARCH"
+  } else {
+    "No aplica"
+  }
+
+
+
+# ----------------------
+# GRÁFICOS
+# ----------------------
+subfolder <- file.path(out_dir, nombre_activo)
+  if(!dir.exists(subfolder)) dir.create(subfolder)
+
+# ACF / PACF con ggplot
+g_acf <- ggAcf(rend) + ggtitle(paste0("ACF - Rendimientos ", nombre_activo))
+ggsave(file.path(subfolder, "ACF_rendimientos.png"), g_acf, width=8, height=6)
+
+g_pacf <- ggPacf(rend) + ggtitle(paste0("PACF - Rendimientos ", nombre_activo))
+ggsave(file.path(subfolder, "PACF_rendimientos.png"), g_pacf, width=8, height=6)
+
+g_acf2 <- ggAcf(rend^2) + ggtitle(paste0("ACF - Rendimientos^2 ", nombre_activo))
+ggsave(file.path(subfolder, "ACF_rend2.png"), g_acf2, width=8, height=6)
+
+g_pacf2 <- ggPacf(rend^2) + ggtitle(paste0("PACF - Rendimientos^2 ", nombre_activo))
+ggsave(file.path(subfolder, "PACF_rend2.png"), g_pacf2, width=8, height=6)
+
+  
+  
+# Serie con bandas ±2SD
+serie <- as.numeric((rend))
+df <- data.frame(Fecha = 1:length(serie), Rendimiento = serie)
+media <- mean(df$Rendimiento)
+sd_val <- sd(df$Rendimiento)
+upper <- media + 2*sd_val
+lower <- media - 2*sd_val
+
+g_band <- ggplot(df, aes(x = Fecha, y = Rendimiento)) +
+  geom_line(color = "blue") +
+  geom_hline(yintercept = media, linetype = "dashed", color = "black") +
+  geom_hline(yintercept = upper, linetype = "dotted", color = "red") +
+  geom_hline(yintercept = lower, linetype = "dotted", color = "red") +
+  ggtitle(paste0("Serie temporal ±2SD - ", nombre_activo))
+
+ggsave(file.path(subfolder, "Serie_2SD.png"), g_band, width=8, height=6)
+
+
+# QQ-plot
+png(file.path(subfolder, "QQplot.png"), width=800, height=600)
+qqnorm(rend, main=paste0("QQ-Plot Rendimientos ", nombre_activo))
+qqline(rend)
+dev.off()
+
+
+    
+#Devolver fila
+data.frame(
+  Estacionariedad_Precios = estacionariedad_precio,
+  Estacionariedad_Rendimientos = estacionariedad_rend, Incorrelacion_Rendimientos = incorrelacion_rend,
+  Incorrelacion_Rend2 = incorrelacion_rend2,
+  Hurst = hurst,
+  BDS = bds,
+  Normalidad = normalidad, 
+  HME = hme_resumen, 
+  Modelo = modelo
+)
+}
+
+# ----------------------
+# Aplicar a todos los activos
+# ----------------------
+activos <- names(rendimientos_limpios)
+
+resultados <- lapply(activos, function(tk) {
+  precio <- precios_originales[[tk]]
+  rend <- rendimientos_limpios[[tk]]
+  
+  fila <- analizar_activo(precio, rend, nombre_activo = tk)
+  #fila$Activo <- tk
+  fila
+})
+
+# Combinar todo en una tabla final
+tabla_final <- do.call(rbind, resultados)
+
+tabla_final$Activo <- activos
+
+# Reordenar columnas
+tabla_final <- tabla_final[, c("Activo",
+                               "Estacionariedad_Precios", "Estacionariedad_Rendimientos",
+                               "Incorrelacion_Rendimientos", "Incorrelacion_Rend2",
+                               "Hurst", "BDS", "Normalidad", "HME", "Modelo")]
+
+
+# Mostrar tabla
+print(tabla_final)
+```
