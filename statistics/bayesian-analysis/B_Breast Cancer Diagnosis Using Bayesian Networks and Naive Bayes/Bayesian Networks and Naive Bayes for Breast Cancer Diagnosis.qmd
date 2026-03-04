@@ -1,0 +1,1015 @@
+---
+title: "Bayesian Networks and Naive Bayes for Breast Cancer Diagnosis"
+author: "Ángela Lomas Anglada"
+format: html
+editor: visual
+---
+
+## DATASET
+
+**Variable dependiente y binaria:** `diagnosis` con dos posibles valores: `'Maligno'` y `'Benigno'` . Esta variable indica la presencia o ausencia de cáncer maligno en los pacientes.
+
+**Objetivo:** Explorar métodos bayesianos mediante las redes bayesianas y compararlos con un Naive Bayes.
+
+### LIBRERIAS
+
+```{r}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(bnlearn) #le da formato a la red bayesiana
+library(caret)
+library(naivebayes)
+
+```
+
+```{r}
+data <- read_csv("data.csv", show_col_types = FALSE)
+data <- data[, 1:(ncol(data)-1)]
+#View(data)
+```
+
+```{r}
+str(data)
+summary(data)
+```
+
+### 1. DATAFRAME
+
+Crearemos primeramente un dataframe paralelo, **`datos_redes`**, donde las variables continuas serán transformadas a variables categóricas, para facilitar así el trabajo con redes bayesianas. Se trabaja con categorías y no con valores continuos, porque las probabilidades condicionales se calculan sobre conteos de ocurrencias.
+
+Examinaremos cómo cada variable continua se relaciona con la variable dependiente diagnosis, y según esa relación decidiremos cómo dividirla en categorías.
+
+Lo primero de todo cambiaremos las variables con nombres inconsistentes:
+
+```{r}
+colnames(data) <- gsub(" ", "_", colnames(data))
+```
+
+-   Selección de variables numéricas:
+
+```{r}
+continuous_vars <- names(data)[sapply(data, is.numeric)]
+continuous_vars
+```
+
+Observamos que de las 32 variables que tiene nuestro conjunto de datos, una de ellas es de tipo caracter, `diagnosis`. Las 31 variables restantes son numéricas. Una de las variables numéricas es el identificador, `id`. Las 30 variables restantes, realmente podemos verlas como 10 variables ya que están en verisiones distintas, es decir, de cada uan de ellas, tenemos su mean, sd y worst.
+
+Para este tipo de problemas de diagnóstico oncológico, resulta más informativo trabajar con las variables en su versión *worst*, ya que estas representan los valores más extremos observados en el tumor. Dichos valores suelen estar asociados a comportamientos más agresivos y, por tanto, a una mayor probabilidad de malignidad. Esta elección reduce la dimensionalidad del problema, evita redundancias entre variables altamente correlacionadas y mejora la interpretabilidad de las redes bayesianas.
+
+Por lo tanto, no categorizaremos las 30 variables numéricas, y lo haremos solo con las 10 variables comentadas.
+
+```{r}
+# Seleccionamos las variables a incluir
+worst_vars <- c("radius_worst","texture_worst", "perimeter_worst","area_worst","smoothness_worst", "compactness_worst","concavity_worst", "concave_points_worst","symmetry_worst", "fractal_dimension_worst")
+
+# Creamos el dataframe paralelo
+datos_redes <- data[, c("diagnosis", worst_vars)]
+
+# Revisamos el nuevo dataframe
+head(datos_redes)
+```
+
+-   Categorización de las 10 variables continuas seleciconadas:
+
+Ahora trabajaremos con el dataste paralelo que ha sido creado, el datos_redes. Vamoa a discretizar estas variables en unas 3-4 categorías de la forma que sean lo más informativas respecto a la variable dependiente. Automatizaremos el código:
+
+```{r}
+for(var in worst_vars){
+  p <- ggplot(datos_redes, aes_string(x=var, fill="diagnosis")) +
+    geom_histogram(position="identity", alpha=0.5, bins=30) +
+    ggtitle(paste("Distribución de", var, "según diagnosis")) +
+    theme_minimal()
+  
+  print(p)
+}
+```
+
+Interpretaremos cada uno de los gráficos para decidir de qué forma vamos a categorizar, de forma general, el eje y, representa el número de observaciones (frecuencia) y el eje x, son los valores de la variable, los histogramas son de distintos colores, el rosa para benigno y el azul para maligno. Lo ideal sería que los valores de benigno (histograma rosa) estuvieran desplazados a la izquierda (valores bajos) y los de malignos a la derecha, indicando valores altos. Además de que haya poco solapamiento entre grupos:\
+
+Vamos a interpretar estos histogramas de la siguiente forma:
+
+-   Los histogramas de `radius_worst`, `perimeter_worst`, `area_worst`, `concavity_worst` y `concave_points_worst` tienen una froma muy similar. En todos estos histogramas se observa una gran concentración de valores bajos asociada mayoritariamente a tumores benignos. En cambio, los valores elevados se concentran en diagnósticos malignos. Se observa una zona intermedia con solapamiento entre ambas clases, este no es elevado, lo que indica una buena capacidad discriminante de estas variables. Por este motivo, discretizamos estas variables en tres categorías (Bajo, Medio-bajo, Medio-alto y Alto). Estas variables, al representar características extremas del tumor, resultan especialmente relevantes para la identificación de patrones asociados a malignidad.
+
+-   En cuanto a los histogramas de `textura_worst`, `smoothness_worst`. En estos casos, se observa una distribución muy similar entre tumores benignos y malignos, con alto grado de solapamiento entre ambas clases. Aunque se observa una ligera tendencia a vlaores más elevados en tumores malignos, esta diferencia no resulta claramente discriminante de forma indivisual.
+
+-   En el caso de *`compactness_worst`*, se observa que los valores bajos se asocian con mayor frecuencia a tumores benignos, mientras que valores más elevados aparecen predominantemente en diagnósticos malignos. Sin embargo, existe una zona intermedia con solapamiento entre ambas clases.
+
+    Esta variable presenta una capacidad discriminante moderada, aportando información relevante que resulta especialmente útil cuando se combina con otras características morfológicas del tumor. Por ello, se discretizó en tres categorías (Bajo, Medio y Alto).
+
+-   El histograma de *`symmetry_worst`* muestra una relación moderada con el diagnóstico. Aunque los valores más elevados tienden a asociarse con tumores malignos, existe un solapamiento considerable entre ambas clases, especialmente en los valores intermedios.
+
+    A pesar de esta limitación, la simetría del tumor es una característica clínicamente relevante, por lo que se decidió discretizar la variable en tres categorías (Bajo, Medio y Alto) para su inclusión en modelos bayesianos multivariantes.
+
+-   La variable *`fractal_dimension_worst`* presenta distribuciones muy similares entre tumores benignos y malignos, con un elevado grado de solapamiento en prácticamente todo su rango de valores. Esto indica una capacidad discriminante limitada cuando se considera de forma aislada.
+
+    No obstante, dado que esta variable captura aspectos relacionados con la complejidad de los bordes del tumor, se decidió discretizarla en tres categorías (Bajo, Medio y Alto), permitiendo evaluar su posible contribución en combinación con otras variables dentro de la red bayesiana.
+
+```{r}
+# Muy discriminantes → 4 categorías
+vars_cuartiles <- c("radius_worst", "perimeter_worst", "area_worst",
+"concavity_worst", "concave_points_worst")
+# Moderadas/bajas → 3 categorías
+vars_terciles  <- setdiff(worst_vars, vars_cuartiles)
+```
+
+```{r}
+# Función para discretizar según número de categorías
+discretizar <- function(x, n_cats = 3) {
+  cortes <- quantile(x, probs = seq(0, 1, length.out = n_cats + 1), na.rm = TRUE)
+  factor(cut(x, breaks = cortes, include.lowest = TRUE,
+             labels = if(n_cats == 3) c("Bajo","Medio","Alto") else c("Bajo","Medio-bajo","Medio-alto","Alto")))
+}
+
+# Crear dataframe paralelo solo con diagnosis (factor)
+datos_redes <- data.frame(diagnosis = factor(data$diagnosis))
+
+# Iterar sobre las variables worst y discretizar según categoría
+for(var in worst_vars){
+  if(var %in% vars_cuartiles){
+    datos_redes[[var]] <- discretizar(data[[var]], n_cats = 4)
+  } else {
+    datos_redes[[var]] <- discretizar(data[[var]], n_cats = 3)
+  }
+}
+
+# Convertir todo a factor (por seguridad)
+datos_redes[] <- lapply(datos_redes, factor)
+
+# Revisar la estructura y tablas de frecuencia
+str(datos_redes)
+summary(datos_redes)
+```
+
+```{r}
+# -------------------------------
+# Crear tablas de frecuencia por variable para justificar discretización
+# -------------------------------
+cat("\n--- Tablas de frecuencia para justificación ---\n")
+for(var in worst_vars){
+  cat("\nFrecuencias de", var, "vs diagnosis:\n")
+  print(table(datos_redes[[var]], datos_redes$diagnosis))
+}
+```
+
+Justificación:
+
+Para las variables altamente discriminantes, vamosa discretizar en cuatro categorías (cuartiles) (Bajo, Medio-Bajo, Medio-Alto y Alto) de forma que los valores más extremos asociados a malignidad se reflejan más claramente. Las variables restantes, con disciminación moderada/limitada se discretizarán en tres niveles (Bajo, Medio, Alto), esta división de categorías es suficiente para capturar patrones informativos sin aumentar la comlejidad del modelo.
+
+### 2.REDES BAYESIANAS
+
+Seleccionaremos únicamente 6 variables predictivas, para predecir diagnosis y construir las redes bayesianas. Serán `radius_worst_cat`, `perimeter_worst_cat`, `area_worst_cat`, estas reflejan características extremas del tumor, y son muy discriminantes entre benigno y maligno, como hemos comprobado anteriormente con los histogramas. Además de estas, seelccioanremos también `concavity_worst_cat`, `concave_points_worst_cat` y `compactness_worst_cat`, ya que aportan infromación morfológica compelmentaria, capturando fromas y complejidad del tumor que pueden mejorar la predicción cuando se consideran de manera conjunta.
+
+```{r}
+# Variables predictivas seleccionadas
+predictoras <- c("radius_worst", "perimeter_worst", "area_worst", "concavity_worst", "concave_points_worst", "compactness_worst")
+
+# Crear nuevo dataframe para redes bayesianas
+datos_redes <- datos_redes[, c("diagnosis", predictoras)]
+```
+
+###### A. Genera una red bayesiana con estructura y probabilidades manuales (No es necesario que esta red tenga un buen poder predictivo, pero sí procura justificar superficialmente por qué las probabilidades indicadas).
+
+En este apartado lo que haremos será constriur una red bayesiana manual con las 6 variables predictivas seleccionadas y asignar probabilidades de forma 'manual' o basada en frecuencias observadas, además explicaremos los conceptos de Markov Blanket y d-separation.
+
+-   Creación del DAG
+
+```{r}
+library(bnlearn)
+dag_a <- model2network("[radius_worst][perimeter_worst|radius_worst][area_worst|radius_worst][concavity_worst|area_worst][concave_points_worst|concavity_worst][compactness_worst|concavity_worst][diagnosis|area_worst:concavity_worst:compactness_worst]")
+
+plot(dag_a)
+```
+
+En esta rpiemra red con estructura manual, asumiremos que diagnóstico depende principalmente de características del tumor (área, concavidad y compactación), y otras medidas más básicas, actúan como variables intermedias.
+
+La variable `radious_worst` es elegido padre de las variables `perimeter_worst` y `area_worst`. Esta relación refleja la dependencia geométrica natural entre estas medidas, un aumento en el radio del tumor implica necesariamente un incremento tanto en el perímetro como en el área, estas variables están claramente correlacionadas por definición matemática.
+
+La variable `concavity_worst` también se define como hija de `area_worst`. Esto se basa en la hipótesis de que tumores de mayor tamaño tienden a presentar bordes más irregulares y complejos. Desde un punto de vista clínico, la concavidad refleja alteraciones estructurales del contorno del tumor que suelen intensificarse conforme aumenta su tamaño.
+
+A su vez, `concave_points_worst` y `compactness_worst` dependen de `concavity_worst`. Estas describen características morfológicas más finas relacionadas con la irregularidad del borde tumoral.
+
+Finalmente, el nodo `diagnosis` se modela como dependiente de `area_worst`, `concavity_worst` y `compactness_worst`. Esta elección se debe a que el diagnóstico dependa de variables que integran información relevante de tamaño y forma. Y decidimos así que estas son las variables que resumen adecuadamente los aspectos más encesarios del tumor.
+
+-   Asignación de probabilidades
+
+Niveles:
+
+```{r}
+lev_cat1 <- c("Bajo", "Meido-bajo" ,"Medio-alto", "Alto")
+lev_cat2 <- c("Bajo","Medio","Alto") 
+lev_diag <- c("Benigno","Maligno")
+```
+
+Nodos sin padres:
+
+```{r}
+# 1. radious_worst
+radius.cpt <- array(
+  c(0.30, 0.35, 0.25, 0.10),
+  dim = 4,
+  dimnames = list(radius_worst = lev_cat1))
+sum(radius.cpt)
+```
+
+La variable redius_worst, es un nodo raíz, eso significa que no tiene padres y por ello su CPT con las probabilidades marginales para cada una de las cuatro categorías. Seleccionamos estas probabilidades porque la mayoría de los tumores suelen estar en categorías bajas o intermedias de tamaño y solo un pequeño porcentaje alcanza esos valores altos. El 0.30 en bajo se debe a que muchos tumores son pequeños, pero no obtiene el porcentaje mayor, ya que 0.35 se lo adjudicamos a la categoría de Medio-bajo porque es la zoma más frecuente del radio. En Medio-alto asignamos un 0.25, porque un número menor de tumores se encuentra en esta categoría y finalemnte 0.10 al nivel Alto, ya que los tumores muy grandes son raros.
+
+Nodos con padres:
+
+```{r}
+# tienen como padre a redius_worst:
+# 1. perimeter_worst
+perimeter.cpt <- array(
+  c(# radius_worst = Bajo
+    0.60, 0.20, 0.15, 0.05,
+    # radius_worst = Medio-bajo
+    0.25, 0.40, 0.25, 0.10,
+    # radius_worst = Medio-alto
+    0.10, 0.25, 0.40, 0.25,
+    # radius_worst = Alto
+    0.05, 0.10, 0.25, 0.60),
+  dim = c(4,4),
+  dimnames = list(perimeter_worst = lev_cat1,
+                  radius_worst = lev_cat1))
+apply(perimeter.cpt, 2, sum)
+
+# 2. area_worst
+area.cpt <- array(
+  c(# radius_worst = Bajo
+    0.65, 0.20, 0.10, 0.05,
+    # radius_worst = Medio-bajo
+    0.25, 0.40, 0.25, 0.10,
+    # radius_worst = Medio-alto
+    0.10, 0.25, 0.40, 0.25,
+    # radius_worst = Alto
+    0.05, 0.10, 0.25, 0.60),
+  dim = c(4,4),
+  dimnames = list(area_worst = lev_cat1,
+                  radius_worst = lev_cat1))
+apply(area.cpt, 2, sum)
+
+
+#tienen como padre a area_worst
+# 1. concavity
+concavity.cpt <- array(
+  c(# area_worst = Bajo
+    0.55, 0.25, 0.15, 0.05,
+    # area_worst = Medio-bajo
+    0.30, 0.35, 0.25, 0.10,
+    # area_worst = Medio-alto
+    0.15, 0.30, 0.35, 0.20,
+    # area_worst = Alto
+    0.05, 0.15, 0.30, 0.50),
+  dim = c(4,4),
+  dimnames = list(concavity_worst = lev_cat1,
+                  area_worst = lev_cat1))
+apply(concavity.cpt, 2, sum)
+
+
+#tienen como padre concavity_worst
+# 1. concave
+concave_points.cpt <- array(
+  c(# concavity_worst = Bajo
+    0.60, 0.25, 0.10, 0.05,
+    # concavity_worst = Medio-bajo
+    0.25, 0.40, 0.25, 0.10,
+    # concavity_worst = Medio-alto
+    0.10, 0.25, 0.40, 0.25,
+    # concavity_worst = Alto
+    0.05, 0.10, 0.25, 0.60),
+  dim = c(4,4),
+  dimnames = list(concave_points_worst = lev_cat1,
+                  concavity_worst = lev_cat1))
+apply(concave_points.cpt, 2, sum)
+
+# 2. compactness
+compactness.cpt <- array(
+  c(# concavity_worst = Bajo
+    0.70, 0.25, 0.05,
+    # concavity_worst = Medio-bajo
+    0.30, 0.50, 0.20,
+    # concavity_worst = Medio-alto
+    0.10, 0.40, 0.50,
+    # concavity_worst = Alto
+    0.05, 0.25, 0.70),
+  dim = c(3,4),
+  dimnames = list(compactness_worst = lev_cat2,
+                  concavity_worst = lev_cat1))
+apply(compactness.cpt, 2, sum)
+
+
+#tiene como padres area_worst, concavity_worst y compactness_worst:
+# 1. diagnosis
+diagnosis.cpt <- array(0, dim = c(2,4,4,3),
+                       dimnames = list(
+                         diagnosis = lev_diag,
+                         area_worst = lev_cat1,
+                         concavity_worst = lev_cat1,
+                         compactness_worst = lev_cat2
+                       ))
+
+# Asignamos probabilidades "manuales" de manera lógica
+for(a in lev_cat1){
+  for(c in lev_cat1){
+    for(k in lev_cat2){
+      # Si todas las medidas altas → maligno
+      if(a=="Alto" & c=="Alto" & k=="Alto"){
+        diagnosis.cpt["Maligno",a,c,k] <- 0.95
+        diagnosis.cpt["Benigno",a,c,k] <- 0.05
+      }
+      # Si todas bajas → benigno
+      else if(a=="Bajo" & c=="Bajo" & k=="Bajo"){
+        diagnosis.cpt["Maligno",a,c,k] <- 0.05
+        diagnosis.cpt["Benigno",a,c,k] <- 0.95
+      }
+      # Si intermedio → moderado
+      else if(a %in% c("Medio-bajo","Medio-alto") | 
+              c %in% c("Medio-bajo","Medio-alto") |
+              k == "Medio"){
+        diagnosis.cpt["Maligno",a,c,k] <- 0.50
+        diagnosis.cpt["Benigno",a,c,k] <- 0.50
+      }
+      # Otros casos (mezcla de alto y bajo)
+      else{
+        diagnosis.cpt["Maligno",a,c,k] <- 0.70
+        diagnosis.cpt["Benigno",a,c,k] <- 0.30
+      }
+    }
+  }
+}
+all(apply(diagnosis.cpt, 2:4, sum) == 1)
+```
+
+El nodo `perimeter_worst`, tiene como padre a radius_worst, esto de debe a que el perímetro del tumor está fuertemente correlacionado con su radio. Tumores con radio pequeño suelen tener un perímetro pequeño y viceversa. Las probabilidades escogidas siguen la lógica que que duando un radio es Bajo, la mayoría de sus perímetros serán bajos (0.6). Cuando el radio es Medio-bajo,la probabilidad máxima se desplaza a un perímetro Medio-bajo (0.4), aunque sigue habiendo algo de dispersión hacia las categorías Bajo y Medio-Alto porque sigue habiendo variablidadad. Y por útlimo cuando el radio es Alto, la mayor probabilidad es que el perímetro sea también Alto (0.6) y siendo casi nula (0.05) la probabilidad de perímetros bajos teniendo radios Altos.
+
+El nodo `area_worst`, también tiene como padre a radius_worst, ya que el área del tumor depende también del radio. La lógica es la misma que antes. Para un radio Bajo, las áreas bajas tenderán una probabilidad de 0.65. Y un 0.05 ya que es raro tener un radio pequeño y un área grande.
+
+El nodo `concavity_worst` tiene como padre a area_worst. Esto se debe a que la concavidad de un tumor suele aumentar a medida que el área es más grande. Los tumores pequeños tienden a ser más regulares (menor concavidad), mientras que los tumores grandes pueden teenr formas más irregulares (mayor concavidad). La mayoría de lso tumores pequeños tienen una concavidad baja cuando el área también lo es, por ello la probabilidad de 0.55. Cuando el área pertenece a un nivel Medio-bajo, la probabilidad máxima pertenecerá al nivel de concavidad Medio-bajo con un 0.35, refelejando que los tumores medianos suelen tener un poco más de concavidad. Cundo pasamos al siguiente nivel, asiganremos la mayor probabilidad (0.35), cuando el área tenga un nivel Medio-alto y la concavidad también pertenezca a ese nivel. Y por último el area_worst Alto, la mayor probabilidad será la de una concavidad Alta (0.5), reflejando que los tumores muy grandes suelen tener concavidad pronunciada.
+
+El nodo `concave_points_worst`, cuyo padre es concavity_worst. Los puntos cóncavos suelen aumentar cuando la concavidad general del tumor es mayor, por lo que tumores más irregulares tienden a tener más puntos cóncavos visibles. Por ello cuando el cóncavo es bajo, la mayoría de lso tumores tienen pocos puntos cóncavos (bajo=0.6). Para un nivel Medio-alto y Medio-bajo la máxima probabilidad está en Medio-alto y Medio-bajo respectivamente (0.4) y cuando tneemos una concavity Alta, la mayor probabilidad se encontrará en Alto (0.6), indicando de esta forma que tumores muy irregulares tienden a tener mucho puntos cóncavos.
+
+El nodo `compactness_worst` también tiene como padre a concavity_worst. Las probabilidades elegidas son que cuando la concavity es Baja, la mayoría de los tumores tienen compactness Bajo (0.70) tanto para Medio-bajo y Medio-alto, la mayor porbabilidad se encuentra en Medio y Alto (0.5) respectivamente. Y por último para un concavity Alto la probabilidad de un compactness Alto es de 0.7, reflejando que los tumores muy irregulares suelen ser compactos.
+
+Para el nodo diagnosis, hijo de area_worst, concavity_worst y compactness_worst, vamos a explicar la selección de dichas probabilidades. Cuando todas las medidas son altas, asignaremos una P(maligno) = 0.95 y P(benigno) = 0.05, esto lo decidimos así porque tumores grandes, muy irregulares y compactos tienen un riesgo muy alto de malignidad. Si todas estas medidas son bajas, las probabilidades son contrarias, es decir, P(benigno) = 0.95 y P(maligno) = 0.05, ya que un tumor pequeño, regular y poco compacto es muy probable que sea benigno. Si alguna de las variables tiene una categoría intermedia, asignaremos la probabilidad de P(maligno) = P(benigno) = 0.5, lo decidimos así ya que no hay suficiente evidencia para favorecer una clase sobre otra. Y cuando las variables presentan combinaciones de valores altos y bajos que no encajan en exteremos o intermedios, asiganremos P(maligno) = 0.7 y P(benigno) = 0.3. Porque con la presencia de un valor extremo, hace que aumente la probabilidad de malignidad.
+
+-   Ajustamos la red
+
+```{r}
+fit_a <- custom.fit(
+  dag_a,
+  dist = list(radius_worst = radius.cpt,
+              perimeter_worst = perimeter.cpt,
+              area_worst = area.cpt,
+              concavity_worst = concavity.cpt,
+              concave_points_worst = concave_points.cpt,
+              compactness_worst = compactness.cpt,
+              diagnosis = diagnosis.cpt))
+
+fit_a
+```
+
+-   Markov Blanket:
+
+```{r}
+nodos <- c("radius_worst", "perimeter_worst", "area_worst", 
+           "concavity_worst", "concave_points_worst", 
+           "compactness_worst", "diagnosis")
+
+cat("=== Markov Blanket de cada nodo ===\n")
+for (n in nodos) {
+  mb_n <- mb(fit_a, n)  # calculamos Markov Blanket
+  cat("Markov Blanket de", n, ":", paste(mb_n, collapse = ", "), "\n")
+}
+```
+
+El **Markov Blanket** de un nodo nos indica el conjunto mínimo de nodos que necesitamos conocer para predecirlo sin depender del resto de la red.
+
+-   **`radius_worst`**: Su Markov Blanket incluye `area_worst` y `perimeter_worst`, que son sus nodos hijos. Esto indica que el tamaño máximo del tumor se refleja principalmente en el área y el perímetro máximos, y conocer estas dos variables nos proporciona toda la información relevante sobre el radio para inferencia.
+
+<!-- -->
+
+-   **`perimeter_worst`**: Solo depende de `radius_worst`, lo que refleja que el perímetro máximo está casi completamente explicado por el radio máximo del tumor.
+
+<!-- -->
+
+-   **`area_worst`**: Su Markov Blanket incluye `compactness_worst`, `concavity_worst`, `diagnosis` y `radius_worst`. Esto indica que el área máxima del tumor está relacionada tanto con su tamaño (`radius_worst`) como con su forma (`concavity_worst` y `compactness_worst`) y, en última instancia, con la probabilidad de malignidad (`diagnosis`).
+
+<!-- -->
+
+-   **`concavity_worst`**: Su Markov Blanket está formado por `area_worst`, `compactness_worst`, `concave_points_worst` y `diagnosis`. Esto refleja que la concavidad máxima depende del área, influye en la cantidad de puntos cóncavos extremos y contribuye a la predicción del diagnóstico.
+
+<!-- -->
+
+-   **`concave_points_worst`**: Solo depende de `concavity_worst`, lo que significa que el número de puntos cóncavos extremos está prácticamente determinado por la concavidad del tumor y no aporta información adicional directa sobre el diagnóstico una vez conocida esta última.
+
+<!-- -->
+
+-   **`compactness_worst`**: Su Markov Blanket incluye `area_worst`, `concavity_worst` y `diagnosis`. Esto indica que la compacidad máxima depende del tamaño y forma del tumor y está estrechamente relacionada con la probabilidad de malignidad.
+
+<!-- -->
+
+-   **`diagnosis`**: Su Markov Blanket está formado por `area_worst`, `concavity_worst` y `compactness_worst`. Esto confirma que para inferir si un tumor es benigno o maligno, basta con conocer estas tres variables; las demás variables (`radius_worst`, `perimeter_worst`, `concave_points_worst`) no aportan información adicional una vez conocidas estas tres medidas clave.
+
+<!-- -->
+
+-   D-separation:
+
+```{r}
+# === D-separation según la Markov Blanket ===
+cat("\n=== Ejemplos de D-separation según Markov Blanket ===\n\n")
+
+# 1. radius_worst
+# Markov Blanket: area_worst, perimeter_worst
+cat("radius_worst ⊥ concavity_worst | area_worst: ",
+    dsep(dag_a, "radius_worst", "concavity_worst", "area_worst"), "\n")
+cat("radius_worst ⊥ concavity_worst | perimeter_worst: ",
+    dsep(dag_a, "radius_worst", "concavity_worst", "perimeter_worst"), "\n")
+
+# 2. perimeter_worst
+# Markov Blanket: radius_worst
+cat("perimeter_worst ⊥ concave_points_worst | radius_worst: ",
+    dsep(dag_a, "perimeter_worst", "concave_points_worst", "radius_worst"), "\n")
+
+# 3. area_worst
+# Markov Blanket: compactness_worst, concavity_worst, diagnosis, radius_worst
+cat("area_worst ⊥ concave_points_worst | concavity_worst: ",
+    dsep(dag_a, "area_worst", "concave_points_worst", "concavity_worst"), "\n")
+cat("area_worst ⊥ concave_points_worst | compactness_worst: ",
+    dsep(dag_a, "area_worst", "concave_points_worst", "compactness_worst"), "\n")
+
+# 4. concavity_worst
+# Markov Blanket: area_worst, compactness_worst, concave_points_worst, diagnosis
+cat("concavity_worst ⊥ perimeter_worst | area_worst: ",
+    dsep(dag_a, "concavity_worst", "perimeter_worst", "area_worst"), "\n")
+
+# 5. concave_points_worst
+# Markov Blanket: concavity_worst
+cat("concave_points_worst ⊥ radius_worst | concavity_worst: ",
+    dsep(dag_a, "concave_points_worst", "radius_worst", "concavity_worst"), "\n")
+cat("concave_points_worst ⊥ perimeter_worst | concavity_worst: ",
+    dsep(dag_a, "concave_points_worst", "perimeter_worst", "concavity_worst"), "\n")
+cat("concave_points_worst ⊥ area_worst | concavity_worst: ",
+    dsep(dag_a, "concave_points_worst", "area_worst", "concavity_worst"), "\n")
+
+# 6. compactness_worst
+# Markov Blanket: area_worst, concavity_worst, diagnosis
+cat("compactness_worst ⊥ perimeter_worst | area_worst: ",
+    dsep(dag_a, "compactness_worst", "perimeter_worst", "area_worst"), "\n")
+cat("compactness_worst ⊥ concave_points_worst | concavity_worst: ",
+    dsep(dag_a, "compactness_worst", "concave_points_worst", "concavity_worst"), "\n")
+
+# 7. diagnosis
+# Markov Blanket: area_worst, concavity_worst, compactness_worst
+cat("diagnosis ⊥ radius_worst | area_worst: ",
+    dsep(dag_a, "diagnosis", "radius_worst", "area_worst"), "\n")
+cat("diagnosis ⊥ perimeter_worst | concavity_worst: ",
+    dsep(dag_a, "diagnosis", "perimeter_worst", "concavity_worst"), "\n")
+cat("diagnosis ⊥ concave_points_worst | compactness_worst: ",
+    dsep(dag_a, "diagnosis", "concave_points_worst", "compactness_worst"), "\n")
+```
+
+El resultado de TRUE indica que sí son independientes dado el nodod de condicionamiento. El FALSE indica que no son independientes, es decir, que existe un camino activo de influencia.
+
+El análisis de d-separación confirma cómo las variables se relacionan condicionalmente según el Markov Blanket. El radio máximo y la concavidad son independientes si se conoce el área, pero no si solo se conoce el perímetro, reflejando que el área captura la información principal sobre el tamaño del tumor. El perímetro y los puntos cóncavos extremos son independientes dado el radio, mientras que el área y los puntos cóncavos son independientes solo conociendo la concavidad, pero no con la compacidad, indicando caminos activos residuales. La concavidad y el perímetro son independientes dado el área, y los puntos cóncavos son independientes de radio, perímetro y área una vez conocida la concavidad, confirmando que esta variable central determina la forma extrema. La compacidad máxima es independiente del perímetro y de los puntos cóncavos dado área y concavidad. Finalmente, el diagnóstico depende principalmente de área, concavidad y compacidad: es independiente del radio, pero el perímetro y los puntos cóncavos aún aportan información si solo se conoce una de las otras variables, evidenciando que la predicción de malignidad combina información de varias medidas de tamaño y forma del tumor.
+
+-   Inferencia
+
+Queremos saber cuál es la probabilidad de que el diagnóstico sea maligno dado que el área del tumor es Alto y la concavidad también lo es. El resultado es de 0.841, es decir, un 84% de probabilidad de malignidad
+
+```{r}
+cpquery(fit_a, event = (diagnosis=="Maligno"),          evidence = (area_worst=="Alto" & concavity_worst=="Alto"))
+```
+
+------------------------------------------------------------------------
+
+###### B. Genera una red bayesiana con estructura manual y justificada.
+
+-   Creación manual del DAG:
+
+Las variables `radius_worst`, `perimeter_worst` y `area_worst` están estrechamente relacionadas porque todas miden la **extensión o tamaño del tumor**, aunque desde perspectivas ligeramente diferentes: el radio indica la dimensión máxima, el perímetro mide el contorno y el área refleja la superficie total. Estas medidas son naturalmente correlacionadas, de modo que cambios en el radio suelen reflejarse directamente en el perímetro y, a su vez, en el área. Por ello, en el DAG `radius_worst` actúa como padre de `perimeter_worst`, y `perimeter_worst` como padre de `area_worst`, reflejando la cadena de dependencia entre estas medidas.
+
+Las variables `concavity_worst` y `concave_points_worst` capturan las **irregularidades y características morfológicas extremas** del tumor. La concavidad máxima del tumor determina la aparición de puntos cóncavos extremos, por lo que `concavity_worst` es padre de `concave_points_worst`. A su vez, `concave_points_worst` influye en `compactness_worst`, que mide la **compacidad del tumor**; esto refleja que la forma general del tumor (cuánto se aleja de un contorno regular) está parcialmente determinada por la distribución de sus puntos cóncavos extremos.
+
+Finalmente, el nodo `diagnosis` depende de **todas las variables anteriores**, ya que la probabilidad de que un tumor sea benigno o maligno se ve influida tanto por su tamaño (radio, perímetro y área) como por sus características morfológicas (concavidad, puntos cóncavos y compacidad). Esta estructura permite capturar tanto los efectos directos como las interacciones indirectas entre las variables, asegurando que la inferencia sobre el diagnóstico utilice toda la información relevante.
+
+```{r}
+dag <- model2network("[radius_worst][perimeter_worst|radius_worst][area_worst|perimeter_worst][concavity_worst][concave_points_worst|concavity_worst][compactness_worst|concave_points_worst][diagnosis|radius_worst:perimeter_worst:area_worst:concavity_worst:concave_points_worst:compactness_worst]")
+
+# DAG: Gráfico Atípico Dirigido
+plot(dag)
+```
+
+-   Probabilidades y estados
+
+    Niveles:
+
+```{r}
+lev_cat1 <- c("Bajo", "Meido-bajo" ,"Medio-alto", "Alto")
+lev_cat2 <- c("Bajo","Medio","Alto") 
+lev_diag <- c("Benigno","Maligno")
+```
+
+Para las **variables sin padres** (`radius_worst_cat`, `concativity_worst_cat`) asignamos **probabilidades marginales**. Las **variables dependientes** (`perimeter_worst_cat`, `area_worst_cat`, `concave_points_worst_cat` y `caompacteness_worst_cat` y `diagnosis`) tienen tablas de **probabilidad condicionales** según sus padres.
+
+Cálculo de las **probabilidades margianles** de los **nodos sin padres**:
+
+Lo calculamos dividiendo la frecuencia en cada categoría y dividiéndola por el total de observaciones, estas probbailidades marginales son calculadas directamente a pertir de las frecuencias observadas en los datos
+
+```{r}
+# Probabilidades marginales de radius_worst (4 categorías)
+table_radius <- table(datos_redes$radius_worst)
+prob_radius <- table_radius / sum(table_radius)
+prob_radius
+
+# Probabilidades marginales de concavity_worst (4 categorías)
+table_concavity <- table(datos_redes$concavity_worst)
+prob_concavity <- table_concavity / sum(table_concavity)
+prob_concavity
+```
+
+```{r}
+#NODOS SIN PADRES:
+#radius_worst:
+radius_worst.cpt <- array(as.numeric(prob_radius),dim = 4, dimnames = list(radius_worst = lev_cat1))
+radius_worst.cpt
+sum(radius_worst.cpt)  # debe ser 1
+
+#concavity_worst:
+concavity_worst.cpt <- array(as.numeric(prob_concavity),dim = 4, dimnames = list(concavity_worst = lev_cat1))
+concavity_worst.cpt
+sum(concavity_worst.cpt)  # debe ser 1
+```
+
+Cálculo de las **probabilidades condicionales** de los **nodos con padres**, en esta parte calculamos tablas de probabilidad condicionales usando las frecuencias condicionales
+
+```{r}
+# Probabilidades condicionales 
+# 1. P(perimeter_worst | radius_worst)
+prob_per_rad <- prop.table(table(datos_redes$perimeter_worst, datos_redes$radius_worst), margin = 2)
+prob_per_rad
+
+# 2. P(area_worst | perimeter_worst)
+prob_area_per <- prop.table(table(datos_redes$area_worst,
+datos_redes$perimeter_worst), margin = 2)
+prob_area_per
+
+# 3. P(concave_points_worst | concavity_worst)
+prob_concave_concavity <- prop.table(table(datos_redes$concave_points_worst,
+datos_redes$concavity_worst), margin = 2)
+prob_concave_concavity
+
+# 4. P(compactness_worst | concave_points_worst)
+prob_comp_concave <- prop.table(table(datos_redes$compactness_worst,
+datos_redes$concave_points_worst), margin = 2)
+prob_comp_concave
+```
+
+```{r}
+#NODOS CON UN SOLO PADRE:
+# 1.perimeter_worst
+perimeter_worst.cpt <- array(
+  as.numeric(prob_per_rad),
+  dim = c(length(lev_cat1), length(lev_cat1)),
+  dimnames = list(perimeter_worst = lev_cat1, radius_worst = lev_cat1) 
+)
+
+apply(perimeter_worst.cpt, 2, sum)  # todas deben dar 1
+
+# 2.area_worst
+area_worst.cpt <- array(
+  as.numeric(prob_area_per),
+  dim = c(length(lev_cat1), length(lev_cat1)),
+  dimnames = list(area_worst = lev_cat1, perimeter_worst = lev_cat1)
+)
+apply(area_worst.cpt, 2, sum)
+
+# 3.concave_ponits_worst
+concave_points_worst.cpt <- array(
+  as.numeric(prob_concave_concavity),
+  dim = c(length(lev_cat1), length(lev_cat1)),
+  dimnames = list(concave_points_worst = lev_cat1, concavity_worst = lev_cat1)
+)
+apply(concave_points_worst.cpt, 2, sum)
+
+# 4.compactness_worst
+compactness_worst.cpt <- array(
+  as.numeric(prob_comp_concave),
+  dim = c(length(lev_cat2), length(lev_cat1)),
+  dimnames = list(compactness_worst = lev_cat2, concave_points_worst = lev_cat1)
+)
+apply(compactness_worst.cpt, 2, sum)
+```
+
+Generamos un CPT multidimensional considerando todos los padres. Calculando las probabilidades observadas de cada categoría de diagnosis dedo la combinación de los padres, usamos el suavizado de Laplace para evitar ceros
+
+```{r}
+#NODO CON VARIOS PADRES:
+# Niveles de los padres
+parents_levels <- list(
+  radius_worst = lev_cat1,
+  perimeter_worst = lev_cat1,
+  area_worst = lev_cat1,
+  concavity_worst = lev_cat1,
+  concave_points_worst = lev_cat1,
+  compactness_worst = lev_cat2)
+
+# Dimensiones: diagnosis + padres
+dims <- c(length(lev_diag), sapply(parents_levels, length))
+names_dim <- c(list(diagnosis = lev_diag), parents_levels)
+
+# Inicializar la CPT con ceros
+diagnosis.cpt <- array(0, dim = dims, dimnames = names_dim)
+# Rellenar con frecuencias observadas suavizadas (Laplace +1)
+for (r in lev_cat1) {
+  for (p in lev_cat1) {
+    for (a in lev_cat1) {
+      for (c in lev_cat1) {
+        for (cp in lev_cat1) {
+          for (cm in lev_cat2) {
+            tab <- subset(datos_redes,
+                          radius_worst == r &
+                          perimeter_worst == p &
+                          area_worst == a &
+                          concavity_worst == c &
+                          concave_points_worst == cp &
+                          compactness_worst == cm)
+            frec <- table(tab$diagnosis)
+            # Suavizado +1 para evitar ceros
+            prob <- (frec + 1) / sum(frec + 1)
+            diagnosis.cpt[, r, p, a, c, cp, cm] <- prob
+          }
+        }
+      }
+    }
+  }
+}
+
+# Verificación: cada combinación de padres suma 1
+all(apply(diagnosis.cpt, 2:7, sum) == 1)  # TRUE
+```
+
+-   Ajustamos la red
+
+```{r}
+fit <- custom.fit(dag, dist = list(
+  radius_worst = radius_worst.cpt,
+  perimeter_worst = perimeter_worst.cpt,
+  area_worst = area_worst.cpt,
+  concavity_worst = concavity_worst.cpt,
+  concave_points_worst = concave_points_worst.cpt,
+  compactness_worst = compactness_worst.cpt,
+  diagnosis = diagnosis.cpt ))
+#fit
+```
+
+-   Markov Blanket
+
+```{r}
+# Markov Blanket de cada nodo
+nodos <- c(predictoras, "diagnosis")
+cat("=== Markov Blanket de cada nodo ===\n")
+for (n in nodos) {
+  mb_n <- mb(fit, n)  
+  cat("Markov Blanket de", n, ":", paste(mb_n, collapse = ", "), "\n")
+}
+```
+
+El Markov Blanket de un nodo indica el conjunto mínimo de variables que es necesario conocer para inferir dicho nodo sin depender del resto de la red. A diferencia del apartado A, en esta red la estructura del DAG define al nodo *diagnosis* como dependiente directo de todas las variables predictivas consideradas. Esta decisión se tomó para reflejar que, desde un punto de vista clínico y empírico, tanto las medidas de tamaño como las características morfológicas del tumor pueden aportar información relevante para el diagnóstico.
+
+Como consecuencia de esta estructura, el Markov Blanket de *diagnosis* está formado por todas las variables del modelo: *radius_worst, perimeter_worst, area_worst, concavity_worst, concave_points_worst* y *compactness_worst*. Esto indica que ninguna de estas variables resulta condicionalmente independiente del diagnóstico una vez consideradas las demás, lo que refleja un enfoque deliberadamente exhaustivo en la modelización del proceso de decisión clínica.
+
+De forma análoga, el Markov Blanket del resto de nodos también incluye la mayoría de las variables, ya que todas ellas comparten al nodo *diagnosis* como hijo común.
+
+-   D-separation
+
+```{r}
+cat("\n=== Ejemplos de D-separation (Apartado B) ===\n\n")
+
+# Aunque condicionemos por una variable intermedia, el camino sigue activo
+cat("radius_worst ⊥ concavity_worst | area_worst: ",
+    dsep(dag, "radius_worst", "concavity_worst", "area_worst"), "\n")
+
+cat("perimeter_worst ⊥ concave_points_worst | concavity_worst: ",
+    dsep(dag, "perimeter_worst", "concave_points_worst", "concavity_worst"), "\n")
+
+cat("area_worst ⊥ compactness_worst | concave_points_worst: ",
+    dsep(dag, "area_worst", "compactness_worst", "concave_points_worst"), "\n")
+
+# diagnosis conecta todo
+cat("radius_worst ⊥ concavity_worst | diagnosis: ",
+    dsep(dag, "radius_worst", "concavity_worst", "diagnosis"), "\n")
+```
+
+Los resultados de d-separation obtenidos son coherentes con la estructura del DAG definido en este apartado. Aunque la red presenta una estructura densa debido a que el nodo *diagnosis* depende de todas las variables predictivas, todavía se observan independencias condicionales cuando se condiciona en nodos que actúan como mediadores directos dentro de cadenas causales bien definidas.
+
+Por ejemplo, *radius_worst* y *concavity_worst* resultan independientes al condicionar sobre *area_worst*, lo que refleja que el área bloquea la transmisión de información entre medidas de tamaño y características morfológicas. De forma similar, *perimeter_worst* y *concave_points_worst* son independientes al conocer la concavidad, confirmando el papel central de esta variable en la descripción de la irregularidad del tumor.
+
+En contraste, al condicionar sobre *diagnosis*, se observa que no se cumple la independencia entre *radius_worst* y *concavity_worst*, ya que el diagnóstico actúa como un colisionador que activa caminos entre variables de tamaño y forma. Este comportamiento es consistente con la teoría de d-separation y pone de manifiesto cómo la estructura del DAG determina qué variables bloquean o activan la transmisión de información.
+
+###### C. Ajusta una red bayesiana con estructura automática.
+
+En este apartado se aprende la estructura de la red bayesiana de forma automática mediante el algoritmo Hill-Climbing, que busca maximizar una función de puntuación (BIC) basándose exclusivamente en los datos, sin incorporar conocimiento previo.
+
+USAR ALGORITMO DE APRENDIZAJE DE ESTRUCTURA (HILL-CLIMBING), QUE PERMITE DESCUBIRR RELACIONES NO EVIDENTES ENTRE LAS VARIABLES. EXPLICAR CÓMO LA ESTRUCTURA DE DIFERENCIA DE LA MANUAL. EXPLICAR QUÉ NDOOS APARECEN COMO PADRES DE DIAGNOSIS
+
+-   Creamos el DAG
+
+```{r}
+dag_c <- hc(datos_redes)  # Hill-Climbing
+plot(dag_c)
+```
+
+El DAG resultante muestra una estructura distinta a las redes manuales definidas anteriormente. En particular, el algoritmo identifica a **concave_points_worst** como el único padre directo del nodo *diagnosis*. Esto indica que, desde un punto de vista puramente estadístico, el número de puntos cóncavos extremos concentra la mayor parte de la información predictiva sobre el diagnóstico, haciendo que otras variables no aporten mejora adicional significativa una vez incluida esta medida.
+
+Asimismo, se mantienen relaciones coherentes entre variables morfológicas, como la influencia de *concavity_worst* sobre *concave_points_worst* y *compactness_worst*, lo que concuerda tanto con el conocimiento clínico como con las estructuras manuales propuestas en los apartados anteriores.
+
+Por otro lado, el algoritmo aprende una relación en la que *diagnosis* actúa como padre de *radius_worst*, que a su vez influye en *perimeter_worst* y *area_worst*. Esta dirección no debe interpretarse de forma causal, sino como una dependencia estadística: los tumores malignos tienden a ser de mayor tamaño, y el algoritmo modela esta asociación en la dirección que maximiza el ajuste a los datos.
+
+-   Ajustamos el DAG
+
+```{r}
+fit_auto <- bn.fit(dag_c, data = datos_redes, method = "bayes")
+fit_auto$diagnosis
+```
+
+-   Markov-blanket
+
+```{r}
+cat("=== Markov Blanket (red automática) ===\n")
+for (n in nodes(dag_c)) {
+  cat("Markov Blanket de", n, ":", paste(mb(fit_auto, n), collapse = ", "), "\n")
+}
+```
+
+El Markov Blanket de un nodo representa el conjunto mínimo de variables que contiene toda la información necesaria para inferir dicho nodo, siendo independiente del resto de la red una vez conocidas estas variables. En la red aprendida automáticamente mediante el algoritmo Hill-Climbing, la composición de las Markov Blanket refleja las dependencias estadísticas más relevantes extraídas directamente de los datos, sin imponer una estructura causal previa.
+
+El Markov Blanket de `diagnosis` indica que, en la red automática, el diagnóstico del tumor queda completamente determinado por dos variables: el tamaño máximo del tumor (`radius_worst`) y el número de puntos cóncavos extremos (`concave_points_worst`). Esto sugiere que el algoritmo identifica estas dos características como las más informativas para discriminar entre tumores benignos y malignos, condensando la información de otras variables morfológicas y de tamaño de forma indirecta.
+
+El radio máximo del tumor está directamente relacionado con el diagnóstico y con las variables derivadas de tamaño, perímetro y área. Esto refleja que `radius_worst` actúa como una variable central que resume la información dimensional del tumor y, al mismo tiempo, mantiene una relación directa con la probabilidad de malignidad.
+
+El `perimeter_worst` depende exclusivamente del `radius_worst` del tumor. Esta relación directa es coherente desde un punto de vista geométrico, ya que el perímetro es una medida derivada del tamaño radial del tumor, y no aporta información adicional independiente una vez conocido el radio.
+
+De forma análoga al perímetro, el `area_worst` del tumor está completamente explicada por el `radius_worst` . El algoritmo Hill-Climbing ha eliminado relaciones adicionales, indicando que el radio captura prácticamente toda la información relevante sobre la superficie del tumor.
+
+La `concavity_worst` aparece como una variable intermedia que influye tanto en el número `concave_points_worst` como en la `compactness_worst` del tumor. Esto sugiere que la concavidad actúa como un descriptor morfológico fundamental del que se derivan otras medidas de irregularidad de la forma tumoral.
+
+El número de `concave_points_worst` s conecta directamente la morfología del tumor con el `diagnosis`. Su Markov Blanket muestra que esta variable recoge información tanto de la `concavicty_worst` como del estado maligno o benigno, reforzando su papel como una de las variables más discriminativas del modelo automático.
+
+La `compactnes_worst` depende únicamente de la `concavity_worst` del tumor. Esto indica que, desde el punto de vista estadístico, `compactness_worst` no aporta información adicional sobre el diagnóstico una vez conocida la concavidad, y queda relegada a un papel secundario en la red automática.
+
+-   D-separation
+
+Elegiremos las más releventes y que más imfromación nos peudan dar
+
+```{r}
+cat("\n=== Ejemplos de D-separation (Apartado C: red automática) ===\n\n")
+
+cat("diagnosis ⊥ area_worst | radius_worst: ",
+    dsep(dag_c, "diagnosis", "area_worst", "radius_worst"), "\n")
+
+cat("diagnosis ⊥ concavity_worst | concave_points_worst: ",
+    dsep(dag_c, "diagnosis", "concavity_worst", "concave_points_worst"), "\n")
+
+cat("perimeter_worst ⊥ diagnosis | radius_worst: ",
+    dsep(dag_c, "perimeter_worst", "diagnosis", "radius_worst"), "\n")
+```
+
+Una vez conocido el **radio máximo**, el **área** deja de aportar información adicional para predecir el diagnóstico. Esto contrasta con la red manual, donde `area_worst` era un padre directo de `diagnosis`.
+
+Toda la información sobre la concavidad se transmite a través de los **puntos cóncavos**, que ahora se posicionan como nodo clave para el diagnóstico en la red automática. En la red manual, `concavity_worst` estaba conectado directamente a `diagnosis`, mientras que en esta red queda mediado.
+
+El **perímetro** no aporta información sobre el diagnóstico una vez conocido el radio, lo que indica que el algoritmo ha simplificado la red eliminando dependencias indirectas que sí estaban presentes en la red manual.
+
+###### D. Compara entre redes y selecciona, justificadamnete, cuál escogerías
+
+Al comparar las tres redes bayesianas generadas (manual A, manual B y automática C), podemos evaluar cada una según criterios de **predictividad, interpretabilidad y coherencia con el conocimiento clínico**.
+
+[1. PREDICTIVIDAD]{.underline}
+
+-   **Red manual (A/B)**:\
+    Al definir manualmente las dependencias, se asegura que todos los factores relevantes para el diagnóstico (área, concavidad, compactness) influyan directamente sobre el nodo `diagnosis`. Esto permite modelar explícitamente relaciones conocidas, pero puede incluir caminos redundantes o poco informativos, lo que podría reducir la eficiencia predictiva. La inferencia con condiciones extremas (ej. área y concavidad altas) muestra que la probabilidad de malignidad es elevada (\~84%), lo cual es coherente, pero el modelo puede ser menos ágil al generalizar a combinaciones intermedias de variables.
+
+-   **Red automática (C)**:\
+    El algoritmo Hill-Climbing identifica estadísticamente las dependencias más informativas, simplificando la red. Por ejemplo, `diagnosis` depende únicamente de `concave_points_worst` y `radius_worst`. Esto concentra la información relevante y elimina redundancias, lo que puede mejorar la capacidad predictiva en datos no vistos, ya que reduce el riesgo de sobreajuste. La D-separation muestra que muchas variables quedan mediadas o independientes condicionalmente, lo que refleja una selección de características efectivas.
+
+**Conclusión predictiva:** La red automática tiene ventaja, porque identifica las variables clave que realmente explican el diagnóstico, reduciendo complejidad sin perder información significativa.
+
+[2. INTERPRETABILIDAD]{.underline}
+
+-   **Red manual (A/B)**:\
+    La estructura refleja claramente relaciones clínicas conocidas: tamaño → perímetro y área; área → concavidad → puntos cóncavos → compactness; y todas estas variables influyen sobre el diagnóstico. Esto facilita la interpretación por expertos clínicos, ya que cada conexión tiene un razonamiento médico evidente.
+
+-   **Red automática (C)**:\
+    Aunque más simple, algunas relaciones pueden ser menos intuitivas, por ejemplo, `diagnosis` como padre de `radius_worst`. Estas dependencias indican asociaciones estadísticas más que causales, lo que puede generar confusión si se interpreta como causalidad directa. Sin embargo, los nodos clave (`concave_points_worst` y `radius_worst`) tienen sentido clínico y el modelo sigue siendo interpretable en términos de variables críticas para el diagnóstico.
+
+**Conclusión interpretabilidad:** La red manual es más fácil de explicar desde un punto de vista clínico, aunque la red automática sigue siendo razonablemente interpretable.
+
+[3. COHERENCIA CON CONOCIMIENTO PREVIO]{.underline}
+
+-   **Red manual (A/B)**:\
+    Alta coherencia con la biología y la morfología del tumor. Cada dependencia refleja relaciones conocidas entre tamaño y forma del tumor y cómo estas afectan la probabilidad de malignidad.
+
+-   **Red automática (C)**:\
+    La mayoría de las relaciones son coherentes: concavity → concave_points → diagnosis y radius → área/perímetro. La diferencia principal es que `diagnosis` se coloca como padre de `radius_worst`, lo cual es interpretado como una dependencia estadística en los datos, no causal. En general, la red mantiene buena coherencia, pero hay que matizar la interpretación causal de ciertas conexiones.
+
+Seleccionaremos la **red automática (C)** ya que maximiza la **predictividad**, simplifica la estructura evitando redundancias, y mantiene coherencia general con el conocimiento clínico. Su principal ventaja es que concentra la información relevante en pocas variables clave (`concave_points_worst` y `radius_worst`), facilitando la inferencia sobre el diagnóstico y reduciendo el riesgo de sobreajuste. Aunque la red manual es más intuitiva y refleja explícitamente las relaciones causales conocidas, la red automática ofrece un balance óptimo entre simplicidad y poder predictivo, lo que es crítico al aplicar el modelo a nuevos datos clínicos. Además, la estructura resultante sigue siendo interpretable, permitiendo a los expertos identificar los factores más relevantes para el diagnóstico de malignidad.
+
+### 3. AJUSTA UN MODELO NAIVE BAYES
+
+###### A. Ejecuta el proceso de aplicación de metodología machine learning adecuado.
+
+-   División Train/Test
+
+```{r}
+set.seed(123)
+# 70% train, 30% test
+train_idx <- createDataPartition(datos_redes$diagnosis, p = 0.7, list = FALSE)
+train <- datos_redes[train_idx, ]
+test  <- datos_redes[-train_idx, ]
+
+# Ver proporción de clases
+prop.table(table(train$diagnosis))
+prop.table(table(test$diagnosis))
+```
+
+En ambos conjuntos se puede observar que existen más pacientes con tumores benignos que malignos. No es un desvalance extremo, pero sí hay una clase mayoritaria (Benigno) y una minoritaria (Maligno). La proporción es casi idéntica en ambos conjuntos, lo que significa que la división realizada de train/test conserva la distribución original de las clases.
+
+-   Ajuste de Naive Bayes
+
+```{r}
+# Ajuste de Naive Bayes con Laplace fijo (por ejemplo, 1)
+set.seed(123)
+nb_simple <- naive_bayes(
+  diagnosis ~ .,
+  data = train,        
+  laplace = 1         
+)
+nb_simple
+```
+
+Antes de considerar cualquier predictor, las probabilidades previas de cada clase son de 0.627 para la clase de Benignos y 0.373 para la clase de Malignos.
+
+Calcula también las tablas de probabilidad condicional P(X\|Y). Se muestra la probabilidad de cada categoría dada cada clase. Por ejemplo, para la variable radius_worst, los tumores con un radius_worst Bajo o Medio-Bajo, son muy probablemete benignos. En cuanto a la categoría de Medio-Alto, se muestra un solapamiento, no hay certeza absoluta pero la probabilidad de malignidad aumenta (0.209 vs. 0.321). Y los tumores con radius_worst Alto son mucho más probables malignos que benignos
+
+```{r}
+# Probabilidades a priori de las clases
+prop.table(table(train$diagnosis))
+```
+
+Esta es otra manera de calcular las probabilidades a priori, y podemos corroborar que nos devuelve lo mismo.
+
+```{r}
+# Probabilidades condicionales P(X|Y) de cada variable categórica
+nb_simple$tables
+```
+
+Gracias a este código, la salida nos muestra todas las probabilidades condicionales para cada una de las variables.
+
+Las variables de **tamaño del tumor** (`radius_worst`, `perimeter_worst`, `area_worst`) siguen el mismo patrón: **Bajo = Benigno, Alto = Maligno**, con solapamiento moderado en niveles medios. El nivel **Alto** es un predictor muy potente de malignidad (\>63% M, casi 0% B).
+
+Sobre las variables `concavity_worst` y `concave_points_worst` Bajo / Medio-bajo son principalmente benignos. El nivel Medio-alto indica que aumenta la probabilidad de malignidad, pero no exclusiva. Y la categoría Alto está altamente asociada a malignidad (≈59–63%), muy pocos benignos. Estas variables reflejan la **irregularidad de la forma del tumor**. Los valores altos son **muy indicativos de malignidad**, mientras que valores bajos siguen siendo benignos.
+
+Por último la variable `compactness_worst` también discrimina bien la malignidad en niveles extremos (Alto = maligno). Los niveles intermedios muestran solapamiento y explican por qué el modelo no tiene sensibilidad 100%.
+
+-   Evaluación del ajuste
+
+```{r}
+# Predicciones sobre test
+pred_class <- predict(nb_simple, newdata = test)
+pred_prob  <- predict(nb_simple, newdata = test, type = "prob")
+
+# Matriz de confusión
+conf <- confusionMatrix(pred_class, test$diagnosis)
+conf
+
+# Sensibilidad y especificidad
+conf$byClass[c("Sensitivity","Specificity")]
+```
+
+Nuestra matriz de confusión nos dice que de los 97 tumores benignos, 96 fueron correctamente predichos como tal (verdaderos positivos para B) y uno fue mal clasificado como maligno (falso negativo para B). De los 72 tumores malignos, 62 fueron correctamente predichos como malignos (verdaderos positivos para M) y 10 se clasificaron incorrectamente como benignos (falsos negativos para M).
+
+Estamos tomando 'Benigno' como la clase postivtiva, por lo que en cuanto a las medidas de Sensibilidad (= 0.9057), concluimos que de todos los benignos reales, el 90.6% se detectaros correcetamente. Y la Especificidad (= 0.984), concluimos que de todos los que no son benignos (es deicr, malignos), el 98.4% se identificaron bien como no benignos.
+
+```{r}
+conf <- confusionMatrix(pred_class, test$diagnosis, positive = "M")
+conf$byClass[c("Sensitivity","Specificity")]
+```
+
+La sensibilidad en este caso es de 0.984, lo que significa que el 98.4% de los tumores malignos fueron correctamente clasificados como malignos. En cuanto a la especificidad, tiene un valor de 0.9057, lo que significa que el 90.6% de los tumores benignos fueron clasificados como benignos
+
+###### B. Encuentra la hiperparametrización óptima del modelo
+
+Priorizaremos métricas como sensibilidad para la clase Maligno porque falsos negativos (no detectar un cáncer) tienen un coste clínico mayor que los falsos positivos.
+
+Mediente esto, haremos la búsqueda de la hiperparametrización óptima del modelo. Evaluaremos esta búsqueda de hiperparámetros de la forma más robusta, es decir, con 5-fold cross-validation. Con el grid_nb definimos qué valores probar para cada hiperparámetro. Usaremos el suavizado de Laplace para evitar ceros en las probabilidades condicionales, no usaremos Naive Bayes con kernel, solo categórico.
+
+Una vez hemos definido todo esto, ajusatmos el modelo con train(), donde ocurre la búsqueda del hiperparámetro óptimo.
+
+```{r}
+set.seed(123)
+# Train control con validación cruzada 5-fold
+train_control <- trainControl(
+  method = "cv",
+  number = 5,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  savePredictions = "final"
+)
+
+# Grid de hiperparámetros
+grid_nb <- expand.grid(
+  laplace = c(0, 0.5, 1, 1.5, 2),
+  usekernel = FALSE, # Naive Bayes clásico
+  adjust = 1
+)
+
+# Ajuste del modelo
+set.seed(123)
+nb_model <- train(
+  diagnosis ~ .,
+  data = train,
+  method = "naive_bayes",
+  trControl = train_control,
+  tuneGrid = grid_nb,
+  metric = "Sens" # priorizamos sensibilidad
+)
+
+# Mejor hiperparámetro
+nb_model$bestTune
+```
+
+La búsqueda de hiperparámetros indicó que el mejor modelo corresponde a Laplace = 0, kernel = FALSE y adjust = 1. Esto coincide prácticamente con nuestro modelo inicial, indicando que el Naive Bayes sin ajuste ya logra un rendimiento óptimo en este conjunto de datos, reflejando la robustez del clasificador para estas variables discretizadas.
+
+###### C. Extrae toda la información explicativa que puedas del modelo ajustado. (+1)
+
+-   Probabilidades a priori de las clases y probabilidades condicionales de cada variable
+
+```{r}
+best_nb <- nb_model$finalModel
+best_nb
+```
+
+El modelo final corresponde a un Naive Bayes clásico con variables discretizadas, sin estimación por kernel, cuya hiperparametrización se obtuvo mediante validación cruzada. La validación cruzada seleccionó un valor óptimo de Laplace igual a 0, indicando que, para este conjunto de datos discretizado, el suavizado no mejora la capacidad del modelo para detectar correctamente los casos malignos.
+
+-   Probabilidades condicionales de cada variable
+
+```{r}
+#best_nb$apriori # probabilidades a priori P(Y)
+best_nb$tables # probabilidades condicionales P(X|Y)
+```
+
+Vamos a ir variable por varibale.
+
+**Radious_worst:**
+
+El 36.8% de los tumores benignos están en el nivel Medio-bajo y solo el 2.7% de los tumores malignos están en este nivel. El nivel Medio-bajo de redious_worst es altamente indicativo de benignidad. El nivel Medio-alto tiene capacidad discriminante moderada, con ligera asociación a malignidad, es más frecuente en malignos (0.322) que en benignos (0.208). El radious_worst Alto es clave para el modelo, ya que solo un 0.4% de los benignos tienen un radious_worst Alto y el 64.4% de los malignos están en este nivel.
+
+**Perimeter_worst:**
+
+El 37.2% de los tumores benignos presenetan un perímetro máximo medio-bajo y solo el 4% de los tumores malignos se encuentran en este nivel. Por lo que el nivel Medio-bajo de esta variable está asociado fuertemente a tumores benignos. En ceunto al nivel Medio-alto, presenra una capacidad discriminantes moderada con mayor asociación a malignidad (20.8% vs. 31.5%). Un valor Alto de perimeter_worst es un indicador muy potente de malignidad, practicamente inexistente en tumores benignos. Concluimos que a medida que aumenta el perímetro máximo del tumor, aumenta notablemente la probabilidad de que el tumor sea maligno.
+
+**Area_worst:**
+
+El 37.6% de los tumores benignos presentan un área máxima medio-baja y solo el 2.7% de los tumores malignos se encuentran en este nivel. Por lo que el nivel Medio-bajo de area_worst está furtemente asociado a tumores benignos. En cuanto al nivel Medio-alto de area_worst, presneta una capacidad discriminante moderada, con ligera asociación a malignidad (20.8% vs 32.2%). Solo el 0.4% de los tumores benignos presnetan un área máxima alta y el 64.4% de los tumores malignos se encuentran en este nivel. Por lo que un valor alto de area_worst es un indicador extremadamente potente de malignidad.
+
+**Concavity_worst:**
+
+El 38% de los tumores benignos presnetan concavidad medio-baja y solo el 4.7% de los tumores malignos están en este nivel, por lo que los valores medios-bajos de concavidad se asocian claramente a tumores benignos. El nivel medio-alto de concavidad muestra una asociación clara a malignidad, aunque no es exclusiva, es más del doble de frecuente en tumores malignos que en benignos. Solo el 4.4% de los tumores benignos presentan concavidad alta y casi el 60% de los tumores malignos tienen concavidad alta, por lo que esta variable es un indicador muy potente de malignidad.
+
+**concave_points_worst:**
+
+El 39.6% de los tumores benignos presentan valores medio-bajos y solo el 4.7% de los tumores malignos están en este nivel. Los valores medio-abajos de putnos cóncavos están fuertemente asociados a tumores benignos. El nivel medio-alto tiene capacidad discriminante moderada con mayor asociación a malignidad (0.302 vs 0.196). Y solo el 0.4% de los tumores benignos presnetan valores altos. El 64.4% de los tumores malignos tienen valores altos, por lo que es una fuerte predictora de malignidad.
+
+**Compactness_worst:**
+
+El 36.4% de los tumores benignos presnetan valores medios y el 22.8% de los tumores malignos presentan valores medios también. Aunque los valores medios de compactness se asocian con mayor frecuencia a tumores benignos, existe solapamiento con tumores malignos. El 11.2% de los tumores benignos presnetan valores altos y el 71.1% de los tumores malignos alcanzan valores altos. Valores altos de compacness_worst están fuertemente asociados con malignidad.
+
+> El modelo Naive Bayes permite una interpretación clara de las relaciones entre las variables morfológicas del tumor y el diagnóstico. Variables relacionadas con el tamaño (radius, perimeter, area) muestran una transición progresiva hacia malignidad, mientras que las variables de forma e irregularidad (concavity, concave points y compactness) presentan una capacidad discriminante muy elevada, especialmente en sus niveles altos. En conjunto, el modelo ofrece no solo buen rendimiento predictivo, sino también una interpretación clínica coherente.
+
+En las categorías intermedias (`Medio-bajo`, `Medio-alto`), las medias de benignos (B) y malignos (M) están más próximas:
+
+Por ejemplo, `radius_worst` en la categoría `Medio-alto` tiene `mean B = 0.208` y `mean M = 0.322`. Esto indica **solapamiento**, es decir, algunos tumores benignos pueden aparecer “grandes” y algunos malignos “moderados”.
+
+Este solapamiento explica por qué la **sensibilidad para malignos no alcanza el 100%**, ya que el clasificador puede confundir tumores en estas categorías intermedias.
+
+Las categorías extremas o raras (`Alto` en B o `Bajo` en M) tienen muy pocos casos, lo que podría generar **inestabilidad en las probabilidades**, especialmente si el tamaño de la muestra fuera menor
+
+```{r}
+# Matriz de confusión
+conf_mat <- table(Predicted = pred_class, Actual = test$diagnosis)
+conf_mat
+
+# Sensibilidad para M (Malignos) = TP / (TP + FN)
+sens_M <- conf_mat["M", "M"] / sum(conf_mat[, "M"])
+sens_M
+
+# Especificidad para M (Malignos) = TN / (TN + FP)
+spec_M <- conf_mat["B", "B"] / sum(conf_mat[, "B"])
+spec_M
+
+# Mostrar resultados
+cat("Sensibilidad para M:", round(sens_M, 3), "\n")
+cat("Especificidad para M:", round(spec_M, 3), "\n")
+```
+
+Los resultados ya han sido explicados antes.
