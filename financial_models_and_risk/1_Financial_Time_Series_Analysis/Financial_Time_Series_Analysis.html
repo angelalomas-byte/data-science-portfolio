@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ángela Lomas Anglada">
+
+<title>FINANCIAL TIME SERIES ANALYSIS</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Financial_Time_Series_Analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Financial_Time_Series_Analysis_files/libs/quarto-html/quarto.js"></script>
+<script src="Financial_Time_Series_Analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="Financial_Time_Series_Analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Financial_Time_Series_Analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Financial_Time_Series_Analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Financial_Time_Series_Analysis_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Financial_Time_Series_Analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Financial_Time_Series_Analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Financial_Time_Series_Analysis_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">FINANCIAL TIME SERIES ANALYSIS</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ángela Lomas Anglada </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#--------------------------------------------------------------------</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#PHASE 1: Data Preparation</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">#--------------------------------------------------------------------</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">#FASES:</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#0) Preparación</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#1) Descarga de datos</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">#2) Visualización</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">#3) Tabla de exploración</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">#4) Creación de carteras</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 0) Preparación del enviroment</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(<span class="at">list =</span> <span class="fu">ls</span>())</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Librerías necesarias</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>pkgs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"quantmod"</span>,<span class="st">"dplyr"</span>,<span class="st">"PerformanceAnalytics"</span>,<span class="st">"ggplot2"</span>,<span class="st">"ggfortify"</span>,<span class="st">"dygraphs"</span>,<span class="st">"qcc"</span>,<span class="st">"xts"</span>,<span class="st">"zoo"</span>, <span class="st">"tseries"</span>, <span class="st">"forecast"</span>, <span class="st">"pracma"</span>, <span class="st">"tseriesChaos"</span>, <span class="st">"nortest"</span>, <span class="st">"stats"</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Paquetes no instalados</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>missing_pkgs <span class="ot">&lt;-</span> pkgs[<span class="sc">!</span>(pkgs <span class="sc">%in%</span> <span class="fu">installed.packages</span>()[,<span class="st">"Package"</span>])]</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Instalación de paquetes no instalados</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">length</span>(missing_pkgs)) <span class="fu">install.packages</span>(missing_pkgs)</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">lapply</span>(pkgs, require, <span class="at">character.only =</span> <span class="cn">TRUE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: quantmod</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: xts</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: zoo</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'zoo'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    as.Date, as.Date.numeric</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: TTR</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Registered S3 method overwritten by 'quantmod':
+  method            from
+  as.zoo.data.frame zoo </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: dplyr</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+######################### Warning from 'xts' package ##########################
+#                                                                             #
+# The dplyr lag() function breaks how base R's lag() function is supposed to  #
+# work, which breaks lag(my_xts). Calls to lag(my_xts) that you type or       #
+# source() into this session won't work correctly.                            #
+#                                                                             #
+# Use stats::lag() to make sure you're not using dplyr::lag(), or you can add #
+# conflictRules('dplyr', exclude = 'lag') to your .Rprofile to stop           #
+# dplyr from breaking base R's lag() function.                                #
+#                                                                             #
+# Code in packages is not affected. It's protected by R's namespace mechanism #
+# Set `options(xts.warn_dplyr_breaks_lag = FALSE)` to suppress this warning.  #
+#                                                                             #
+###############################################################################</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:xts':
+
+    first, last</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: PerformanceAnalytics</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'PerformanceAnalytics'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:graphics':
+
+    legend</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: ggplot2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: ggfortify</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: dygraphs</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: qcc</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Package 'qcc' version 2.7</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Type 'citation("qcc")' for citing this R package in publications.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: tseries</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: forecast</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Registered S3 methods overwritten by 'forecast':
+  method                 from     
+  autoplot.Arima         ggfortify
+  autoplot.acf           ggfortify
+  autoplot.ar            ggfortify
+  autoplot.bats          ggfortify
+  autoplot.decomposed.ts ggfortify
+  autoplot.ets           ggfortify
+  autoplot.forecast      ggfortify
+  autoplot.stl           ggfortify
+  autoplot.ts            ggfortify
+  fitted.ar              ggfortify
+  fortify.ts             ggfortify
+  residuals.ar           ggfortify</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: pracma</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: tseriesChaos</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: nortest</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Carpeta de salida </span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>out_dir <span class="ot">&lt;-</span> <span class="st">"Results"</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">dir.exists</span>(out_dir)) <span class="fu">dir.create</span>(out_dir)</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 1) Descarga de datos</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Variable tickers con todos los activos</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>tickers <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"^IBEX"</span>, <span class="st">"SAN.MC"</span>,<span class="st">"BBVA.MC"</span>,<span class="st">"ITX.MC"</span>,<span class="st">"TEF.MC"</span>,<span class="st">"IBE.MC"</span>,<span class="st">"REP.MC"</span>,<span class="st">"ACS.MC"</span>, <span class="st">"AENA.MC"</span>,<span class="st">"FER.MC"</span>,<span class="st">"GRF.MC"</span>,<span class="st">"MTS.MC"</span>,<span class="st">"CABK.MC"</span>,<span class="st">"COL.MC"</span>,<span class="st">"MAP.MC"</span>,<span class="st">"PHM.MC"</span>, <span class="st">"BKT.MC"</span>,<span class="st">"CLNX.MC"</span>,<span class="st">"AMS.MC"</span>,<span class="st">"VIS.MC"</span>,<span class="st">"ELE.MC"</span>,<span class="st">"ENG.MC"</span>,<span class="st">"NTGY.MC"</span>, <span class="st">"UNI.MC"</span>,<span class="st">"SLR.MC"</span>,<span class="st">"TRE.MC"</span>,<span class="st">"SAB.MC"</span>,<span class="st">"IDR.MC"</span>,<span class="st">"ACX.MC"</span>,<span class="st">"FCC.MC"</span>, <span class="st">"LOG.MC"</span>,<span class="st">"RED.MC"</span>,<span class="st">"FDR.MC"</span>,<span class="st">"ROVI.MC"</span>,<span class="st">"SCYR.MC"</span>,<span class="st">"MEL.MC"</span>)</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Descarga de todo el histórico</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>from_date <span class="ot">&lt;-</span> <span class="st">"1990-01-01"</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(tk <span class="cf">in</span> tickers){</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Descargando:"</span>, tk, <span class="st">"...</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tryCatch</span>({</span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">getSymbols</span>(tk, <span class="at">from =</span> from_date, <span class="at">auto.assign =</span> <span class="cn">TRUE</span>, <span class="at">warnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>  }, <span class="at">error =</span> <span class="cf">function</span>(e){</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"  ERROR descargando:"</span>, tk, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Descargando: ^IBEX ...
+Descargando: SAN.MC ...
+Descargando: BBVA.MC ...
+Descargando: ITX.MC ...
+Descargando: TEF.MC ...
+Descargando: IBE.MC ...
+Descargando: REP.MC ...
+Descargando: ACS.MC ...
+Descargando: AENA.MC ...
+Descargando: FER.MC ...
+Descargando: GRF.MC ...
+Descargando: MTS.MC ...
+Descargando: CABK.MC ...
+Descargando: COL.MC ...
+Descargando: MAP.MC ...
+Descargando: PHM.MC ...
+Descargando: BKT.MC ...
+Descargando: CLNX.MC ...
+Descargando: AMS.MC ...
+Descargando: VIS.MC ...
+Descargando: ELE.MC ...
+Descargando: ENG.MC ...
+Descargando: NTGY.MC ...
+Descargando: UNI.MC ...
+Descargando: SLR.MC ...
+Descargando: TRE.MC ...
+Descargando: SAB.MC ...
+Descargando: IDR.MC ...
+Descargando: ACX.MC ...
+Descargando: FCC.MC ...
+Descargando: LOG.MC ...
+Descargando: RED.MC ...
+Descargando: FDR.MC ...
+Descargando: ROVI.MC ...
+Descargando: SCYR.MC ...
+Descargando: MEL.MC ...</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Crear lista con los objetos descargados</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>activos_xts <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(tk <span class="cf">in</span> tickers){</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  objname <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">^"</span>, <span class="st">""</span>, tk)  <span class="co"># quitar ^ si existe</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">exists</span>(objname)){</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    activos_xts[[tk]] <span class="ot">&lt;-</span> <span class="fu">get</span>(objname)</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">exists</span>(tk)){</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    activos_xts[[tk]] <span class="ot">&lt;-</span> <span class="fu">get</span>(tk)</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"  No se encontró objeto para:"</span>, tk, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a><span class="co"># 2) Visualización</span></span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a><span class="do">### Construir matriz de Adjusted de todos los activos</span></span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>lista_adj <span class="ot">&lt;-</span> <span class="fu">lapply</span>(activos_xts, <span class="cf">function</span>(x) <span class="fu">Ad</span>(x))</span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(n <span class="cf">in</span> <span class="fu">names</span>(lista_adj)) <span class="fu">colnames</span>(lista_adj[[n]]) <span class="ot">&lt;-</span> n</span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>cartera_adj <span class="ot">&lt;-</span> <span class="fu">do.call</span>(merge, <span class="fu">c</span>(lista_adj, <span class="at">all =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a><span class="co"># GRÁFICO 1: 35 ACTIVOS (sin IBEX)</span></span>
+<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Excluir IBEX</span></span>
+<span id="cb32-28"><a href="#cb32-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Crear cartera sin IBEX-35</span></span>
+<span id="cb32-29"><a href="#cb32-29" aria-hidden="true" tabindex="-1"></a>cartera_sin_ibex <span class="ot">&lt;-</span> cartera_adj[, <span class="sc">!</span>(<span class="fu">colnames</span>(cartera_adj) <span class="sc">%in%</span> <span class="st">"X.IBEX"</span>)]</span>
+<span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Detectar activos que despuntan automáticamente</span></span>
+<span id="cb32-32"><a href="#cb32-32" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb32-33"><a href="#cb32-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Definir umbral: si el precio máximo es &gt; 2 veces la mediana de máximos, lo consideramos "despuntador"</span></span>
+<span id="cb32-34"><a href="#cb32-34" aria-hidden="true" tabindex="-1"></a>maximos <span class="ot">&lt;-</span> <span class="fu">apply</span>(cartera_sin_ibex, <span class="dv">2</span>, max, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-35"><a href="#cb32-35" aria-hidden="true" tabindex="-1"></a>umbral <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">median</span>(maximos)</span>
+<span id="cb32-36"><a href="#cb32-36" aria-hidden="true" tabindex="-1"></a>activos_despuntan <span class="ot">&lt;-</span> <span class="fu">names</span>(maximos[maximos <span class="sc">&gt;</span> umbral])</span>
+<span id="cb32-37"><a href="#cb32-37" aria-hidden="true" tabindex="-1"></a>activos_normales <span class="ot">&lt;-</span> <span class="fu">names</span>(maximos[maximos <span class="sc">&lt;=</span> umbral])</span>
+<span id="cb32-38"><a href="#cb32-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-39"><a href="#cb32-39" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb32-40"><a href="#cb32-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráfica de activos normales</span></span>
+<span id="cb32-41"><a href="#cb32-41" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb32-42"><a href="#cb32-42" aria-hidden="true" tabindex="-1"></a>cartera_normales <span class="ot">&lt;-</span> cartera_sin_ibex[, activos_normales]</span>
+<span id="cb32-43"><a href="#cb32-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-44"><a href="#cb32-44" aria-hidden="true" tabindex="-1"></a><span class="co">#cartera_plot &lt;- cartera_normales</span></span>
+<span id="cb32-45"><a href="#cb32-45" aria-hidden="true" tabindex="-1"></a><span class="co">#cartera_plot[is.na(cartera_plot)] &lt;- NaN</span></span>
+<span id="cb32-46"><a href="#cb32-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-47"><a href="#cb32-47" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(cartera_normales, <span class="at">facets =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb32-48"><a href="#cb32-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"GRÁFICA 1 - 35 ACTIVOS"</span>) <span class="sc">+</span></span>
+<span id="cb32-49"><a href="#cb32-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Fecha"</span>) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="st">"Precio Ajustado"</span>) <span class="sc">+</span></span>
+<span id="cb32-50"><a href="#cb32-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">5</span>), <span class="at">axis.title.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">7</span>), <span class="at">axis.title.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">7</span>),<span class="at">axis.text.x  =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">5</span>), <span class="at">axis.text.y  =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: `aes_string()` was deprecated in ggplot2 3.0.0.
+ℹ Please use tidy evaluation idioms with `aes()`.
+ℹ See also `vignette("ggplot2-in-packages")` for more information.
+ℹ The deprecated feature was likely used in the ggfortify package.
+  Please report the issue at &lt;https://github.com/sinhrks/ggfortify/issues&gt;.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 70809 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="fu">file.path</span>(out_dir, <span class="st">"GRÁFICA_1.png"</span>), <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 70809 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráficas de activos que despuntan por separado</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(act <span class="cf">in</span> activos_despuntan){</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  cartera_act <span class="ot">&lt;-</span> cartera_sin_ibex[, act, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    g <span class="ot">&lt;-</span> <span class="fu">autoplot</span>(cartera_act, <span class="at">facets =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggtitle</span>(<span class="fu">paste</span>(<span class="st">"GRÁFICA 1.1"</span>, act)) <span class="sc">+</span></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">xlab</span>(<span class="st">"Fecha"</span>) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="st">"Precio Ajustado"</span>) <span class="sc">+</span></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(g)</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="fu">file.path</span>(out_dir, <span class="fu">paste0</span>(<span class="st">"GRÁFICA_1.1"</span>, act, <span class="st">".png"</span>)), <span class="at">plot =</span> g, <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">6</span></span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 2212 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 2212 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1690 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1690 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 3401 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 3401 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-4.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 2307 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 2307 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-5.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1869 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1869 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-6.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 4354 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 4354 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-7.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1690 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1690 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-8.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1886 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 1886 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-9.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 3749 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 3749 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-10.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a><span class="co"># GRÁFICO 2: IBEX-35</span></span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="st">"IBEX"</span> <span class="sc">%in%</span> <span class="fu">colnames</span>(cartera_adj)){</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>  ibex <span class="ot">&lt;-</span> cartera_adj[, <span class="st">"IBEX"</span>]</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> <span class="cf">if</span>(<span class="st">"^IBEX"</span> <span class="sc">%in%</span> <span class="fu">names</span>(activos_xts)){</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>  ibex <span class="ot">&lt;-</span> <span class="fu">Ad</span>(activos_xts[[<span class="st">"^IBEX"</span>]])</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">"No se encontró el IBEX"</span>)</span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(ibex) <span class="sc">+</span></span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"GRÁFICA 2 - IBEX35"</span>) <span class="sc">+</span></span>
+<span id="cb56-14"><a href="#cb56-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Fecha"</span>) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="st">"Precio Ajustado"</span>) <span class="sc">+</span></span>
+<span id="cb56-15"><a href="#cb56-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-11.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="fu">file.path</span>(out_dir, <span class="st">"GRÁFICA_2.png"</span>),</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">6</span></span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a><span class="co"># GRÁFICO 3: CLOSE VS ADJUSTED de cada activo</span></span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(tk <span class="cf">in</span> <span class="fu">names</span>(cartera_sin_ibex)){</span>
+<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> activos_xts[[tk]]</span>
+<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a>  cl <span class="ot">&lt;-</span> <span class="fu">Cl</span>(x)</span>
+<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a>  ad <span class="ot">&lt;-</span> <span class="fu">Ad</span>(x)</span>
+<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">merge</span>(cl, ad)</span>
+<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(df) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Close"</span>, <span class="st">"Adjusted"</span>)</span>
+<span id="cb57-19"><a href="#cb57-19" aria-hidden="true" tabindex="-1"></a>  g <span class="ot">&lt;-</span> <span class="fu">autoplot</span>(df, <span class="at">facets =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb57-20"><a href="#cb57-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggtitle</span>(<span class="fu">paste0</span>(tk, <span class="st">" – Close vs Adjusted"</span>)) <span class="sc">+</span></span>
+<span id="cb57-21"><a href="#cb57-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">xlab</span>(<span class="st">"Fecha"</span>) <span class="sc">+</span> <span class="fu">ylab</span>(<span class="st">"Precio"</span>) <span class="sc">+</span></span>
+<span id="cb57-22"><a href="#cb57-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme_minimal</span>()</span>
+<span id="cb57-23"><a href="#cb57-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span> (g)</span>
+<span id="cb57-24"><a href="#cb57-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(</span>
+<span id="cb57-25"><a href="#cb57-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="fu">file.path</span>(out_dir, <span class="fu">paste0</span>(<span class="st">"GRÁFICA_3"</span>, tk, <span class="st">".png"</span>)), <span class="at">plot =</span> g, <span class="at">width =</span> <span class="dv">10</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb57-26"><a href="#cb57-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-27"><a href="#cb57-27" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-12.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-13.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-14.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-15.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-16.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-17.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-18.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-19.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-20.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-21.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-22.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-23.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-24.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-25.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-26.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-27.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-28.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-29.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-30.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-31.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-32.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-33.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-34.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-35.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-36.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-37.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-38.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-39.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-40.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-41.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-42.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-43.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-44.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-45.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="Financial_Time_Series_Analysis_files/figure-html/unnamed-chunk-1-46.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ---------------------------------------------------------------</span></span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 3) Tabla de exploración</span></span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ---------------------------------------------------------------</span></span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Creación de la función</span></span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>resumen_activo <span class="ot">&lt;-</span> <span class="cf">function</span>(ticker, lista_xts){</span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> lista_xts[[ticker]]</span>
+<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 1) ¿Close o Adjusted?</span></span>
+<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>  pct_neg <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">Ad</span>(x) <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(pct_neg <span class="sc">&gt;</span> <span class="dv">5</span>){</span>
+<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>    serie <span class="ot">&lt;-</span> <span class="fu">Cl</span>(x)</span>
+<span id="cb58-14"><a href="#cb58-14" aria-hidden="true" tabindex="-1"></a>    tipo  <span class="ot">&lt;-</span> <span class="st">"Close"</span></span>
+<span id="cb58-15"><a href="#cb58-15" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb58-16"><a href="#cb58-16" aria-hidden="true" tabindex="-1"></a>    serie <span class="ot">&lt;-</span> <span class="fu">Ad</span>(x)</span>
+<span id="cb58-17"><a href="#cb58-17" aria-hidden="true" tabindex="-1"></a>    tipo  <span class="ot">&lt;-</span> <span class="st">"Adjusted"</span></span>
+<span id="cb58-18"><a href="#cb58-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb58-19"><a href="#cb58-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-20"><a href="#cb58-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 2) Fechas de inicio y fin</span></span>
+<span id="cb58-21"><a href="#cb58-21" aria-hidden="true" tabindex="-1"></a>  F_ini <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(<span class="fu">start</span>(serie))</span>
+<span id="cb58-22"><a href="#cb58-22" aria-hidden="true" tabindex="-1"></a>  F_fin <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(<span class="fu">end</span>(serie))</span>
+<span id="cb58-23"><a href="#cb58-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-24"><a href="#cb58-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 3) Rendimiento logarítmico</span></span>
+<span id="cb58-25"><a href="#cb58-25" aria-hidden="true" tabindex="-1"></a>  rend <span class="ot">&lt;-</span> <span class="fu">diff</span>(<span class="fu">log</span>(serie))</span>
+<span id="cb58-26"><a href="#cb58-26" aria-hidden="true" tabindex="-1"></a>  rend <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(rend)</span>
+<span id="cb58-27"><a href="#cb58-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb58-28"><a href="#cb58-28" aria-hidden="true" tabindex="-1"></a>  <span class="co"># T0 observaciones iniciales</span></span>
+<span id="cb58-29"><a href="#cb58-29" aria-hidden="true" tabindex="-1"></a>  T0 <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(rend))</span>
+<span id="cb58-30"><a href="#cb58-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-31"><a href="#cb58-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 4) Porcentaje de NA</span></span>
+<span id="cb58-32"><a href="#cb58-32" aria-hidden="true" tabindex="-1"></a>  pct_NA <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">is.na</span>(rend)) <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb58-33"><a href="#cb58-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-34"><a href="#cb58-34" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 5) Outliers con C = 3 y C = 5</span></span>
+<span id="cb58-35"><a href="#cb58-35" aria-hidden="true" tabindex="-1"></a>  z <span class="ot">&lt;-</span> <span class="fu">scale</span>(rend)</span>
+<span id="cb58-36"><a href="#cb58-36" aria-hidden="true" tabindex="-1"></a>  out3 <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(z) <span class="sc">&gt;</span> <span class="dv">3</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb58-37"><a href="#cb58-37" aria-hidden="true" tabindex="-1"></a>  out5 <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(z) <span class="sc">&gt;</span> <span class="dv">5</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb58-38"><a href="#cb58-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-39"><a href="#cb58-39" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 6) T1 tras limpiar con C = 5</span></span>
+<span id="cb58-40"><a href="#cb58-40" aria-hidden="true" tabindex="-1"></a>  rend_clean <span class="ot">&lt;-</span> rend[<span class="fu">abs</span>(z) <span class="sc">&lt;=</span> <span class="dv">5</span>]</span>
+<span id="cb58-41"><a href="#cb58-41" aria-hidden="true" tabindex="-1"></a>  T1 <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(rend_clean))</span>
+<span id="cb58-42"><a href="#cb58-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-43"><a href="#cb58-43" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Tabla final para este activo</span></span>
+<span id="cb58-44"><a href="#cb58-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb58-45"><a href="#cb58-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">Ticker   =</span> ticker,</span>
+<span id="cb58-46"><a href="#cb58-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">Serie    =</span> tipo,</span>
+<span id="cb58-47"><a href="#cb58-47" aria-hidden="true" tabindex="-1"></a>    <span class="at">Fecha_Inicio    =</span> F_ini,</span>
+<span id="cb58-48"><a href="#cb58-48" aria-hidden="true" tabindex="-1"></a>    <span class="at">Fecha_Fin    =</span> F_fin,</span>
+<span id="cb58-49"><a href="#cb58-49" aria-hidden="true" tabindex="-1"></a>    Tamaño<span class="at">_Inicial      =</span> T0,</span>
+<span id="cb58-50"><a href="#cb58-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">Porcentaje_NaN   =</span> <span class="fu">round</span>(pct_NA, <span class="dv">2</span>),</span>
+<span id="cb58-51"><a href="#cb58-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">C3       =</span> out3,</span>
+<span id="cb58-52"><a href="#cb58-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">C5       =</span> out5,</span>
+<span id="cb58-53"><a href="#cb58-53" aria-hidden="true" tabindex="-1"></a>    Tamaño<span class="at">_Final       =</span> T1,</span>
+<span id="cb58-54"><a href="#cb58-54" aria-hidden="true" tabindex="-1"></a>    <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb58-55"><a href="#cb58-55" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb58-56"><a href="#cb58-56" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb58-57"><a href="#cb58-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-58"><a href="#cb58-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-59"><a href="#cb58-59" aria-hidden="true" tabindex="-1"></a><span class="co">#Tabla final</span></span>
+<span id="cb58-60"><a href="#cb58-60" aria-hidden="true" tabindex="-1"></a>tickers_analisis <span class="ot">&lt;-</span> <span class="fu">names</span>(cartera_sin_ibex)</span>
+<span id="cb58-61"><a href="#cb58-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-62"><a href="#cb58-62" aria-hidden="true" tabindex="-1"></a>tabla_final <span class="ot">&lt;-</span> <span class="fu">do.call</span>(</span>
+<span id="cb58-63"><a href="#cb58-63" aria-hidden="true" tabindex="-1"></a>  rbind,</span>
+<span id="cb58-64"><a href="#cb58-64" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lapply</span>(tickers_analisis, resumen_activo, <span class="at">lista_xts =</span> activos_xts)</span>
+<span id="cb58-65"><a href="#cb58-65" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in log(serie): Se han producido NaNs</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in log(serie): Se han producido NaNs
+Warning in log(serie): Se han producido NaNs</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co">#print(tabla_final)</span></span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(</span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>  tabla_final,</span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">file =</span> <span class="fu">file.path</span>(out_dir, <span class="st">"TABLA.csv"</span>),</span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-11"><a href="#cb61-11" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb61-12"><a href="#cb61-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 4) Guardar precios originales y rendimientos limpios (2 archivos)</span></span>
+<span id="cb61-13"><a href="#cb61-13" aria-hidden="true" tabindex="-1"></a><span class="co"># -------------------------</span></span>
+<span id="cb61-14"><a href="#cb61-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Lista para precios originales</span></span>
+<span id="cb61-15"><a href="#cb61-15" aria-hidden="true" tabindex="-1"></a>precios_originales <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb61-16"><a href="#cb61-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Lista para rendimientos limpios</span></span>
+<span id="cb61-17"><a href="#cb61-17" aria-hidden="true" tabindex="-1"></a>rendimientos_limpios <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb61-18"><a href="#cb61-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-19"><a href="#cb61-19" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(tk <span class="cf">in</span> <span class="fu">names</span>(cartera_sin_ibex)) {</span>
+<span id="cb61-20"><a href="#cb61-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-21"><a href="#cb61-21" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> activos_xts[[tk]]</span>
+<span id="cb61-22"><a href="#cb61-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-23"><a href="#cb61-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># -------------------------</span></span>
+<span id="cb61-24"><a href="#cb61-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 4.1) Serie de precios original (Adjusted)</span></span>
+<span id="cb61-25"><a href="#cb61-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># -------------------------</span></span>
+<span id="cb61-26"><a href="#cb61-26" aria-hidden="true" tabindex="-1"></a>  adj <span class="ot">&lt;-</span> <span class="fu">Ad</span>(x)</span>
+<span id="cb61-27"><a href="#cb61-27" aria-hidden="true" tabindex="-1"></a>  precios_originales[[tk]] <span class="ot">&lt;-</span> adj</span>
+<span id="cb61-28"><a href="#cb61-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-29"><a href="#cb61-29" aria-hidden="true" tabindex="-1"></a>  <span class="co"># -------------------------</span></span>
+<span id="cb61-30"><a href="#cb61-30" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 4.2) Rendimientos limpios</span></span>
+<span id="cb61-31"><a href="#cb61-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># -------------------------</span></span>
+<span id="cb61-32"><a href="#cb61-32" aria-hidden="true" tabindex="-1"></a>  pct_neg <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">Ad</span>(x) <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb61-33"><a href="#cb61-33" aria-hidden="true" tabindex="-1"></a>  serie <span class="ot">&lt;-</span> <span class="cf">if</span>(pct_neg <span class="sc">&gt;</span> <span class="dv">5</span>) <span class="fu">Cl</span>(x) <span class="cf">else</span> <span class="fu">Ad</span>(x)</span>
+<span id="cb61-34"><a href="#cb61-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-35"><a href="#cb61-35" aria-hidden="true" tabindex="-1"></a>  rend <span class="ot">&lt;-</span> <span class="fu">diff</span>(<span class="fu">log</span>(serie))</span>
+<span id="cb61-36"><a href="#cb61-36" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb61-37"><a href="#cb61-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Limpiar outliers con C = 5</span></span>
+<span id="cb61-38"><a href="#cb61-38" aria-hidden="true" tabindex="-1"></a>  z <span class="ot">&lt;-</span> <span class="fu">scale</span>(rend)</span>
+<span id="cb61-39"><a href="#cb61-39" aria-hidden="true" tabindex="-1"></a>  rend_clean <span class="ot">&lt;-</span> rend[<span class="fu">abs</span>(z) <span class="sc">&lt;=</span> <span class="dv">5</span>]</span>
+<span id="cb61-40"><a href="#cb61-40" aria-hidden="true" tabindex="-1"></a>  rend_clean <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(rend_clean)</span>
+<span id="cb61-41"><a href="#cb61-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-42"><a href="#cb61-42" aria-hidden="true" tabindex="-1"></a>  rendimientos_limpios[[tk]] <span class="ot">&lt;-</span> rend_clean</span>
+<span id="cb61-43"><a href="#cb61-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-44"><a href="#cb61-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Procesado:"</span>, tk, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb61-45"><a href="#cb61-45" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Procesado: SAN.MC 
+Procesado: BBVA.MC 
+Procesado: ITX.MC 
+Procesado: TEF.MC 
+Procesado: IBE.MC 
+Procesado: REP.MC 
+Procesado: ACS.MC 
+Procesado: AENA.MC 
+Procesado: FER.MC 
+Procesado: GRF.MC 
+Procesado: MTS.MC 
+Procesado: CABK.MC 
+Procesado: COL.MC 
+Procesado: MAP.MC 
+Procesado: PHM.MC 
+Procesado: BKT.MC 
+Procesado: CLNX.MC 
+Procesado: AMS.MC 
+Procesado: VIS.MC </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in log(serie): Se han producido NaNs</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Procesado: ELE.MC 
+Procesado: ENG.MC 
+Procesado: NTGY.MC 
+Procesado: UNI.MC 
+Procesado: SLR.MC 
+Procesado: TRE.MC 
+Procesado: SAB.MC </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in log(serie): Se han producido NaNs</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Procesado: IDR.MC 
+Procesado: ACX.MC </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in log(serie): Se han producido NaNs</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Procesado: FCC.MC 
+Procesado: LOG.MC 
+Procesado: RED.MC 
+Procesado: FDR.MC 
+Procesado: ROVI.MC 
+Procesado: SCYR.MC 
+Procesado: MEL.MC </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Guardar listas completas en dos archivos RData</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(precios_originales, <span class="at">file =</span> <span class="st">"precios_originales.RData"</span>)</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(rendimientos_limpios, <span class="at">file =</span> <span class="st">"rendimientos_limpios.RData"</span>)</span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a><span class="co">#--------------------------------------------------------------------</span></span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a><span class="co">#PHASE 2: HME</span></span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a><span class="co">#--------------------------------------------------------------------</span></span>
+<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a><span class="co">#FASES:</span></span>
+<span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a><span class="co">#5) Función para etsudiar HME</span></span>
+<span id="cb69-15"><a href="#cb69-15" aria-hidden="true" tabindex="-1"></a><span class="co">#6) Aplicación de la función</span></span>
+<span id="cb69-16"><a href="#cb69-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-17"><a href="#cb69-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-18"><a href="#cb69-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Función para analizar la HME de cada activo</span></span>
+<span id="cb69-19"><a href="#cb69-19" aria-hidden="true" tabindex="-1"></a>analizar_activo <span class="ot">&lt;-</span> <span class="cf">function</span>(precio, rend, <span class="at">nombre_activo =</span> <span class="st">'Activo'</span>) {</span>
+<span id="cb69-20"><a href="#cb69-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-21"><a href="#cb69-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-22"><a href="#cb69-22" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-23"><a href="#cb69-23" aria-hidden="true" tabindex="-1"></a><span class="co"># ESTACIONARIEDAD PRECIOS</span></span>
+<span id="cb69-24"><a href="#cb69-24" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-25"><a href="#cb69-25" aria-hidden="true" tabindex="-1"></a>precio_clean <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(precio)  <span class="co"># elimina NAs</span></span>
+<span id="cb69-26"><a href="#cb69-26" aria-hidden="true" tabindex="-1"></a>adf_val_precio <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">adf.test</span>(precio_clean)<span class="sc">$</span>p.value, <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span>)</span>
+<span id="cb69-27"><a href="#cb69-27" aria-hidden="true" tabindex="-1"></a>pp_val_precio  <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">pp.test</span>(precio_clean)<span class="sc">$</span>p.value,  <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span>)</span>
+<span id="cb69-28"><a href="#cb69-28" aria-hidden="true" tabindex="-1"></a>kpss_val_precio <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">kpss.test</span>(precio_clean)<span class="sc">$</span>p.value, <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span>)</span>
+<span id="cb69-29"><a href="#cb69-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-30"><a href="#cb69-30" aria-hidden="true" tabindex="-1"></a>estacionariedad_precio <span class="ot">&lt;-</span> <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(adf_val_precio) <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(pp_val_precio) <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(kpss_val_precio)) {</span>
+<span id="cb69-31"><a href="#cb69-31" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(adf_val_precio <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">&amp;</span> pp_val_precio <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">&amp;</span> kpss_val_precio <span class="sc">&gt;</span> <span class="fl">0.05</span>) {</span>
+<span id="cb69-32"><a href="#cb69-32" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Precios estacionarios"</span></span>
+<span id="cb69-33"><a href="#cb69-33" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb69-34"><a href="#cb69-34" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Precios no estacionarios"</span></span>
+<span id="cb69-35"><a href="#cb69-35" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb69-36"><a href="#cb69-36" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb69-37"><a href="#cb69-37" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Error test estacionariedad"</span></span>
+<span id="cb69-38"><a href="#cb69-38" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb69-39"><a href="#cb69-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-40"><a href="#cb69-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-41"><a href="#cb69-41" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-42"><a href="#cb69-42" aria-hidden="true" tabindex="-1"></a><span class="co"># ESTACIONARIEDAD RENDIMIENTOS</span></span>
+<span id="cb69-43"><a href="#cb69-43" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-44"><a href="#cb69-44" aria-hidden="true" tabindex="-1"></a>adf_val <span class="ot">&lt;-</span> <span class="fu">adf.test</span>(rend)<span class="sc">$</span>p.value</span>
+<span id="cb69-45"><a href="#cb69-45" aria-hidden="true" tabindex="-1"></a>pp_val  <span class="ot">&lt;-</span> <span class="fu">pp.test</span>(rend)<span class="sc">$</span>p.value</span>
+<span id="cb69-46"><a href="#cb69-46" aria-hidden="true" tabindex="-1"></a>kpss_val <span class="ot">&lt;-</span> <span class="fu">kpss.test</span>(rend)<span class="sc">$</span>p.value</span>
+<span id="cb69-47"><a href="#cb69-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-48"><a href="#cb69-48" aria-hidden="true" tabindex="-1"></a>estacionariedad_rend <span class="ot">&lt;-</span> <span class="cf">if</span>(adf_val <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">&amp;</span> pp_val <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">&amp;</span> kpss_val <span class="sc">&gt;</span> <span class="fl">0.05</span>) {</span>
+<span id="cb69-49"><a href="#cb69-49" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Rendimientos estacionarios"</span></span>
+<span id="cb69-50"><a href="#cb69-50" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb69-51"><a href="#cb69-51" aria-hidden="true" tabindex="-1"></a>  <span class="st">"No estacionario"</span></span>
+<span id="cb69-52"><a href="#cb69-52" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb69-53"><a href="#cb69-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-54"><a href="#cb69-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-55"><a href="#cb69-55" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-56"><a href="#cb69-56" aria-hidden="true" tabindex="-1"></a><span class="co"># INCORRELACIÓN</span></span>
+<span id="cb69-57"><a href="#cb69-57" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-58"><a href="#cb69-58" aria-hidden="true" tabindex="-1"></a>ljung <span class="ot">&lt;-</span> <span class="fu">Box.test</span>(rend, <span class="at">lag =</span> <span class="dv">5</span>, <span class="at">type =</span> <span class="st">"Ljung-Box"</span>)<span class="sc">$</span>p.value</span>
+<span id="cb69-59"><a href="#cb69-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-60"><a href="#cb69-60" aria-hidden="true" tabindex="-1"></a>incorrelacion_rend <span class="ot">&lt;-</span> <span class="cf">if</span>(ljung <span class="sc">&gt;</span> <span class="fl">0.05</span>) {</span>
+<span id="cb69-61"><a href="#cb69-61" aria-hidden="true" tabindex="-1"></a>  <span class="st">"A favor HME"</span></span>
+<span id="cb69-62"><a href="#cb69-62" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb69-63"><a href="#cb69-63" aria-hidden="true" tabindex="-1"></a>  <span class="st">"En contra HME"</span></span>
+<span id="cb69-64"><a href="#cb69-64" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb69-65"><a href="#cb69-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-66"><a href="#cb69-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-67"><a href="#cb69-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-68"><a href="#cb69-68" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-69"><a href="#cb69-69" aria-hidden="true" tabindex="-1"></a><span class="co"># INCORRELACIÓN rendimientos al cuadrado</span></span>
+<span id="cb69-70"><a href="#cb69-70" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-71"><a href="#cb69-71" aria-hidden="true" tabindex="-1"></a>ljung2 <span class="ot">&lt;-</span> <span class="fu">Box.test</span>(rend<span class="sc">^</span><span class="dv">2</span>, <span class="at">lag =</span> <span class="dv">5</span>, <span class="at">type =</span> <span class="st">"Ljung-Box"</span>)<span class="sc">$</span>p.value</span>
+<span id="cb69-72"><a href="#cb69-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-73"><a href="#cb69-73" aria-hidden="true" tabindex="-1"></a>incorrelacion_rend2 <span class="ot">&lt;-</span> <span class="cf">if</span>(ljung2 <span class="sc">&gt;</span> <span class="fl">0.05</span>) {</span>
+<span id="cb69-74"><a href="#cb69-74" aria-hidden="true" tabindex="-1"></a>  <span class="st">"A favor HME"</span></span>
+<span id="cb69-75"><a href="#cb69-75" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb69-76"><a href="#cb69-76" aria-hidden="true" tabindex="-1"></a>  <span class="st">"En contra HME"</span></span>
+<span id="cb69-77"><a href="#cb69-77" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb69-78"><a href="#cb69-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-79"><a href="#cb69-79" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-80"><a href="#cb69-80" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-81"><a href="#cb69-81" aria-hidden="true" tabindex="-1"></a><span class="co"># EXPONENTE DE HURST</span></span>
+<span id="cb69-82"><a href="#cb69-82" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-83"><a href="#cb69-83" aria-hidden="true" tabindex="-1"></a>hurst_val <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">hurstexp</span>(rend)<span class="sc">$</span>Hs, <span class="at">error=</span><span class="cf">function</span>(e) <span class="cn">NA</span>)</span>
+<span id="cb69-84"><a href="#cb69-84" aria-hidden="true" tabindex="-1"></a>  hurst <span class="ot">&lt;-</span> <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.na</span>(hurst_val)) {</span>
+<span id="cb69-85"><a href="#cb69-85" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(hurst_val <span class="sc">&lt;</span> <span class="fl">0.5</span>) <span class="st">"RR. No cumple HME"</span></span>
+<span id="cb69-86"><a href="#cb69-86" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="cf">if</span>(hurst_val <span class="sc">==</span> <span class="fl">0.5</span>) <span class="st">"RB. Se cumple HME"</span></span>
+<span id="cb69-87"><a href="#cb69-87" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="st">"RN. No cumple HME"</span></span>
+<span id="cb69-88"><a href="#cb69-88" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb69-89"><a href="#cb69-89" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Error Hurst"</span></span>
+<span id="cb69-90"><a href="#cb69-90" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb69-91"><a href="#cb69-91" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-92"><a href="#cb69-92" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-93"><a href="#cb69-93" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TEST</span><span class="co"> DE BDS</span></span>
+<span id="cb69-94"><a href="#cb69-94" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-95"><a href="#cb69-95" aria-hidden="true" tabindex="-1"></a>bds_val <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">bds.test</span>(rend)<span class="sc">$</span>p.value, <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span>)</span>
+<span id="cb69-96"><a href="#cb69-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-97"><a href="#cb69-97" aria-hidden="true" tabindex="-1"></a>bds <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">any</span>(<span class="fu">is.na</span>(bds_val))) {</span>
+<span id="cb69-98"><a href="#cb69-98" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Error BDS"</span></span>
+<span id="cb69-99"><a href="#cb69-99" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">all</span>(bds_val <span class="sc">&gt;</span> <span class="fl">0.05</span>)) {</span>
+<span id="cb69-100"><a href="#cb69-100" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Se cumple HME"</span></span>
+<span id="cb69-101"><a href="#cb69-101" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb69-102"><a href="#cb69-102" aria-hidden="true" tabindex="-1"></a>  <span class="st">"No cumple HME"</span></span>
+<span id="cb69-103"><a href="#cb69-103" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb69-104"><a href="#cb69-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-105"><a href="#cb69-105" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-106"><a href="#cb69-106" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-107"><a href="#cb69-107" aria-hidden="true" tabindex="-1"></a><span class="co"># NORMALIDAD</span></span>
+<span id="cb69-108"><a href="#cb69-108" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-109"><a href="#cb69-109" aria-hidden="true" tabindex="-1"></a>jb_val <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">jarque.bera.test</span>(rend)<span class="sc">$</span>p.value, <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span>)</span>
+<span id="cb69-110"><a href="#cb69-110" aria-hidden="true" tabindex="-1"></a>normalidad <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">is.na</span>(jb_val)) {</span>
+<span id="cb69-111"><a href="#cb69-111" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Error normalidad"</span></span>
+<span id="cb69-112"><a href="#cb69-112" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> <span class="cf">if</span> (jb_val <span class="sc">&gt;</span> <span class="fl">0.05</span>) {</span>
+<span id="cb69-113"><a href="#cb69-113" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Normalidad compatible RB"</span></span>
+<span id="cb69-114"><a href="#cb69-114" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb69-115"><a href="#cb69-115" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Distribución no normal"</span></span>
+<span id="cb69-116"><a href="#cb69-116" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb69-117"><a href="#cb69-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-118"><a href="#cb69-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-119"><a href="#cb69-119" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-120"><a href="#cb69-120" aria-hidden="true" tabindex="-1"></a><span class="co"># Determinar HME resumen</span></span>
+<span id="cb69-121"><a href="#cb69-121" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-122"><a href="#cb69-122" aria-hidden="true" tabindex="-1"></a>hme_resumen <span class="ot">&lt;-</span> <span class="cf">if</span>(</span>
+<span id="cb69-123"><a href="#cb69-123" aria-hidden="true" tabindex="-1"></a>    incorrelacion_rend <span class="sc">==</span> <span class="st">"A favor HME"</span> <span class="sc">&amp;</span></span>
+<span id="cb69-124"><a href="#cb69-124" aria-hidden="true" tabindex="-1"></a>    incorrelacion_rend2 <span class="sc">==</span> <span class="st">"A favor HME"</span> <span class="sc">&amp;</span></span>
+<span id="cb69-125"><a href="#cb69-125" aria-hidden="true" tabindex="-1"></a>    <span class="fu">grepl</span>(<span class="st">"RB"</span>, hurst) <span class="sc">&amp;</span></span>
+<span id="cb69-126"><a href="#cb69-126" aria-hidden="true" tabindex="-1"></a>    bds <span class="sc">==</span> <span class="st">"Se cumple HME"</span></span>
+<span id="cb69-127"><a href="#cb69-127" aria-hidden="true" tabindex="-1"></a>  ) <span class="st">"Sí"</span> <span class="cf">else</span> <span class="st">"No"</span></span>
+<span id="cb69-128"><a href="#cb69-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-129"><a href="#cb69-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-130"><a href="#cb69-130" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-131"><a href="#cb69-131" aria-hidden="true" tabindex="-1"></a><span class="co">#MODELO</span></span>
+<span id="cb69-132"><a href="#cb69-132" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-133"><a href="#cb69-133" aria-hidden="true" tabindex="-1"></a>modelo <span class="ot">&lt;-</span> <span class="cf">if</span>(incorrelacion_rend <span class="sc">==</span> <span class="st">"En contra HME"</span> <span class="sc">&amp;</span> incorrelacion_rend2 <span class="sc">==</span> <span class="st">"En contra HME"</span>) {</span>
+<span id="cb69-134"><a href="#cb69-134" aria-hidden="true" tabindex="-1"></a>    <span class="st">"ARMA-GARCH"</span></span>
+<span id="cb69-135"><a href="#cb69-135" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span>(incorrelacion_rend <span class="sc">==</span> <span class="st">"A favor HME"</span> <span class="sc">&amp;</span> incorrelacion_rend2 <span class="sc">==</span> <span class="st">"En contra HME"</span>) {</span>
+<span id="cb69-136"><a href="#cb69-136" aria-hidden="true" tabindex="-1"></a>    <span class="st">"GARCH"</span></span>
+<span id="cb69-137"><a href="#cb69-137" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb69-138"><a href="#cb69-138" aria-hidden="true" tabindex="-1"></a>    <span class="st">"No aplica"</span></span>
+<span id="cb69-139"><a href="#cb69-139" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb69-140"><a href="#cb69-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-141"><a href="#cb69-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-142"><a href="#cb69-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-143"><a href="#cb69-143" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-144"><a href="#cb69-144" aria-hidden="true" tabindex="-1"></a><span class="co"># GRÁFICOS</span></span>
+<span id="cb69-145"><a href="#cb69-145" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-146"><a href="#cb69-146" aria-hidden="true" tabindex="-1"></a>subfolder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(out_dir, nombre_activo)</span>
+<span id="cb69-147"><a href="#cb69-147" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span><span class="fu">dir.exists</span>(subfolder)) <span class="fu">dir.create</span>(subfolder)</span>
+<span id="cb69-148"><a href="#cb69-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-149"><a href="#cb69-149" aria-hidden="true" tabindex="-1"></a><span class="co"># ACF / PACF con ggplot</span></span>
+<span id="cb69-150"><a href="#cb69-150" aria-hidden="true" tabindex="-1"></a>g_acf <span class="ot">&lt;-</span> <span class="fu">ggAcf</span>(rend) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="fu">paste0</span>(<span class="st">"ACF - Rendimientos "</span>, nombre_activo))</span>
+<span id="cb69-151"><a href="#cb69-151" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">file.path</span>(subfolder, <span class="st">"ACF_rendimientos.png"</span>), g_acf, <span class="at">width=</span><span class="dv">8</span>, <span class="at">height=</span><span class="dv">6</span>)</span>
+<span id="cb69-152"><a href="#cb69-152" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-153"><a href="#cb69-153" aria-hidden="true" tabindex="-1"></a>g_pacf <span class="ot">&lt;-</span> <span class="fu">ggPacf</span>(rend) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="fu">paste0</span>(<span class="st">"PACF - Rendimientos "</span>, nombre_activo))</span>
+<span id="cb69-154"><a href="#cb69-154" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">file.path</span>(subfolder, <span class="st">"PACF_rendimientos.png"</span>), g_pacf, <span class="at">width=</span><span class="dv">8</span>, <span class="at">height=</span><span class="dv">6</span>)</span>
+<span id="cb69-155"><a href="#cb69-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-156"><a href="#cb69-156" aria-hidden="true" tabindex="-1"></a>g_acf2 <span class="ot">&lt;-</span> <span class="fu">ggAcf</span>(rend<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="fu">paste0</span>(<span class="st">"ACF - Rendimientos^2 "</span>, nombre_activo))</span>
+<span id="cb69-157"><a href="#cb69-157" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">file.path</span>(subfolder, <span class="st">"ACF_rend2.png"</span>), g_acf2, <span class="at">width=</span><span class="dv">8</span>, <span class="at">height=</span><span class="dv">6</span>)</span>
+<span id="cb69-158"><a href="#cb69-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-159"><a href="#cb69-159" aria-hidden="true" tabindex="-1"></a>g_pacf2 <span class="ot">&lt;-</span> <span class="fu">ggPacf</span>(rend<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">ggtitle</span>(<span class="fu">paste0</span>(<span class="st">"PACF - Rendimientos^2 "</span>, nombre_activo))</span>
+<span id="cb69-160"><a href="#cb69-160" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">file.path</span>(subfolder, <span class="st">"PACF_rend2.png"</span>), g_pacf2, <span class="at">width=</span><span class="dv">8</span>, <span class="at">height=</span><span class="dv">6</span>)</span>
+<span id="cb69-161"><a href="#cb69-161" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-162"><a href="#cb69-162" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-163"><a href="#cb69-163" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-164"><a href="#cb69-164" aria-hidden="true" tabindex="-1"></a><span class="co"># Serie con bandas ±2SD</span></span>
+<span id="cb69-165"><a href="#cb69-165" aria-hidden="true" tabindex="-1"></a>serie <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>((rend))</span>
+<span id="cb69-166"><a href="#cb69-166" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Fecha =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(serie), <span class="at">Rendimiento =</span> serie)</span>
+<span id="cb69-167"><a href="#cb69-167" aria-hidden="true" tabindex="-1"></a>media <span class="ot">&lt;-</span> <span class="fu">mean</span>(df<span class="sc">$</span>Rendimiento)</span>
+<span id="cb69-168"><a href="#cb69-168" aria-hidden="true" tabindex="-1"></a>sd_val <span class="ot">&lt;-</span> <span class="fu">sd</span>(df<span class="sc">$</span>Rendimiento)</span>
+<span id="cb69-169"><a href="#cb69-169" aria-hidden="true" tabindex="-1"></a>upper <span class="ot">&lt;-</span> media <span class="sc">+</span> <span class="dv">2</span><span class="sc">*</span>sd_val</span>
+<span id="cb69-170"><a href="#cb69-170" aria-hidden="true" tabindex="-1"></a>lower <span class="ot">&lt;-</span> media <span class="sc">-</span> <span class="dv">2</span><span class="sc">*</span>sd_val</span>
+<span id="cb69-171"><a href="#cb69-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-172"><a href="#cb69-172" aria-hidden="true" tabindex="-1"></a>g_band <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(df, <span class="fu">aes</span>(<span class="at">x =</span> Fecha, <span class="at">y =</span> Rendimiento)) <span class="sc">+</span></span>
+<span id="cb69-173"><a href="#cb69-173" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">color =</span> <span class="st">"blue"</span>) <span class="sc">+</span></span>
+<span id="cb69-174"><a href="#cb69-174" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> media, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb69-175"><a href="#cb69-175" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> upper, <span class="at">linetype =</span> <span class="st">"dotted"</span>, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb69-176"><a href="#cb69-176" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> lower, <span class="at">linetype =</span> <span class="st">"dotted"</span>, <span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb69-177"><a href="#cb69-177" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="fu">paste0</span>(<span class="st">"Serie temporal ±2SD - "</span>, nombre_activo))</span>
+<span id="cb69-178"><a href="#cb69-178" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-179"><a href="#cb69-179" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">file.path</span>(subfolder, <span class="st">"Serie_2SD.png"</span>), g_band, <span class="at">width=</span><span class="dv">8</span>, <span class="at">height=</span><span class="dv">6</span>)</span>
+<span id="cb69-180"><a href="#cb69-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-181"><a href="#cb69-181" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-182"><a href="#cb69-182" aria-hidden="true" tabindex="-1"></a><span class="co"># QQ-plot</span></span>
+<span id="cb69-183"><a href="#cb69-183" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="fu">file.path</span>(subfolder, <span class="st">"QQplot.png"</span>), <span class="at">width=</span><span class="dv">800</span>, <span class="at">height=</span><span class="dv">600</span>)</span>
+<span id="cb69-184"><a href="#cb69-184" aria-hidden="true" tabindex="-1"></a><span class="fu">qqnorm</span>(rend, <span class="at">main=</span><span class="fu">paste0</span>(<span class="st">"QQ-Plot Rendimientos "</span>, nombre_activo))</span>
+<span id="cb69-185"><a href="#cb69-185" aria-hidden="true" tabindex="-1"></a><span class="fu">qqline</span>(rend)</span>
+<span id="cb69-186"><a href="#cb69-186" aria-hidden="true" tabindex="-1"></a><span class="fu">dev.off</span>()</span>
+<span id="cb69-187"><a href="#cb69-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-188"><a href="#cb69-188" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb69-189"><a href="#cb69-189" aria-hidden="true" tabindex="-1"></a><span class="co">#Devolver fila</span></span>
+<span id="cb69-190"><a href="#cb69-190" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb69-191"><a href="#cb69-191" aria-hidden="true" tabindex="-1"></a>  <span class="at">Estacionariedad_Precios =</span> estacionariedad_precio,</span>
+<span id="cb69-192"><a href="#cb69-192" aria-hidden="true" tabindex="-1"></a>  <span class="at">Estacionariedad_Rendimientos =</span> estacionariedad_rend, <span class="at">Incorrelacion_Rendimientos =</span> incorrelacion_rend,</span>
+<span id="cb69-193"><a href="#cb69-193" aria-hidden="true" tabindex="-1"></a>  <span class="at">Incorrelacion_Rend2 =</span> incorrelacion_rend2,</span>
+<span id="cb69-194"><a href="#cb69-194" aria-hidden="true" tabindex="-1"></a>  <span class="at">Hurst =</span> hurst,</span>
+<span id="cb69-195"><a href="#cb69-195" aria-hidden="true" tabindex="-1"></a>  <span class="at">BDS =</span> bds,</span>
+<span id="cb69-196"><a href="#cb69-196" aria-hidden="true" tabindex="-1"></a>  <span class="at">Normalidad =</span> normalidad, </span>
+<span id="cb69-197"><a href="#cb69-197" aria-hidden="true" tabindex="-1"></a>  <span class="at">HME =</span> hme_resumen, </span>
+<span id="cb69-198"><a href="#cb69-198" aria-hidden="true" tabindex="-1"></a>  <span class="at">Modelo =</span> modelo</span>
+<span id="cb69-199"><a href="#cb69-199" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb69-200"><a href="#cb69-200" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb69-201"><a href="#cb69-201" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-202"><a href="#cb69-202" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-203"><a href="#cb69-203" aria-hidden="true" tabindex="-1"></a><span class="co"># Aplicar a todos los activos</span></span>
+<span id="cb69-204"><a href="#cb69-204" aria-hidden="true" tabindex="-1"></a><span class="co"># ----------------------</span></span>
+<span id="cb69-205"><a href="#cb69-205" aria-hidden="true" tabindex="-1"></a>activos <span class="ot">&lt;-</span> <span class="fu">names</span>(rendimientos_limpios)</span>
+<span id="cb69-206"><a href="#cb69-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-207"><a href="#cb69-207" aria-hidden="true" tabindex="-1"></a>resultados <span class="ot">&lt;-</span> <span class="fu">lapply</span>(activos, <span class="cf">function</span>(tk) {</span>
+<span id="cb69-208"><a href="#cb69-208" aria-hidden="true" tabindex="-1"></a>  precio <span class="ot">&lt;-</span> precios_originales[[tk]]</span>
+<span id="cb69-209"><a href="#cb69-209" aria-hidden="true" tabindex="-1"></a>  rend <span class="ot">&lt;-</span> rendimientos_limpios[[tk]]</span>
+<span id="cb69-210"><a href="#cb69-210" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb69-211"><a href="#cb69-211" aria-hidden="true" tabindex="-1"></a>  fila <span class="ot">&lt;-</span> <span class="fu">analizar_activo</span>(precio, rend, <span class="at">nombre_activo =</span> tk)</span>
+<span id="cb69-212"><a href="#cb69-212" aria-hidden="true" tabindex="-1"></a>  <span class="co">#fila$Activo &lt;- tk</span></span>
+<span id="cb69-213"><a href="#cb69-213" aria-hidden="true" tabindex="-1"></a>  fila</span>
+<span id="cb69-214"><a href="#cb69-214" aria-hidden="true" tabindex="-1"></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5188698 
+Corrected R over S Hurst exponent:   0.5419075 
+Empirical Hurst exponent:            0.546719 
+Corrected empirical Hurst exponent:  0.5195915 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5184471 
+Corrected R over S Hurst exponent:   0.5282228 
+Empirical Hurst exponent:            0.5275065 
+Corrected empirical Hurst exponent:  0.5014451 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5103614 
+Corrected R over S Hurst exponent:   0.5325389 
+Empirical Hurst exponent:            0.5190946 
+Corrected empirical Hurst exponent:  0.4888759 
+Theoretical Hurst exponent:          0.5286448 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5126898 
+Corrected R over S Hurst exponent:   0.5284112 
+Empirical Hurst exponent:            0.5319101 
+Corrected empirical Hurst exponent:  0.5066063 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5246606 
+Corrected R over S Hurst exponent:   0.521937 
+Empirical Hurst exponent:            0.4953188 
+Corrected empirical Hurst exponent:  0.4707462 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.468323 
+Corrected R over S Hurst exponent:   0.4915318 
+Empirical Hurst exponent:            0.5245003 
+Corrected empirical Hurst exponent:  0.4985648 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5555147 
+Corrected R over S Hurst exponent:   0.5660994 
+Empirical Hurst exponent:            0.5250868 
+Corrected empirical Hurst exponent:  0.4975583 
+Theoretical Hurst exponent:          0.5284086 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5438469 
+Corrected R over S Hurst exponent:   0.5589916 
+Empirical Hurst exponent:            0.5089704 
+Corrected empirical Hurst exponent:  0.4772038 
+Theoretical Hurst exponent:          0.5328161 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5299289 
+Corrected R over S Hurst exponent:   0.5472175 
+Empirical Hurst exponent:            0.5352906 
+Corrected empirical Hurst exponent:  0.5074086 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5209261 
+Corrected R over S Hurst exponent:   0.5447819 
+Empirical Hurst exponent:            0.4990019 
+Corrected empirical Hurst exponent:  0.4714379 
+Theoretical Hurst exponent:          0.5297621 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5594764 
+Corrected R over S Hurst exponent:   0.5784947 
+Empirical Hurst exponent:            0.5660369 
+Corrected empirical Hurst exponent:  0.5353603 
+Theoretical Hurst exponent:          0.5301022 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.527951 
+Corrected R over S Hurst exponent:   0.559463 
+Empirical Hurst exponent:            0.5563343 
+Corrected empirical Hurst exponent:  0.5251589 
+Theoretical Hurst exponent:          0.529926 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.6155992 
+Corrected R over S Hurst exponent:   0.6353804 
+Empirical Hurst exponent:            0.6038951 
+Corrected empirical Hurst exponent:  0.5731405 
+Theoretical Hurst exponent:          0.5286231 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.537494 
+Corrected R over S Hurst exponent:   0.5563651 
+Empirical Hurst exponent:            0.551298 
+Corrected empirical Hurst exponent:  0.5220925 
+Theoretical Hurst exponent:          0.5281755 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5420384 
+Corrected R over S Hurst exponent:   0.5744169 
+Empirical Hurst exponent:            0.5801427 
+Corrected empirical Hurst exponent:  0.5512612 
+Theoretical Hurst exponent:          0.5277621 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5414988 
+Corrected R over S Hurst exponent:   0.5593233 
+Empirical Hurst exponent:            0.5645013 
+Corrected empirical Hurst exponent:  0.5382304 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5607634 
+Corrected R over S Hurst exponent:   0.5649181 
+Empirical Hurst exponent:            0.500112 
+Corrected empirical Hurst exponent:  0.4703263 
+Theoretical Hurst exponent:          0.5307506 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5497098 
+Corrected R over S Hurst exponent:   0.53606 
+Empirical Hurst exponent:            0.5033321 
+Corrected empirical Hurst exponent:  0.4730907 
+Theoretical Hurst exponent:          0.5305003 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5256494 
+Corrected R over S Hurst exponent:   0.5219554 
+Empirical Hurst exponent:            0.4904746 
+Corrected empirical Hurst exponent:  0.4632203 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5157442 
+Corrected R over S Hurst exponent:   0.5437181 
+Empirical Hurst exponent:            0.5602459 
+Corrected empirical Hurst exponent:  0.5306686 
+Theoretical Hurst exponent:          0.528616 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5066006 
+Corrected R over S Hurst exponent:   0.5056357 
+Empirical Hurst exponent:            0.4805202 
+Corrected empirical Hurst exponent:  0.4524205 
+Theoretical Hurst exponent:          0.5286231 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5473159 
+Corrected R over S Hurst exponent:   0.558838 
+Empirical Hurst exponent:            0.5483571 
+Corrected empirical Hurst exponent:  0.5221132 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5539203 
+Corrected R over S Hurst exponent:   0.5785543 
+Empirical Hurst exponent:            0.5569109 
+Corrected empirical Hurst exponent:  0.5226461 
+Theoretical Hurst exponent:          0.5350219 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.6156563 
+Corrected R over S Hurst exponent:   0.6577946 
+Empirical Hurst exponent:            0.651115 
+Corrected empirical Hurst exponent:  0.6193396 
+Theoretical Hurst exponent:          0.5288595 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.545171 
+Corrected R over S Hurst exponent:   0.5755862 
+Empirical Hurst exponent:            0.5765562 
+Corrected empirical Hurst exponent:  0.5453971 
+Theoretical Hurst exponent:          0.5284599 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5805418 
+Corrected R over S Hurst exponent:   0.6022649 
+Empirical Hurst exponent:            0.5819261 
+Corrected empirical Hurst exponent:  0.5561457 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(precio_clean): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5505806 
+Corrected R over S Hurst exponent:   0.5777498 
+Empirical Hurst exponent:            0.5667578 
+Corrected empirical Hurst exponent:  0.5367243 
+Theoretical Hurst exponent:          0.5286448 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5106517 
+Corrected R over S Hurst exponent:   0.5194801 
+Empirical Hurst exponent:            0.507555 
+Corrected empirical Hurst exponent:  0.4819772 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5588098 
+Corrected R over S Hurst exponent:   0.5783132 
+Empirical Hurst exponent:            0.5564114 
+Corrected empirical Hurst exponent:  0.5268856 
+Theoretical Hurst exponent:          0.528616 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.532187 
+Corrected R over S Hurst exponent:   0.5315375 
+Empirical Hurst exponent:            0.4789265 
+Corrected empirical Hurst exponent:  0.4506051 
+Theoretical Hurst exponent:          0.5305518 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.535829 
+Corrected R over S Hurst exponent:   0.5444469 
+Empirical Hurst exponent:            0.5119513 
+Corrected empirical Hurst exponent:  0.4860191 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5524817 
+Corrected R over S Hurst exponent:   0.5731094 
+Empirical Hurst exponent:            0.5503774 
+Corrected empirical Hurst exponent:  0.5190713 
+Theoretical Hurst exponent:          0.5294517 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5149201 
+Corrected R over S Hurst exponent:   0.5626437 
+Empirical Hurst exponent:            0.5936869 
+Corrected empirical Hurst exponent:  0.5591449 
+Theoretical Hurst exponent:          0.5298613 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.584067 
+Corrected R over S Hurst exponent:   0.6027957 
+Empirical Hurst exponent:            0.564293 
+Corrected empirical Hurst exponent:  0.5381267 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(precio_clean): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in adf.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in pp.test(rend): p-value smaller than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in kpss.test(rend): p-value greater than printed p-value</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple R/S Hurst estimation:         0.5192572 
+Corrected R over S Hurst exponent:   0.5576707 
+Empirical Hurst exponent:            0.5938318 
+Corrected empirical Hurst exponent:  0.5666025 
+Theoretical Hurst exponent:          0.5258175 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb260"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb260-1"><a href="#cb260-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Combinar todo en una tabla final</span></span>
+<span id="cb260-2"><a href="#cb260-2" aria-hidden="true" tabindex="-1"></a>tabla_final <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, resultados)</span>
+<span id="cb260-3"><a href="#cb260-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb260-4"><a href="#cb260-4" aria-hidden="true" tabindex="-1"></a>tabla_final<span class="sc">$</span>Activo <span class="ot">&lt;-</span> activos</span>
+<span id="cb260-5"><a href="#cb260-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb260-6"><a href="#cb260-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Reordenar columnas</span></span>
+<span id="cb260-7"><a href="#cb260-7" aria-hidden="true" tabindex="-1"></a>tabla_final <span class="ot">&lt;-</span> tabla_final[, <span class="fu">c</span>(<span class="st">"Activo"</span>,</span>
+<span id="cb260-8"><a href="#cb260-8" aria-hidden="true" tabindex="-1"></a>                               <span class="st">"Estacionariedad_Precios"</span>, <span class="st">"Estacionariedad_Rendimientos"</span>,</span>
+<span id="cb260-9"><a href="#cb260-9" aria-hidden="true" tabindex="-1"></a>                               <span class="st">"Incorrelacion_Rendimientos"</span>, <span class="st">"Incorrelacion_Rend2"</span>,</span>
+<span id="cb260-10"><a href="#cb260-10" aria-hidden="true" tabindex="-1"></a>                               <span class="st">"Hurst"</span>, <span class="st">"BDS"</span>, <span class="st">"Normalidad"</span>, <span class="st">"HME"</span>, <span class="st">"Modelo"</span>)]</span>
+<span id="cb260-11"><a href="#cb260-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb260-12"><a href="#cb260-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb260-13"><a href="#cb260-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar tabla</span></span>
+<span id="cb260-14"><a href="#cb260-14" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(tabla_final)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Activo  Estacionariedad_Precios Estacionariedad_Rendimientos
+1   SAN.MC Precios no estacionarios   Rendimientos estacionarios
+2  BBVA.MC Precios no estacionarios   Rendimientos estacionarios
+3   ITX.MC Precios no estacionarios   Rendimientos estacionarios
+4   TEF.MC Precios no estacionarios   Rendimientos estacionarios
+5   IBE.MC Precios no estacionarios   Rendimientos estacionarios
+6   REP.MC Precios no estacionarios   Rendimientos estacionarios
+7   ACS.MC Precios no estacionarios   Rendimientos estacionarios
+8  AENA.MC Precios no estacionarios   Rendimientos estacionarios
+9   FER.MC Precios no estacionarios   Rendimientos estacionarios
+10  GRF.MC Precios no estacionarios   Rendimientos estacionarios
+11  MTS.MC Precios no estacionarios   Rendimientos estacionarios
+12 CABK.MC Precios no estacionarios   Rendimientos estacionarios
+13  COL.MC Precios no estacionarios   Rendimientos estacionarios
+14  MAP.MC Precios no estacionarios   Rendimientos estacionarios
+15  PHM.MC Precios no estacionarios   Rendimientos estacionarios
+16  BKT.MC Precios no estacionarios   Rendimientos estacionarios
+17 CLNX.MC Precios no estacionarios   Rendimientos estacionarios
+18  AMS.MC Precios no estacionarios   Rendimientos estacionarios
+19  VIS.MC Precios no estacionarios   Rendimientos estacionarios
+20  ELE.MC Precios no estacionarios   Rendimientos estacionarios
+21  ENG.MC Precios no estacionarios   Rendimientos estacionarios
+22 NTGY.MC Precios no estacionarios   Rendimientos estacionarios
+23  UNI.MC Precios no estacionarios   Rendimientos estacionarios
+24  SLR.MC Precios no estacionarios              No estacionario
+25  TRE.MC Precios no estacionarios   Rendimientos estacionarios
+26  SAB.MC Precios no estacionarios   Rendimientos estacionarios
+27  IDR.MC Precios no estacionarios   Rendimientos estacionarios
+28  ACX.MC Precios no estacionarios   Rendimientos estacionarios
+29  FCC.MC Precios no estacionarios   Rendimientos estacionarios
+30  LOG.MC Precios no estacionarios   Rendimientos estacionarios
+31  RED.MC Precios no estacionarios   Rendimientos estacionarios
+32  FDR.MC Precios no estacionarios              No estacionario
+33 ROVI.MC Precios no estacionarios   Rendimientos estacionarios
+34 SCYR.MC Precios no estacionarios   Rendimientos estacionarios
+35  MEL.MC Precios no estacionarios   Rendimientos estacionarios
+   Incorrelacion_Rendimientos Incorrelacion_Rend2             Hurst
+1                 A favor HME       En contra HME RN. No cumple HME
+2               En contra HME       En contra HME RN. No cumple HME
+3               En contra HME       En contra HME RN. No cumple HME
+4               En contra HME       En contra HME RN. No cumple HME
+5               En contra HME       En contra HME RN. No cumple HME
+6               En contra HME       En contra HME RR. No cumple HME
+7                 A favor HME       En contra HME RN. No cumple HME
+8                 A favor HME       En contra HME RN. No cumple HME
+9               En contra HME       En contra HME RN. No cumple HME
+10                A favor HME       En contra HME RN. No cumple HME
+11              En contra HME       En contra HME RN. No cumple HME
+12                A favor HME       En contra HME RN. No cumple HME
+13              En contra HME       En contra HME RN. No cumple HME
+14                A favor HME       En contra HME RN. No cumple HME
+15                A favor HME       En contra HME RN. No cumple HME
+16              En contra HME       En contra HME RN. No cumple HME
+17              En contra HME       En contra HME RN. No cumple HME
+18                A favor HME       En contra HME RN. No cumple HME
+19              En contra HME       En contra HME RN. No cumple HME
+20                A favor HME       En contra HME RN. No cumple HME
+21              En contra HME       En contra HME RN. No cumple HME
+22                A favor HME       En contra HME RN. No cumple HME
+23              En contra HME       En contra HME RN. No cumple HME
+24                A favor HME       En contra HME RN. No cumple HME
+25                A favor HME       En contra HME RN. No cumple HME
+26              En contra HME       En contra HME RN. No cumple HME
+27              En contra HME       En contra HME RN. No cumple HME
+28                A favor HME       En contra HME RN. No cumple HME
+29                A favor HME       En contra HME RN. No cumple HME
+30                A favor HME       En contra HME RN. No cumple HME
+31              En contra HME       En contra HME RN. No cumple HME
+32                A favor HME       En contra HME RN. No cumple HME
+33              En contra HME       En contra HME RN. No cumple HME
+34                A favor HME       En contra HME RN. No cumple HME
+35              En contra HME       En contra HME RN. No cumple HME
+             BDS             Normalidad HME     Modelo
+1  No cumple HME Distribución no normal  No      GARCH
+2  No cumple HME Distribución no normal  No ARMA-GARCH
+3  No cumple HME Distribución no normal  No ARMA-GARCH
+4  No cumple HME Distribución no normal  No ARMA-GARCH
+5  No cumple HME Distribución no normal  No ARMA-GARCH
+6  No cumple HME Distribución no normal  No ARMA-GARCH
+7  No cumple HME Distribución no normal  No      GARCH
+8  No cumple HME Distribución no normal  No      GARCH
+9  No cumple HME Distribución no normal  No ARMA-GARCH
+10 No cumple HME Distribución no normal  No      GARCH
+11 No cumple HME Distribución no normal  No ARMA-GARCH
+12 No cumple HME Distribución no normal  No      GARCH
+13 No cumple HME Distribución no normal  No ARMA-GARCH
+14 No cumple HME Distribución no normal  No      GARCH
+15 No cumple HME Distribución no normal  No      GARCH
+16 No cumple HME Distribución no normal  No ARMA-GARCH
+17 No cumple HME Distribución no normal  No ARMA-GARCH
+18 No cumple HME Distribución no normal  No      GARCH
+19 No cumple HME Distribución no normal  No ARMA-GARCH
+20 No cumple HME Distribución no normal  No      GARCH
+21 No cumple HME Distribución no normal  No ARMA-GARCH
+22 No cumple HME Distribución no normal  No      GARCH
+23 No cumple HME Distribución no normal  No ARMA-GARCH
+24 No cumple HME Distribución no normal  No      GARCH
+25 No cumple HME Distribución no normal  No      GARCH
+26 No cumple HME Distribución no normal  No ARMA-GARCH
+27 No cumple HME Distribución no normal  No ARMA-GARCH
+28 No cumple HME Distribución no normal  No      GARCH
+29 No cumple HME Distribución no normal  No      GARCH
+30 No cumple HME Distribución no normal  No      GARCH
+31 No cumple HME Distribución no normal  No ARMA-GARCH
+32 No cumple HME Distribución no normal  No      GARCH
+33 No cumple HME Distribución no normal  No ARMA-GARCH
+34 No cumple HME Distribución no normal  No      GARCH
+35 No cumple HME Distribución no normal  No ARMA-GARCH</code></pre>
+</div>
+</div>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
