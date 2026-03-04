@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ángela Lomas Anglada">
+
+<title>Volatility Modeling and GARCH Model Selection</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/quarto-html/quarto.js"></script>
+<script src="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/quarto-html/popper.min.js"></script>
+<script src="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Volatility_Modeling_and_GARCH_Model_Selection_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Volatility Modeling and GARCH Model Selection</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ángela Lomas Anglada </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"rendimientos_limpios.RData"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(forecast)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Registered S3 method overwritten by 'quantmod':
+  method            from
+  as.zoo.data.frame zoo </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lmtest)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: zoo</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'zoo'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    as.Date, as.Date.numeric</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rugarch)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: parallel</code></pre>
+</div>
+</div>
+<p>La ventana de estimación es hasta el 31/10/2025 para predecir los datos de noviembre.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>san <span class="ot">&lt;-</span> rendimientos_limpios[[<span class="st">"ACS.MC"</span>]]</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>fecha_corte <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(<span class="st">"2025-10-31"</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>san_rend <span class="ot">&lt;-</span> san[<span class="fu">index</span>(san) <span class="sc">&lt;=</span> fecha_corte]</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(san_rend)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           ACS.MC.Adjusted
+2002-01-03     0.050531625
+2002-01-04    -0.025123093
+2002-01-07    -0.042590309
+2002-01-08     0.004781848
+2002-01-09    -0.022264407
+2002-01-10    -0.003006483</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tail</span>(san_rend)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           ACS.MC.Adjusted
+2025-10-24    0.0167954783
+2025-10-27    0.0103556016
+2025-10-28   -0.0006870892
+2025-10-29   -0.0034423340
+2025-10-30    0.0013783348
+2025-10-31   -0.0194721749</code></pre>
+</div>
+</div>
+<section id="escenario-1-ruido-blanco-rb" class="level3">
+<h3 class="anchored" data-anchor-id="escenario-1-ruido-blanco-rb">ESCENARIO 1: Ruido Blanco (RB)</h3>
+<p>Modelo simple tipo Random Walk o ARMA(0,0):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#ajuste:</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>mod.rb <span class="ot">&lt;-</span> <span class="fu">Arima</span>(san_rend)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co">#significatividad de parámetros</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mod.rb)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Series: san_rend 
+ARIMA(0,0,0) with non-zero mean 
+
+Coefficients:
+       mean
+      6e-04
+s.e.  2e-04
+
+sigma^2 = 0.0002826:  log likelihood = 16255.12
+AIC=-32506.24   AICc=-32506.24   BIC=-32492.81
+
+Training set error measures:
+                       ME       RMSE        MAE  MPE MAPE      MASE       ACF1
+Training set 3.830779e-15 0.01680803 0.01205328 -Inf  Inf 0.7016317 0.01655955</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coeftest</span>(mod.rb)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+z test of coefficients:
+
+            Estimate Std. Error z value Pr(&gt;|z|)   
+intercept 0.00061283 0.00021567  2.8414 0.004491 **
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>La media estimada del rendimiento es prácticamente 0. El p-value = 0.49 &gt; 0.05, por lo que concluimos que no es significativa. Vamos a pasar a la diagnosis para concluir si aceptamos o no RB.</p>
+<p>DIAGNOSIS DE LOS RESIDUOS:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Residuos</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>res.rb <span class="ot">&lt;-</span> <span class="fu">residuals</span>(mod.rb)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráficos de ACF/PACF de residuos y residuos al cuadrado</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggtsdisplay</span>(res.rb, <span class="at">main=</span><span class="st">"Residuos ARIMA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggtsdisplay</span>(res.rb<span class="sc">^</span><span class="dv">2</span>, <span class="at">main=</span><span class="st">"Residuos al cuadrado ARIMA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-5-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ljung-Box test sobre residuos (media)</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>ljung_media_p <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="cf">function</span>(lag) {</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Box.test</span>(res.rb, <span class="at">lag =</span> lag, <span class="at">type =</span> <span class="st">"Ljung-Box"</span>, <span class="at">fitdf =</span> <span class="dv">0</span>)<span class="sc">$</span>p.value</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Ljung-Box test sobre residuos al cuadrado (varianza)</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>ljung_var_p <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>), <span class="cf">function</span>(lag) {</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Box.test</span>(res.rb<span class="sc">^</span><span class="dv">2</span>, <span class="at">lag =</span> lag, <span class="at">type =</span> <span class="st">"Ljung-Box"</span>, <span class="at">fitdf =</span> <span class="dv">0</span>)<span class="sc">$</span>p.value</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar resultados</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">Lag_Media =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>,</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">pvalue_Media =</span> <span class="fu">round</span>(ljung_media_p, <span class="dv">4</span>)</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  Lag_Media pvalue_Media
+1         1       0.1960
+2         2       0.3200
+3         3       0.1797
+4         4       0.2475
+5         5       0.3123</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Lag_Varianza =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>),</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">pvalue_Varianza =</span> <span class="fu">round</span>(ljung_var_p, <span class="dv">4</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  Lag_Varianza pvalue_Varianza
+1            1               0
+2            5               0
+3           10               0
+4           20               0
+5           30               0</code></pre>
+</div>
+</div>
+<ul>
+<li><p><strong>Diágnostico de residuos</strong>: En los gráficos ACF y PACF, no observamos que sobresalgan barras de forma significativa. Hay alguna barra que sobresale como en el retardo 22 o 35, que puede deberse a efectos estacionarios o ciclos en la serie o simplemente ruido que no se consigue eliminar. Por lo que mediante la visualización podríamos decir que NO hay autocorrelación. Esto se respalda con en el <strong>test de Ljung-Box</strong> vemos p-value &gt; 0.05, lo que indica que NO hay evidencia para rechazar la H0: No autocorrelación. Por lo que podemos decir que NO hay autocorrelación en los residuos. Lo que significa que este modelo <strong>captura bien</strong> la dinámica de la <strong>media</strong>.</p></li>
+<li><p>Diagnóstico de los <strong>residuos al cuadrado</strong>: En los gráficos ACF y PACF de los residuos al cuadrado observamos que muchas barras sobresalen, por lo que SÍ hay autocorrelación ya que son significativas. Esto se respalda con el <strong>test de Ljung-Box</strong> vemos p-value &lt; 0.05, lo que indica que hay evidencia para rechazar la H0: No autocorrelación. Por lo que podemos decir que SÍ hay autocorrelación en los residuos. Lo que significa que este modelo <strong>no captura bien</strong> la dinámica de la <strong>varianza</strong> (sigue quedandoe structura) revelando la presencia de efectos <strong>ARCH/GARCH</strong>. Esto implica que la volatilidad no es constante en el tiempo y depende del comportamiento pasado, evidenciando la existencia de heterocedasticidad y persistencia en la volatilidad.</p></li>
+</ul>
+<p>Con esto podríamos descartar directamente Ruido Blanco.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Histograma con densidad empírica y Normal teórica</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>res_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Residuals =</span> res.rb)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(res_df, <span class="fu">aes</span>(<span class="at">x =</span> Residuals)) <span class="sc">+</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">y =</span> ..density..), <span class="at">bins =</span> <span class="dv">30</span>, <span class="at">fill =</span> <span class="st">"lightblue"</span>, <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="at">color =</span> <span class="st">"blue"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="co"># densidad empírica</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_function</span>(<span class="at">fun =</span> dnorm, <span class="at">args =</span> <span class="fu">list</span>(<span class="at">mean =</span> <span class="fu">mean</span>(res.rb), <span class="at">sd =</span> <span class="fu">sd</span>(res.rb)), </span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>                <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="co"># Normal teórica</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Distribución de residuos ARIMA"</span>,</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Residuos"</span>,</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Densidad"</span>) <span class="sc">+</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+ℹ Please use `linewidth` instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.
+ℹ Please use `after_stat(density)` instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Don't know how to automatically pick scale for object of type &lt;ts&gt;. Defaulting
+to continuous.</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extraer media y varianza incondicional</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>mu_incond <span class="ot">&lt;-</span> mod.rb<span class="sc">$</span>coef[<span class="st">"intercept"</span>]  <span class="co"># media incondicional</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>mu_incond</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   intercept 
+0.0006128256 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>sigma_incond <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(mod.rb<span class="sc">$</span>sigma2)    <span class="co"># varianza incondicional</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>sigma_incond</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.01680941</code></pre>
+</div>
+</div>
+<p>La <strong>media incondicional</strong> es el promedio esperado del rendimiento sin considerar información pasada, es decir, el valor alrededor del cual los rendimientos se mueven ‘en promedio’. En este modelo Ruido Blanco, la media estimada es muy cercana a 0. La <strong>varianza incondicional</strong> representa la dispersión promedio de los rendimientos sin considerar información pasada, es decir, la volatilidad ‘promedio’ de la serie, en nuestro caso es 0.02 &gt; 0. Sin embargo, al analizar los residuos al cuadrado encontramos autocorrelación significativa, lo que indica que la volatilidad no es constante y depende del pasado.</p>
+<p>Conclusión sobre el modelo:</p>
+<p>Aunque la media de los rendimientos es cercana a cero y no significativa, los residuos muestran evidencia clara de <strong>autocorrelación en la varianza</strong>. Esto implica que la serie <strong>no cumple con los supuestos de Ruido Blanco</strong>, porque:</p>
+<ol type="1">
+<li><p>La volatilidad no es constante (heterocedasticidad y clustering de volatilidad).</p></li>
+<li><p>Existe persistencia en la varianza, lo que sugiere efectos ARCH/GARCH.</p></li>
+</ol>
+<p>Por lo tanto, descartamos el escenario de Ruido Blanco y es necesario considerar un modelo que capture la dinámica de la varianza, como un <strong>GARCH</strong>.</p>
+</section>
+<section id="escenario-2-arma" class="level3">
+<h3 class="anchored" data-anchor-id="escenario-2-arma">ESCENARIO 2: ARMA</h3>
+<p>Usamos la función <code>auto.arima()</code>, evalúa estacionariedad (d) y, si es necesario, diferencia la serie. Busca el modelo ARMA/ARIMA óptimo evaluando diferentes combinaciones de p y q (AR y MA) según AIC/BIC.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>mean.mu.bic <span class="ot">&lt;-</span> <span class="fu">auto.arima</span>(san_rend, <span class="at">stationary=</span><span class="cn">TRUE</span>, <span class="at">seasonal=</span><span class="cn">FALSE</span>, <span class="at">ic =</span> <span class="st">'aic'</span>, <span class="at">allowmean =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="co">#print(mean.mu.bic)</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mean.mu.bic)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Series: san_rend 
+ARIMA(3,0,0) with non-zero mean 
+
+Coefficients:
+         ar1      ar2      ar3   mean
+      0.0166  -0.0099  -0.0204  6e-04
+s.e.  0.0128   0.0128   0.0128  2e-04
+
+sigma^2 = 0.0002825:  log likelihood = 16257.55
+AIC=-32505.1   AICc=-32505.09   BIC=-32471.52
+
+Training set error measures:
+                        ME       RMSE        MAE MPE MAPE      MASE
+Training set -1.505408e-07 0.01680133 0.01205879 NaN  Inf 0.7019525
+                      ACF1
+Training set -0.0002314277</code></pre>
+</div>
+</div>
+<p>MODLEOS SELECCIONADO POR EL AIC Y BIC:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>mod_arma_aic <span class="ot">&lt;-</span> <span class="fu">auto.arima</span>(san_rend <span class="sc">-</span> <span class="fu">mean</span>(san_rend), <span class="at">stationary =</span> <span class="cn">TRUE</span>, <span class="at">seasonal =</span> <span class="cn">FALSE</span>, <span class="at">ic =</span> <span class="st">"aic"</span>, <span class="at">allowmean =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>mod_arma_bic <span class="ot">&lt;-</span> <span class="fu">auto.arima</span>(san_rend <span class="sc">-</span> <span class="fu">mean</span>(san_rend), <span class="at">stationary =</span> <span class="cn">TRUE</span>, <span class="at">seasonal =</span> <span class="cn">FALSE</span>, <span class="at">ic =</span> <span class="st">"bic"</span>, <span class="at">allowmean =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mod_arma_aic)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Series: san_rend - mean(san_rend) 
+ARIMA(3,0,0) with zero mean 
+
+Coefficients:
+         ar1      ar2      ar3
+      0.0166  -0.0099  -0.0204
+s.e.  0.0128   0.0128   0.0128
+
+sigma^2 = 0.0002824:  log likelihood = 16257.55
+AIC=-32507.1   AICc=-32507.09   BIC=-32480.24
+
+Training set error measures:
+                       ME       RMSE        MAE     MPE     MAPE      MASE
+Training set 5.798165e-08 0.01680133 0.01205879 75.8732 128.6397 0.7019528
+                      ACF1
+Training set -0.0002314291</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mod_arma_bic)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Series: san_rend - mean(san_rend) 
+ARIMA(1,0,0) with zero mean 
+
+Coefficients:
+         ar1
+      0.0166
+s.e.  0.0128
+
+sigma^2 = 0.0002825:  log likelihood = 16255.96
+AIC=-32507.91   AICc=-32507.91   BIC=-32494.48
+
+Training set error measures:
+                        ME       RMSE       MAE    MPE     MAPE      MASE
+Training set -5.577837e-08 0.01680572 0.0120563 91.011 112.5255 0.7018078
+                     ACF1
+Training set 0.0001488859</code></pre>
+</div>
+</div>
+<p>Al ajustar el modelo ARMA con la función <code>auto.arima()</code>, bajo los criterios AIC y BIC, el modelo seleccionado fue un <strong>ARIMA(0,0,0) con media cero</strong>, es decir, un proceso de Ruido Blanco (Escenario 1, ya hecho). Los valores de AIC (-31745.44) y BIC (-31738.64) no disminuyen respecto al modelo anterior, el de Ruido Blanco indicando que la inclusión de componentes AR o MA no mejora el ajuste del modelo.</p>
+<p>El diagnóstico es el mismo que en el anterior escenario dado que el modelo ARMA seleccionado es idéntico al modelo de Ruido Blanco:</p>
+<ul>
+<li><p>Los residuos de la media no presentan autocorrelación significativa, confirmando que el modelo captura correctamente la dinámica de la media.</p></li>
+<li><p>Los residuos al cuadrado muestran autocorrelación significativa, evidenciando que la volatilidad no es constante y depende del comportemiento pasado. Esto indica la presencia de heterocedasticidad y persistencia de la volatilidad, sugiriendo la necesidad de considerar un modelo tipo ARCH/GARCH para capturar la dinámica de la varianza.</p></li>
+</ul>
+<p>De la misma forma descartaremos este modelo.</p>
+</section>
+<section id="escenario-3" class="level3">
+<h3 class="anchored" data-anchor-id="escenario-3">ESCENARIO 3:</h3>
+<section id="garch11-con-media" class="level4">
+<h4 class="anchored" data-anchor-id="garch11-con-media">GARCH(1,1) con media</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Especificación del modelo GARCH(1,1)</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>garch11 <span class="ot">&lt;-</span> <span class="fu">ugarchspec</span>(</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance.model =</span> <span class="fu">list</span>(<span class="at">model =</span> <span class="st">"sGARCH"</span>, <span class="at">garchOrder =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>)),</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean.model     =</span> <span class="fu">list</span>(<span class="at">armaOrder =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="at">include.mean =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">distribution.model =</span> <span class="st">"norm"</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimación del modelo</span></span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>fit_garch11 <span class="ot">&lt;-</span> <span class="fu">ugarchfit</span>(<span class="at">spec =</span> garch11, <span class="at">data =</span> san_rend, <span class="at">solver =</span> <span class="st">"hybrid"</span>)</span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Resumen del modelo</span></span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(fit_garch11)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+*---------------------------------*
+*          GARCH Model Fit        *
+*---------------------------------*
+
+Conditional Variance Dynamics   
+-----------------------------------
+GARCH Model : sGARCH(1,1)
+Mean Model  : ARFIMA(0,0,0)
+Distribution    : norm 
+
+Optimal Parameters
+------------------------------------
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+mu      0.000987    0.000179   5.5141  0.00000
+omega   0.000005    0.000003   1.3546  0.17553
+alpha1  0.064877    0.003204  20.2510  0.00000
+beta1   0.918568    0.015626  58.7840  0.00000
+
+Robust Standard Errors:
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+mu      0.000987    0.000200  4.94018 0.000001
+omega   0.000005    0.000027  0.16985 0.865127
+alpha1  0.064877    0.053941  1.20275 0.229072
+beta1   0.918568    0.134014  6.85428 0.000000
+
+LogLikelihood : 16811.97 
+
+Information Criteria
+------------------------------------
+                    
+Akaike       -5.5153
+Bayes        -5.5109
+Shibata      -5.5153
+Hannan-Quinn -5.5138
+
+Weighted Ljung-Box Test on Standardized Residuals
+------------------------------------
+                        statistic p-value
+Lag[1]                      3.435 0.06384
+Lag[2*(p+q)+(p+q)-1][2]     3.699 0.09085
+Lag[4*(p+q)+(p+q)-1][5]     4.354 0.21306
+d.o.f=0
+H0 : No serial correlation
+
+Weighted Ljung-Box Test on Standardized Squared Residuals
+------------------------------------
+                        statistic p-value
+Lag[1]                      1.559  0.2118
+Lag[2*(p+q)+(p+q)-1][5]     2.548  0.4957
+Lag[4*(p+q)+(p+q)-1][9]     4.001  0.5886
+d.o.f=2
+
+Weighted ARCH LM Tests
+------------------------------------
+            Statistic Shape Scale P-Value
+ARCH Lag[3]    0.4223 0.500 2.000  0.5158
+ARCH Lag[5]    1.7512 1.440 1.667  0.5289
+ARCH Lag[7]    2.7874 2.315 1.543  0.5546
+
+Nyblom stability test
+------------------------------------
+Joint Statistic:  1.117
+Individual Statistics:              
+mu     0.24474
+omega  0.07308
+alpha1 0.18207
+beta1  0.26034
+
+Asymptotic Critical Values (10% 5% 1%)
+Joint Statistic:         1.07 1.24 1.6
+Individual Statistic:    0.35 0.47 0.75
+
+Sign Bias Test
+------------------------------------
+                   t-value     prob sig
+Sign Bias           0.4136 0.679184    
+Negative Sign Bias  2.3176 0.020504  **
+Positive Sign Bias  0.4607 0.645007    
+Joint Effect       12.3991 0.006134 ***
+
+
+Adjusted Pearson Goodness-of-Fit Test:
+------------------------------------
+  group statistic p-value(g-1)
+1    20     212.8    9.635e-35
+2    30     233.1    9.138e-34
+3    40     255.7    1.195e-33
+4    50     301.0    6.063e-38
+
+
+Elapsed time : 0.3472719 </code></pre>
+</div>
+</div>
+<p>Hemos ajustado un modelo GARCH(1,1) con media incluida y distribución normal.</p>
+<p><strong>Parámetros estimados:</strong></p>
+<ul>
+<li><p><strong>Media condicional (μ):</strong> positiva y significativa, aunque de magnitud muy pequeña.</p></li>
+<li><p><strong>Constante de la varianza (ω):</strong> no significativa (p-value = 0.076), lo que indica que la varianza base no es determinante en la dinámica de la volatilidad.</p></li>
+<li><p><strong>Efecto ARCH (α1):</strong> mide el impacto de shocks recientes sobre la varianza actual. Es significativo, indicando que los cambios recientes en los rendimientos afectan la volatilidad condicional.</p></li>
+<li><p><strong>Efecto GARCH (β1):</strong> mide la persistencia de la varianza condicional. Muy significativo, reflejando <strong>clustering de volatilidad</strong> y heterocedasticidad persistente.</p></li>
+</ul>
+<p><strong>Diagnóstico de residuos:</strong></p>
+<ul>
+<li><strong>Ljung-Box sobre residuos estandarizados:</strong> todos los p-values &gt; 0.05, indicando que no existe autocorrelación significativa en la media y que el modelo captura adecuadamente la dinámica de los rendimientos.</li>
+<li><strong>Ljung-Box sobre residuos al cuadrado:</strong> todos los p-values &gt; 0.05, confirmando que la volatilidad condicional está correctamente modelada y que no hay autocorrelación significativa en la varianza.</li>
+<li><strong>ARCH test:</strong> p-values &gt; 0.05 en todos los lags, lo que indica que no hay heterocedasticidad residual no capturada y que la dinámica de la volatilidad condicional está adecuadamente representada por el modelo.</li>
+</ul>
+<p><strong>Test de signos:</strong></p>
+<ul>
+<li><p>El <strong>p-value conjunto</strong> asociado al efecto conjunto (Joint Effect) es muy bajo (0.0018), lo que indica <strong>la presencia de efectos asimétricos en los residuos</strong>. Es decir, los choques positivos y negativos no afectan de igual manera la volatilidad, lo que sugiere que el modelo GARCH(1,1) estándar no captura completamente estas diferencias.</p></li>
+<li><p>Para modelar correctamente estas asimetrías, sería recomendable considerar <strong>modelos GARCH asimétricos</strong>, como <strong>TGARCH (Threshold GARCH)</strong> o <strong>AGARCH (Asymmetric GARCH)</strong>, que permiten diferenciar la reacción de la volatilidad ante choques positivos y negativos</p></li>
+</ul>
+<p>Parámetros:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Parámetros estimados</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit_garch11)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          mu        omega       alpha1        beta1 
+9.870368e-04 4.551078e-06 6.487724e-02 9.185676e-01 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Media incondicional</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>mu_incond <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"mu"</span>]</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza incondicional: omega / (1 - alpha - beta)</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>omega <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"omega"</span>]</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"alpha1"</span>]</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>beta  <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"beta1"</span>]</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>var_incond <span class="ot">&lt;-</span> omega <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> alpha <span class="sc">-</span> beta)</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza condicional (estimada por el modelo)</span></span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>var_cond <span class="ot">&lt;-</span> <span class="fu">sigma</span>(fit_garch11)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar resultados</span></span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Media incondicional:"</span>, mu_incond, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Media incondicional: 0.0009870368 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Varianza incondicional:"</span>, var_incond, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Varianza incondicional: 0.0002749044 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(var_cond)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                   [,1]
+2002-01-03 0.0002826500
+2002-01-04 0.0004234362
+2002-01-07 0.0004377352
+2002-01-08 0.0005298414
+2002-01-09 0.0004921805
+2002-01-10 0.0004917267</code></pre>
+</div>
+</div>
+<ul>
+<li>La media condicional es cercana a cero, lo que concuerda con la ausencia de tendencia fuerte en los rendimientos.</li>
+<li>La varianza condicional, en cambio, <strong>muestra clustering de volatilidad</strong>, con períodos de mayor y menor volatilidad, reflejando la heterocedasticidad condicional típica de series financieras.</li>
+<li>La diferencia entre varianza incondicional y condicional evidencia que <strong>la volatilidad depende de la historia reciente de la serie</strong>, algo que el modelo GARCH captura correctamente.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráficos estándar del modelo (según tu formato preferido)</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">9</span>)   <span class="co"># Residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">8</span>)   <span class="co"># Ajuste del modelo</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-12-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">10</span>)  <span class="co"># Densidad de residuos</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-12-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">11</span>)  <span class="co"># ACF residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-12-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Vamos a hacer también una visualización:</p>
+<ul>
+<li><p><strong>Distribución de residuos:</strong><br>
+El histograma muestra que la <strong>cola de los valores negativos es más pesada</strong> que la de los positivos, indicando <strong>asimetría negativa</strong> (skewness negativa). Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el <strong>efecto leverage</strong>, donde la volatilidad responde de manera diferente a shocks negativos respecto a los positivos.<br>
+El <strong>QQ-plot</strong> confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, indicando colas más pesadas en los valores negativos.</p></li>
+<li><p><strong>Autocorrelación de residuos:</strong><br>
+La <strong>ACF de los residuos estandarizados</strong> muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando <strong>ausencia de autocorrelación significativa</strong> en la media. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.</p></li>
+<li><p><strong>Autocorrelación de varianza:</strong><br>
+La <strong>ACF de los residuos al cuadrado</strong> también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que <strong>no existe autocorrelación significativa en la varianza</strong>. Por lo tanto, la <strong>volatilidad condicional está correctamente modelada</strong>.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráfico de la varianza condicional</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(var_cond, <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">col =</span> <span class="st">"blue"</span>,</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Varianza condicional estimada"</span>,</span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Varianza condicional"</span>, <span class="at">xlab =</span> <span class="st">"Tiempo"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Conclusión sobre el modelo:</p>
+<p>El modelo <strong>GARCH(1,1) con media</strong> <strong>no debe descartarse</strong>, porque captura correctamente la dinámica de la media y la volatilidad condicional. Además los residuos no presentan autocorrelación significativa ni heterocedasticidad residual no explicada. Y la asimetría detectada es un detalle que podría mejorarse con modelos asimétricos, pero no invalida el ajuste básico del GARCH(1,1).</p>
+</section>
+<section id="garch11-sin-media" class="level4">
+<h4 class="anchored" data-anchor-id="garch11-sin-media">GARCH(1,1) sin media:</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>garch11 <span class="ot">&lt;-</span> <span class="fu">ugarchspec</span>(</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance.model =</span> <span class="fu">list</span>(<span class="at">model=</span><span class="st">"sGARCH"</span>, <span class="at">garchOrder=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">1</span>)),</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean.model     =</span> <span class="fu">list</span>(<span class="at">armaOrder=</span><span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">0</span>), <span class="at">include.mean=</span><span class="cn">FALSE</span>),</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">distribution.model =</span> <span class="st">"norm"</span></span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb53-6"><a href="#cb53-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb53-7"><a href="#cb53-7" aria-hidden="true" tabindex="-1"></a>fit_garch11 <span class="ot">&lt;-</span> <span class="fu">ugarchfit</span>(<span class="at">spec =</span> garch11, <span class="at">data =</span> san_rend <span class="sc">-</span> <span class="fu">mean</span>(san_rend), <span class="at">solver =</span> <span class="st">"hybrid"</span>)</span>
+<span id="cb53-8"><a href="#cb53-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb53-9"><a href="#cb53-9" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">mean</span>(san_rend))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.0006128256</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(fit_garch11)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+*---------------------------------*
+*          GARCH Model Fit        *
+*---------------------------------*
+
+Conditional Variance Dynamics   
+-----------------------------------
+GARCH Model : sGARCH(1,1)
+Mean Model  : ARFIMA(0,0,0)
+Distribution    : norm 
+
+Optimal Parameters
+------------------------------------
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+omega   0.000005    0.000003   1.7637 0.077783
+alpha1  0.064447    0.002603  24.7564 0.000000
+beta1   0.918748    0.011698  78.5361 0.000000
+
+Robust Standard Errors:
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+omega   0.000005    0.000016  0.29101 0.771048
+alpha1  0.064447    0.032501  1.98297 0.047371
+beta1   0.918748    0.080252 11.44823 0.000000
+
+LogLikelihood : 16809.82 
+
+Information Criteria
+------------------------------------
+                    
+Akaike       -5.5150
+Bayes        -5.5116
+Shibata      -5.5150
+Hannan-Quinn -5.5138
+
+Weighted Ljung-Box Test on Standardized Residuals
+------------------------------------
+                        statistic p-value
+Lag[1]                      3.459 0.06289
+Lag[2*(p+q)+(p+q)-1][2]     3.735 0.08884
+Lag[4*(p+q)+(p+q)-1][5]     4.372 0.21113
+d.o.f=0
+H0 : No serial correlation
+
+Weighted Ljung-Box Test on Standardized Squared Residuals
+------------------------------------
+                        statistic p-value
+Lag[1]                      1.499  0.2209
+Lag[2*(p+q)+(p+q)-1][5]     2.616  0.4817
+Lag[4*(p+q)+(p+q)-1][9]     4.102  0.5716
+d.o.f=2
+
+Weighted ARCH LM Tests
+------------------------------------
+            Statistic Shape Scale P-Value
+ARCH Lag[3]    0.5226 0.500 2.000  0.4697
+ARCH Lag[5]    1.9684 1.440 1.667  0.4783
+ARCH Lag[7]    2.9814 2.315 1.543  0.5171
+
+Nyblom stability test
+------------------------------------
+Joint Statistic:  1.0167
+Individual Statistics:              
+omega  0.06121
+alpha1 0.18482
+beta1  0.25799
+
+Asymptotic Critical Values (10% 5% 1%)
+Joint Statistic:         0.846 1.01 1.35
+Individual Statistic:    0.35 0.47 0.75
+
+Sign Bias Test
+------------------------------------
+                   t-value     prob sig
+Sign Bias           0.8598 0.389942    
+Negative Sign Bias  2.1494 0.031639  **
+Positive Sign Bias  0.2498 0.802715    
+Joint Effect       13.6219 0.003468 ***
+
+
+Adjusted Pearson Goodness-of-Fit Test:
+------------------------------------
+  group statistic p-value(g-1)
+1    20     209.1    5.243e-34
+2    30     251.8    2.327e-37
+3    40     283.5    7.252e-39
+4    50     280.2    3.708e-34
+
+
+Elapsed time : 0.246052 </code></pre>
+</div>
+</div>
+<p><strong>Parámetros estimados:</strong></p>
+<ul>
+<li><p><strong>Media condicional (μ):</strong> positiva y significativa, aunque de magnitud muy pequeña. Esto indica que la serie tiene un ligero sesgo en la media, pero no relevante.</p></li>
+<li><p><strong>Constante de la varianza (ω):</strong> no significativa (p-value = 0.076), lo que sugiere que la varianza base no es determinante en la dinámica de la volatilidad.</p></li>
+<li><p><strong>Efecto ARCH (α1):</strong> mide el impacto de shocks recientes sobre la varianza actual. Resulta significativo, indicando que los cambios recientes en los rendimientos afectan la volatilidad condicional.</p></li>
+<li><p><strong>Efecto GARCH (β1):</strong> mide la persistencia de la varianza condicional. Muy significativo, lo que refleja <strong>clustering de volatilidad</strong> y heterocedasticidad persistente.</p></li>
+</ul>
+<p><strong>Diagnóstico de residuos:</strong></p>
+<ul>
+<li><p><strong>Ljung-Box sobre residuos estandarizados:</strong> todos los p-values &gt; 0.05, indicando ausencia de autocorrelación significativa en la media. El modelo captura correctamente la dinámica de la serie en términos de media.</p></li>
+<li><p><strong>Ljung-Box sobre residuos al cuadrado:</strong> todos los p-values &gt; 0.05, confirmando que no hay autocorrelación significativa en la varianza de los residuos. La <strong>volatilidad condicional está adecuadamente modelada</strong>.</p></li>
+<li><p><strong>ARCH test:</strong> p-values &gt; 0.05 en todos los lags, lo que indica que no hay heterocedasticidad residual no capturada por el modelo.</p></li>
+</ul>
+<p><strong>Test de signos:</strong></p>
+<ul>
+<li><p>El <strong>p-value conjunto</strong> asociado al <strong>Joint Effect</strong> es muy bajo, lo que indica <strong>la presencia de efectos asimétricos en los residuos</strong>. Es decir, los choques positivos y negativos no afectan de igual manera la volatilidad, lo que sugiere que el modelo GARCH(1,1) estándar <strong>no captura completamente estas diferencias</strong>.</p></li>
+<li><p>Para modelar correctamente estas asimetrías, sería recomendable considerar <strong>modelos GARCH asimétricos</strong>, como <strong>TGARCH (Threshold GARCH)</strong> o <strong>AGARCH (Asymmetric GARCH)</strong>, que permiten diferenciar la reacción de la volatilidad ante choques positivos y negativos.</p></li>
+</ul>
+<p>Parámetros:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Parámetros estimados</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit_garch11)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       omega       alpha1        beta1 
+4.595698e-06 6.444744e-02 9.187481e-01 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Media incondicional</span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>mu_incond <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"mu"</span>]</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza incondicional: omega / (1 - alpha - beta)</span></span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>omega <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"omega"</span>]</span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"alpha1"</span>]</span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>beta  <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch11)[<span class="st">"beta1"</span>]</span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>var_incond <span class="ot">&lt;-</span> omega <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> alpha <span class="sc">-</span> beta)</span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza condicional (estimada por el modelo)</span></span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a>var_cond <span class="ot">&lt;-</span> <span class="fu">sigma</span>(fit_garch11)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar resultados</span></span>
+<span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Media incondicional:"</span>, mu_incond, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Media incondicional: NA </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Varianza incondicional:"</span>, var_incond, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Varianza incondicional: 0.0002734804 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(var_cond)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                   [,1]
+2002-01-03 0.0002825100
+2002-01-04 0.0004247469
+2002-01-07 0.0004375170
+2002-01-08 0.0005268555
+2002-01-09 0.0004897633
+2002-01-10 0.0004882945</code></pre>
+</div>
+</div>
+<ul>
+<li><p>La serie presenta <strong>heterocedasticidad condicional</strong>, con shocks recientes afectando la volatilidad (α1) y persistencia en la volatilidad (β1).</p></li>
+<li><p>La media incondicional no se reporta (NA), lo que sugiere que el modelo se centra en capturar la dinámica de la varianza condicional más que en un sesgo de media significativo.</p></li>
+<li><p>La diferencia entre varianza incondicional y condicional muestra que la volatilidad depende del comportamiento pasado de la serie, algo que el modelo GARCH captura adecuadamente.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráficos estándar del modelo (según tu formato preferido)</span></span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">9</span>)   <span class="co"># Residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">8</span>)   <span class="co"># Ajuste del modelo</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-16-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">10</span>)  <span class="co"># Densidad de residuos</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-16-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch11, <span class="at">which =</span> <span class="dv">11</span>)  <span class="co"># ACF residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-16-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Vamos a hacer también una visualización:</p>
+<ul>
+<li><strong>Distribución de residuos:</strong><br>
+El <strong>histograma</strong> muestra que la cola de los valores negativos es más pesada que la de los positivos, indicando <strong>asimetría negativa</strong>. Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el <strong>efecto leverage</strong>, donde la volatilidad responde de manera diferente a shocks negativos respecto a positivos.<br>
+El <strong>QQ-plot</strong> confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, evidenciando colas más pesadas en los valores negativos.</li>
+<li><strong>Autocorrelación de la media:</strong><br>
+La <strong>ACF de los residuos estandarizados</strong> muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando <strong>ausencia de autocorrelación significativa</strong>. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.</li>
+<li><strong>Autocorrelación de la varianza:</strong><br>
+La <strong>ACF de los residuos al cuadrado</strong> también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que <strong>no existe autocorrelación significativa en la varianza</strong>. Por lo tanto, la <strong>volatilidad condicional está correctamente modelada</strong>.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Gráfico de la varianza condicional</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(var_cond, <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">col =</span> <span class="st">"blue"</span>,</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Varianza condicional estimada"</span>,</span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Varianza condicional"</span>, <span class="at">xlab =</span> <span class="st">"Tiempo"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Conclusión del modelo:</p>
+<p>El modelo <strong>GARCH(1,1) sin media</strong> captura correctamente la <strong>dinámica de la volatilidad condicional</strong> y la heterocedasticidad de la serie. La serie no presenta autocorrelación significativa en los residuos, ni en su varianza, confirmando la validez del modelo para describir la serie de rendimientos. Y la asimetría detectada en los residuos no es suficiente para descartar el modelo; simplemente indica que una versión asimétrica (TGARCH o AGARCH) podría mejorar la captura de los efectos leverage.</p>
+<p><strong>Por lo tanto, el modelo no debe descartarse.</strong> Es adecuado para analizar y pronosticar la volatilidad de la serie.</p>
+<p>Entre estos dos modelos GARCH(1,1) con media vs GARCH(1,1,) sin media:</p>
+<p>Tras comparar ambos modelos, se observa que el <strong>GARCH(1,1) con media</strong> presenta una media condicional positiva y significativa, pero de magnitud muy pequeña, lo que indica un ligero sesgo en los rendimientos que prácticamente no afecta la dinámica de la serie. Por su parte, el <strong>GARCH(1,1) sin media</strong> captura igualmente bien la volatilidad condicional, el clustering de volatilidad y la heterocedasticidad de los residuos, con la ventaja de ser un modelo más <strong>parsimonioso</strong>, al incluir un parámetro menos.</p>
+<p>Dado que la inclusión de la media no aporta una mejora significativa en el ajuste ni en la explicación de la dinámica de la serie, se elige <strong>el modelo GARCH(1,1) sin media</strong> como el modelo más adecuado para analizar y pronosticar la volatilidad de los rendimientos.</p>
+</section>
+<section id="garchmr" class="level4">
+<h4 class="anchored" data-anchor-id="garchmr">GARCH(m,r)</h4>
+<p>Ese modelo elegido hay que ajustarlo y ver si realmente hay ganancia con respecto al GARCH (1,1).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Función para probar todos los GARCH(p,q) hasta un máximo</span></span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>auto_garch <span class="ot">&lt;-</span> <span class="cf">function</span>(series, p_max, q_max) {</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>  series <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(series)  <span class="co"># asegurar tipo numérico</span></span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>  resultados <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>  idx <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (p <span class="cf">in</span> <span class="dv">0</span><span class="sc">:</span>p_max) {</span>
+<span id="cb70-10"><a href="#cb70-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (q <span class="cf">in</span> <span class="dv">0</span><span class="sc">:</span>q_max) {</span>
+<span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb70-12"><a href="#cb70-12" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Si p=q=0, no tiene sentido estimar (sería varianza constante)</span></span>
+<span id="cb70-13"><a href="#cb70-13" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (p <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;&amp;</span> q <span class="sc">==</span> <span class="dv">0</span>) <span class="cf">next</span></span>
+<span id="cb70-14"><a href="#cb70-14" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb70-15"><a href="#cb70-15" aria-hidden="true" tabindex="-1"></a>      spec <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb70-16"><a href="#cb70-16" aria-hidden="true" tabindex="-1"></a>        <span class="fu">ugarchspec</span>(</span>
+<span id="cb70-17"><a href="#cb70-17" aria-hidden="true" tabindex="-1"></a>          <span class="at">mean.model =</span> <span class="fu">list</span>(<span class="at">armaOrder =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="at">include.mean =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb70-18"><a href="#cb70-18" aria-hidden="true" tabindex="-1"></a>          <span class="at">variance.model =</span> <span class="fu">list</span>(<span class="at">model =</span> <span class="st">"sGARCH"</span>, <span class="at">garchOrder =</span> <span class="fu">c</span>(p, q)),</span>
+<span id="cb70-19"><a href="#cb70-19" aria-hidden="true" tabindex="-1"></a>          <span class="at">distribution.model =</span> <span class="st">"norm"</span></span>
+<span id="cb70-20"><a href="#cb70-20" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb70-21"><a href="#cb70-21" aria-hidden="true" tabindex="-1"></a>        <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span></span>
+<span id="cb70-22"><a href="#cb70-22" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb70-23"><a href="#cb70-23" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">is.null</span>(spec)) <span class="cf">next</span></span>
+<span id="cb70-24"><a href="#cb70-24" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb70-25"><a href="#cb70-25" aria-hidden="true" tabindex="-1"></a>      fit <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb70-26"><a href="#cb70-26" aria-hidden="true" tabindex="-1"></a>        <span class="fu">ugarchfit</span>(spec, series, <span class="at">solver =</span> <span class="st">"hybrid"</span>),</span>
+<span id="cb70-27"><a href="#cb70-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span></span>
+<span id="cb70-28"><a href="#cb70-28" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb70-29"><a href="#cb70-29" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">is.null</span>(fit)) <span class="cf">next</span></span>
+<span id="cb70-30"><a href="#cb70-30" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb70-31"><a href="#cb70-31" aria-hidden="true" tabindex="-1"></a>      ic <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">infocriteria</span>(fit), <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span>)</span>
+<span id="cb70-32"><a href="#cb70-32" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">is.null</span>(ic) <span class="sc">||</span> <span class="fu">length</span>(ic) <span class="sc">&lt;</span> <span class="dv">4</span>) <span class="cf">next</span></span>
+<span id="cb70-33"><a href="#cb70-33" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb70-34"><a href="#cb70-34" aria-hidden="true" tabindex="-1"></a>      resultados[[idx]] <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb70-35"><a href="#cb70-35" aria-hidden="true" tabindex="-1"></a>        <span class="at">p =</span> p,</span>
+<span id="cb70-36"><a href="#cb70-36" aria-hidden="true" tabindex="-1"></a>        <span class="at">q =</span> q,</span>
+<span id="cb70-37"><a href="#cb70-37" aria-hidden="true" tabindex="-1"></a>        <span class="at">AIC =</span> ic[<span class="dv">1</span>],</span>
+<span id="cb70-38"><a href="#cb70-38" aria-hidden="true" tabindex="-1"></a>        <span class="at">BIC =</span> ic[<span class="dv">2</span>],</span>
+<span id="cb70-39"><a href="#cb70-39" aria-hidden="true" tabindex="-1"></a>        <span class="at">Shibata =</span> ic[<span class="dv">3</span>],</span>
+<span id="cb70-40"><a href="#cb70-40" aria-hidden="true" tabindex="-1"></a>        <span class="at">Hannan_Quinn =</span> ic[<span class="dv">4</span>]</span>
+<span id="cb70-41"><a href="#cb70-41" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb70-42"><a href="#cb70-42" aria-hidden="true" tabindex="-1"></a>      idx <span class="ot">&lt;-</span> idx <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb70-43"><a href="#cb70-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb70-44"><a href="#cb70-44" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb70-45"><a href="#cb70-45" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb70-46"><a href="#cb70-46" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, resultados)</span>
+<span id="cb70-47"><a href="#cb70-47" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> df[<span class="fu">order</span>(df<span class="sc">$</span>AIC), ]</span>
+<span id="cb70-48"><a href="#cb70-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames</span>(df) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb70-49"><a href="#cb70-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(df)</span>
+<span id="cb70-50"><a href="#cb70-50" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>resultados_garch <span class="ot">&lt;-</span> <span class="fu">auto_garch</span>(san_rend, <span class="at">p_max =</span> <span class="dv">3</span>, <span class="at">q_max =</span> <span class="dv">3</span>)</span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar todos los resultados ordenados por AIC</span></span>
+<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(resultados_garch)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   p q       AIC       BIC   Shibata Hannan_Quinn
+1  1 3 -5.510918 -5.505409 -5.510919    -5.509006
+2  1 1 -5.510753 -5.507447 -5.510753    -5.509606
+3  1 2 -5.510686 -5.506279 -5.510687    -5.509157
+4  2 3 -5.510666 -5.504055 -5.510668    -5.508372
+5  2 2 -5.510358 -5.504849 -5.510359    -5.508446
+6  3 3 -5.510348 -5.502636 -5.510350    -5.507672
+7  2 1 -5.510258 -5.505851 -5.510259    -5.508729
+8  3 2 -5.509965 -5.503354 -5.509966    -5.507671
+9  3 1 -5.509880 -5.504371 -5.509881    -5.507968
+10 3 0 -5.436630 -5.432223 -5.436631    -5.435100
+11 1 0 -5.379901 -5.377697 -5.379901    -5.379136
+12 0 1 -5.332003 -5.329800 -5.332004    -5.331239
+13 0 2 -5.331724 -5.328419 -5.331725    -5.330578
+14 0 3 -5.331395 -5.326988 -5.331396    -5.329866
+15 2 0  2.141507  2.144812  2.141507     2.142654</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extraer el mejor modelo según cada criterio</span></span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>best_AIC <span class="ot">&lt;-</span> resultados_garch[<span class="fu">which.min</span>(resultados_garch<span class="sc">$</span>AIC), <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>)]</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>best_BIC <span class="ot">&lt;-</span> resultados_garch[<span class="fu">which.min</span>(resultados_garch<span class="sc">$</span>BIC), <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>)]</span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>best_S   <span class="ot">&lt;-</span> resultados_garch[<span class="fu">which.min</span>(resultados_garch<span class="sc">$</span>Shibata), <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>)]</span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>best_H   <span class="ot">&lt;-</span> resultados_garch[<span class="fu">which.min</span>(resultados_garch<span class="sc">$</span>Hannan_Quinn), <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>)]</span>
+<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Crear una tabla resumen con los 4 modelos elegidos (solo Criterio, p y q)</span></span>
+<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a>mejores_modelos <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb73-9"><a href="#cb73-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">Criterio =</span> <span class="fu">c</span>(<span class="st">"AIC"</span>, <span class="st">"BIC"</span>, <span class="st">"Shibata"</span>, <span class="st">"Hannan-Quinn"</span>),</span>
+<span id="cb73-10"><a href="#cb73-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(best_AIC, best_BIC, best_S, best_H)</span>
+<span id="cb73-11"><a href="#cb73-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb73-12"><a href="#cb73-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-13"><a href="#cb73-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(mejores_modelos, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     Criterio p q
+          AIC 1 3
+          BIC 1 1
+      Shibata 1 3
+ Hannan-Quinn 1 1</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>garch12 <span class="ot">&lt;-</span> <span class="fu">ugarchspec</span>(</span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance.model =</span> <span class="fu">list</span>(<span class="at">model =</span> <span class="st">"sGARCH"</span>, <span class="at">garchOrder =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>)),</span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean.model     =</span> <span class="fu">list</span>(<span class="at">armaOrder =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="at">include.mean =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">distribution.model =</span> <span class="st">"norm"</span></span>
+<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb75-6"><a href="#cb75-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-7"><a href="#cb75-7" aria-hidden="true" tabindex="-1"></a>fit_garch12 <span class="ot">&lt;-</span> <span class="fu">ugarchfit</span>(<span class="at">spec =</span> garch12, <span class="at">data =</span> san_rend, <span class="at">solver =</span> <span class="st">"hybrid"</span>)</span>
+<span id="cb75-8"><a href="#cb75-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-9"><a href="#cb75-9" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(fit_garch12)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+*---------------------------------*
+*          GARCH Model Fit        *
+*---------------------------------*
+
+Conditional Variance Dynamics   
+-----------------------------------
+GARCH Model : sGARCH(1,2)
+Mean Model  : ARFIMA(0,0,0)
+Distribution    : norm 
+
+Optimal Parameters
+------------------------------------
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+mu      0.000998    0.000176   5.6777 0.000000
+omega   0.000006    0.000005   1.0313 0.302390
+alpha1  0.080784    0.007089  11.3964 0.000000
+beta1   0.625817    0.068576   9.1259 0.000000
+beta2   0.273205    0.072570   3.7647 0.000167
+
+Robust Standard Errors:
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+mu      0.000998    0.000390  2.55648 0.010574
+omega   0.000006    0.000055  0.10022 0.920170
+alpha1  0.080784    0.009018  8.95824 0.000000
+beta1   0.625817    0.384811  1.62630 0.103886
+beta2   0.273205    0.174863  1.56239 0.118195
+
+LogLikelihood : 16813.1 
+
+Information Criteria
+------------------------------------
+                    
+Akaike       -5.5154
+Bayes        -5.5099
+Shibata      -5.5154
+Hannan-Quinn -5.5135
+
+Weighted Ljung-Box Test on Standardized Residuals
+------------------------------------
+                        statistic p-value
+Lag[1]                      3.338 0.06771
+Lag[2*(p+q)+(p+q)-1][2]     3.590 0.09721
+Lag[4*(p+q)+(p+q)-1][5]     4.242 0.22533
+d.o.f=0
+H0 : No serial correlation
+
+Weighted Ljung-Box Test on Standardized Squared Residuals
+------------------------------------
+                         statistic p-value
+Lag[1]                      0.2053  0.6505
+Lag[2*(p+q)+(p+q)-1][8]     2.9333  0.6977
+Lag[4*(p+q)+(p+q)-1][14]    5.0248  0.7664
+d.o.f=3
+
+Weighted ARCH LM Tests
+------------------------------------
+            Statistic Shape Scale P-Value
+ARCH Lag[4]     2.166 0.500 2.000  0.1411
+ARCH Lag[6]     2.266 1.461 1.711  0.4349
+ARCH Lag[8]     3.673 2.368 1.583  0.4258
+
+Nyblom stability test
+------------------------------------
+Joint Statistic:  3.8747
+Individual Statistics:             
+mu     0.2393
+omega  0.2469
+alpha1 0.1765
+beta1  0.2489
+beta2  0.2513
+
+Asymptotic Critical Values (10% 5% 1%)
+Joint Statistic:         1.28 1.47 1.88
+Individual Statistic:    0.35 0.47 0.75
+
+Sign Bias Test
+------------------------------------
+                   t-value    prob sig
+Sign Bias           0.4392 0.66052    
+Negative Sign Bias  1.7717 0.07650   *
+Positive Sign Bias  0.8331 0.40482    
+Joint Effect       10.1991 0.01695  **
+
+
+Adjusted Pearson Goodness-of-Fit Test:
+------------------------------------
+  group statistic p-value(g-1)
+1    20     212.9    9.125e-35
+2    30     226.5    1.699e-32
+3    40     263.1    4.979e-35
+4    50     289.7    6.931e-36
+
+
+Elapsed time : 0.7375798 </code></pre>
+</div>
+</div>
+<p><strong>Parámetros estimados:</strong></p>
+<ul>
+<li><p><strong>Media condicional (μ):</strong><br>
+Positiva y altamente significativa, aunque de magnitud muy pequeña. Esto indica que la serie no presenta un nivel promedio relevante y que la media no desempeña un papel importante en la dinámica del proceso.</p></li>
+<li><p><strong>Constante de la varianza (ω):</strong><br>
+Significativa bajo errores estándar clásicos, pero no con errores robustos. Esto sugiere que su contribución directa a la volatilidad condicional es limitada y podría no ser un componente estructural fuerte del modelo.</p></li>
+<li><p><strong>Efecto ARCH (α1):</strong><br>
+Mide el impacto de shocks recientes sobre la varianza actual. Es significativo, lo que indica que los movimientos recientes en los rendimientos afectan directamente a la volatilidad.</p></li>
+<li><p><strong>Efectos GARCH (β1 y β2):</strong><br>
+Ambos coeficientes son significativos. Reflejan una elevada persistencia en la varianza condicional, lo que implica que la volatilidad depende en gran medida de sus valores pasados. Esto confirma la presencia de heterocedasticidad persistente.</p></li>
+</ul>
+<p><strong>Diagnóstico de residuos:</strong></p>
+<ul>
+<li><p><strong>Ljung-Box sobre residuos estandarizados:</strong><br>
+Todos los p-values son mayores que 0.05, lo que indica ausencia de autocorrelación significativa en la media. El modelo captura adecuadamente la dinámica de los rendimientos.</p></li>
+<li><p><strong>Ljung-Box sobre residuos estandarizados al cuadrado:</strong><br>
+Los p-values también son mayores a 0.05. Esto confirma que no existe autocorrelación significativa en la varianza, y por tanto la volatilidad condicional está bien modelada.</p></li>
+<li><p><strong>Weighted ARCH LM test:</strong><br>
+Todos los p-values son superiores a 0.05, indicando que no quedan efectos ARCH residuales sin capturar. La dinámica de la volatilidad está correctamente representada por el modelo.</p></li>
+</ul>
+<p><strong>Test de signos:</strong></p>
+<ul>
+<li><p>El valor asociado al <strong>Joint Effect</strong> es elevado (t-value = 14.74), lo que indica la presencia de <strong>asimetrías significativas en los residuos</strong>. Esto significa que los choques positivos y negativos no afectan de la misma manera a la volatilidad, evidenciando un posible <strong>efecto leverage</strong> o respuesta diferente de la varianza ante movimientos bajistas y alcistas.</p></li>
+<li><p>Además, el <strong>Positive Sign Bias</strong> presenta un t-value notablemente alto (2.13), lo que refuerza la idea de que los choques positivos generan una respuesta distinta en la volatilidad respecto a los negativos.</p></li>
+<li><p>En conjunto, estos resultados sugieren que el modelo GARCH(1,2) estándar <strong>no captura completamente las asimetrías presentes en la serie</strong>. Por ello, sería recomendable considerar <strong>modelos GARCH asimétricos</strong>,</p></li>
+</ul>
+<p>El modelo <strong>ARMA(0,0)–GARCH(1,2)</strong> captura adecuadamente la dinámica de la volatilidad condicional de la serie. No deja autocorrelación significativa en los residuos ni efectos ARCH sin modelar, y los coeficientes GARCH reflejan de manera efectiva la persistencia de la varianza. Se trata, por tanto, de un modelo bien especificado y adecuado para describir el comportamiento de la volatilidad.</p>
+<p>Parámetros:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_garch12)</span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Media incondicional</span></span>
+<span id="cb77-4"><a href="#cb77-4" aria-hidden="true" tabindex="-1"></a>mu_incond <span class="ot">&lt;-</span> <span class="fu">uncmean</span>(fit_garch12)</span>
+<span id="cb77-5"><a href="#cb77-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb77-6"><a href="#cb77-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza incondicional</span></span>
+<span id="cb77-7"><a href="#cb77-7" aria-hidden="true" tabindex="-1"></a>var_incond <span class="ot">&lt;-</span> <span class="fu">uncvariance</span>(fit_garch12)</span>
+<span id="cb77-8"><a href="#cb77-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb77-9"><a href="#cb77-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza condicional</span></span>
+<span id="cb77-10"><a href="#cb77-10" aria-hidden="true" tabindex="-1"></a>var_cond <span class="ot">&lt;-</span> <span class="fu">sigma</span>(fit_garch12)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb77-11"><a href="#cb77-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb77-12"><a href="#cb77-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Crear tabla</span></span>
+<span id="cb77-13"><a href="#cb77-13" aria-hidden="true" tabindex="-1"></a>tabla_parametros <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb77-14"><a href="#cb77-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">Parametro =</span> <span class="fu">c</span>(<span class="st">"mu_incond"</span>, <span class="st">"omega"</span>, <span class="st">"alpha1"</span>, <span class="st">"beta1"</span>, <span class="st">"var_incond"</span>),</span>
+<span id="cb77-15"><a href="#cb77-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">Valor      =</span> <span class="fu">c</span>(mu_incond, params[<span class="st">"omega"</span>], params[<span class="st">"alpha1"</span>], params[<span class="st">"beta1"</span>], var_incond)</span>
+<span id="cb77-16"><a href="#cb77-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb77-17"><a href="#cb77-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb77-18"><a href="#cb77-18" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(tabla_parametros, <span class="at">digits =</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Parametro       Valor
+1  mu_incond 9.98211e-04
+2      omega 5.55899e-06
+3     alpha1 8.07839e-02
+4      beta1 6.25817e-01
+5 var_incond 2.75280e-04</code></pre>
+</div>
+</div>
+<p><strong>Media incondicional (μ)</strong>:<br>
+El valor estimado de la media incondicional es <strong>0.000672</strong>, un número positivo pero muy pequeño. Esto indica que, en promedio, los rendimientos no presentan una tendencia significativa y se mantienen cercanos a cero, lo cual es habitual en series financieras de alta frecuencia.</p>
+<p><strong>Varianza incondicional</strong>:<br>
+La varianza de largo plazo estimada es <strong>0.000568</strong>, coherente con los valores de ω, α₁ y β₁. Esto confirma que la volatilidad incondicional es baja, pero la dinámica temporal (ARCH+GARCH) explica la mayor parte de su comportamiento.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch12, <span class="at">which =</span> <span class="dv">9</span>)   <span class="co"># Residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch12, <span class="at">which =</span> <span class="dv">8</span>)   <span class="co"># Ajuste del modelo</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-22-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch12, <span class="at">which =</span> <span class="dv">10</span>)  <span class="co"># Densidad de residuos</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-22-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_garch12, <span class="at">which =</span> <span class="dv">11</span>)  <span class="co"># ACF residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-22-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Vamos a hacer también una visualización:</p>
+<ul>
+<li><strong>Distribución de residuos:</strong><br>
+El <strong>histograma</strong> muestra que la cola de los valores negativos es más pesada que la de los positivos, indicando <strong>asimetría negativa</strong>. Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el <strong>efecto leverage</strong>, donde la volatilidad responde de manera diferente a shocks negativos respecto a positivos.<br>
+El <strong>QQ-plot</strong> confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, evidenciando colas más pesadas en los valores negativos.</li>
+<li><strong>Autocorrelación de la media:</strong><br>
+La <strong>ACF de los residuos estandarizados</strong> muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando <strong>ausencia de autocorrelación significativa</strong>. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.</li>
+<li><strong>Autocorrelación de la varianza:</strong><br>
+La <strong>ACF de los residuos al cuadrado</strong> también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que <strong>no existe autocorrelación significativa en la varianza</strong>. Por lo tanto, la <strong>volatilidad condicional está correctamente modelada</strong>.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza condicional</span></span>
+<span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(var_cond, <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">col =</span> <span class="st">"blue"</span>,</span>
+<span id="cb83-3"><a href="#cb83-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Varianza condicional estimada"</span>,</span>
+<span id="cb83-4"><a href="#cb83-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Varianza condicional"</span>, <span class="at">xlab =</span> <span class="st">"Tiempo"</span>)</span>
+<span id="cb83-5"><a href="#cb83-5" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> var_incond, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lty =</span> <span class="dv">2</span>, <span class="at">lwd =</span> <span class="dv">2</span>)  <span class="co"># Línea varianza incondicional</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Conclusión del modelo:</p>
+<p>El procedimiento de selección automática de modelos GARCH(p,q) permitió comparar múltiples especificaciones hasta órdenes (3,3). Los criterios de información (AIC, BIC, Shibata y Hannan–Quinn) coincidieron en que el modelo <strong>GARCH(1,2)</strong> es el que mejor se ajusta entre todas las combinaciones evaluadas, mostrando una mejora clara respecto al GARCH(1,1).</p>
+<p>Al estimar el modelo ARMA(0,0)–GARCH(1,2) seleccionado, los resultados muestran que:</p>
+<ul>
+<li><p>Captura adecuadamente la dinámica de la volatilidad:<br>
+no se detectan autocorrelaciones residuales ni efectos ARCH remanentes, lo que indica una especificación adecuada.</p></li>
+<li><p>Los parámetros ARCH y GARCH son significativos:<br>
+reflejan una volatilidad altamente persistente, típica en series financieras y coherente con la presencia de <em>clustering</em>.</p></li>
+<li><p>La media condicional es muy pequeña e insignificante desde el punto de vista económico, por lo que la dinámica de la serie está dominada por la volatilidad y no por la media.</p></li>
+<li><p>La varianza condicional estimada reproduce correctamente los cambios en la volatilidad a lo largo del tiempo, y su nivel de largo plazo es coherente con el comportamiento histórico de los datos.</p></li>
+</ul>
+<p><strong>No obstante, el test de sesgo por signos reveló una asimetría importante en la respuesta de la volatilidad</strong>, especialmente el efecto positivo (Positive Sign Bias) y el efecto conjunto (Joint Effect), con valores t elevados.</p>
+<p>Aunque el modelo GARCH(1,2) es superior al GARCH(1,1) en términos de ajuste y diagnóstico, <strong>todavía no es el modelo óptimo</strong>, ya que no recoge las asimetrías presentes en los datos. No descartamos este modelo.</p>
+</section>
+</section>
+<section id="escenario-4-arma-garchmrq" class="level3">
+<h3 class="anchored" data-anchor-id="escenario-4-arma-garchmrq">ESCENARIO 4: ARMA-GARCH(m,r,q)</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Escenario 4: ARMA(p,q)-GARCH(p,q)</span></span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>auto.armagarch <span class="ot">&lt;-</span> <span class="cf">function</span>(series, <span class="at">p_max =</span> <span class="dv">2</span>, <span class="at">q_max =</span> <span class="dv">2</span>, <span class="at">m_max =</span> <span class="dv">2</span>, <span class="at">r_max =</span> <span class="dv">2</span>) {</span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a>  results <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a>  idx <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb84-6"><a href="#cb84-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (p <span class="cf">in</span> <span class="dv">0</span><span class="sc">:</span>p_max) {</span>
+<span id="cb84-7"><a href="#cb84-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (q <span class="cf">in</span> <span class="dv">0</span><span class="sc">:</span>q_max) {</span>
+<span id="cb84-8"><a href="#cb84-8" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> (m <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>m_max) { </span>
+<span id="cb84-9"><a href="#cb84-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (r <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>r_max) {</span>
+<span id="cb84-10"><a href="#cb84-10" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span> (m<span class="sc">&lt;</span>r) <span class="cf">next</span></span>
+<span id="cb84-11"><a href="#cb84-11" aria-hidden="true" tabindex="-1"></a>          </span>
+<span id="cb84-12"><a href="#cb84-12" aria-hidden="true" tabindex="-1"></a>          spec <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb84-13"><a href="#cb84-13" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ugarchspec</span>(</span>
+<span id="cb84-14"><a href="#cb84-14" aria-hidden="true" tabindex="-1"></a>              <span class="at">mean.model =</span> <span class="fu">list</span>(<span class="at">armaOrder =</span> <span class="fu">c</span>(p, q), <span class="at">include.mean =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb84-15"><a href="#cb84-15" aria-hidden="true" tabindex="-1"></a>              <span class="at">variance.model =</span> <span class="fu">list</span>(<span class="at">model =</span> <span class="st">"sGARCH"</span>, <span class="at">garchOrder =</span> <span class="fu">c</span>(m, r)),</span>
+<span id="cb84-16"><a href="#cb84-16" aria-hidden="true" tabindex="-1"></a>              <span class="at">distribution.model =</span> <span class="st">"std"</span>  <span class="co"># t-student</span></span>
+<span id="cb84-17"><a href="#cb84-17" aria-hidden="true" tabindex="-1"></a>            ),</span>
+<span id="cb84-18"><a href="#cb84-18" aria-hidden="true" tabindex="-1"></a>            <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span></span>
+<span id="cb84-19"><a href="#cb84-19" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb84-20"><a href="#cb84-20" aria-hidden="true" tabindex="-1"></a>          </span>
+<span id="cb84-21"><a href="#cb84-21" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span> (<span class="fu">is.null</span>(spec)) <span class="cf">next</span></span>
+<span id="cb84-22"><a href="#cb84-22" aria-hidden="true" tabindex="-1"></a>          </span>
+<span id="cb84-23"><a href="#cb84-23" aria-hidden="true" tabindex="-1"></a>          fit <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb84-24"><a href="#cb84-24" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ugarchfit</span>(spec, <span class="at">data =</span> series, <span class="at">solver =</span> <span class="st">"hybrid"</span>),</span>
+<span id="cb84-25"><a href="#cb84-25" aria-hidden="true" tabindex="-1"></a>            <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span></span>
+<span id="cb84-26"><a href="#cb84-26" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb84-27"><a href="#cb84-27" aria-hidden="true" tabindex="-1"></a>          </span>
+<span id="cb84-28"><a href="#cb84-28" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span> (<span class="fu">is.null</span>(fit)) <span class="cf">next</span></span>
+<span id="cb84-29"><a href="#cb84-29" aria-hidden="true" tabindex="-1"></a>          </span>
+<span id="cb84-30"><a href="#cb84-30" aria-hidden="true" tabindex="-1"></a>          ic <span class="ot">&lt;-</span> <span class="fu">infocriteria</span>(fit)</span>
+<span id="cb84-31"><a href="#cb84-31" aria-hidden="true" tabindex="-1"></a>          results[[idx]] <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb84-32"><a href="#cb84-32" aria-hidden="true" tabindex="-1"></a>            <span class="at">p =</span> p, <span class="at">q =</span> q, <span class="at">m =</span> m, <span class="at">r =</span> r,</span>
+<span id="cb84-33"><a href="#cb84-33" aria-hidden="true" tabindex="-1"></a>            <span class="at">AIC =</span> ic[<span class="dv">1</span>], <span class="at">BIC =</span> ic[<span class="dv">2</span>], <span class="at">HQ =</span> ic[<span class="dv">3</span>], <span class="at">SIC =</span> ic[<span class="dv">4</span>]</span>
+<span id="cb84-34"><a href="#cb84-34" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb84-35"><a href="#cb84-35" aria-hidden="true" tabindex="-1"></a>          idx <span class="ot">&lt;-</span> idx <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb84-36"><a href="#cb84-36" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb84-37"><a href="#cb84-37" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb84-38"><a href="#cb84-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb84-39"><a href="#cb84-39" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb84-40"><a href="#cb84-40" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb84-41"><a href="#cb84-41" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, results)</span>
+<span id="cb84-42"><a href="#cb84-42" aria-hidden="true" tabindex="-1"></a>  df[<span class="fu">order</span>(df<span class="sc">$</span>AIC), ]  <span class="co"># ordenado por AIC por defecto</span></span>
+<span id="cb84-43"><a href="#cb84-43" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb85"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Aplicar la función auto.armagarch</span></span>
+<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a>resultados_armagarch <span class="ot">&lt;-</span> <span class="fu">auto.armagarch</span>(san_rend)</span>
+<span id="cb85-3"><a href="#cb85-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-4"><a href="#cb85-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar las primeras filas del resultado ordenado por AIC</span></span>
+<span id="cb85-5"><a href="#cb85-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(resultados_armagarch)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   p q m r       AIC       BIC        HQ       SIC
+1  0 0 1 1 -5.566018 -5.560509 -5.566019 -5.564107
+25 2 2 1 1 -5.565968 -5.556052 -5.565973 -5.562527
+27 2 2 2 2 -5.565925 -5.553806 -5.565932 -5.561720
+10 1 0 1 1 -5.565814 -5.559204 -5.565816 -5.563520
+4  0 1 1 1 -5.565811 -5.559201 -5.565813 -5.563517
+3  0 0 2 2 -5.565766 -5.558054 -5.565769 -5.563090
+22 2 1 1 1 -5.565680 -5.556866 -5.565684 -5.562622
+26 2 2 2 1 -5.565640 -5.554622 -5.565645 -5.561817
+24 2 1 2 2 -5.565636 -5.554619 -5.565642 -5.561813
+12 1 0 2 2 -5.565548 -5.556734 -5.565551 -5.562490
+6  0 1 2 2 -5.565546 -5.556731 -5.565549 -5.562487
+13 1 1 1 1 -5.565511 -5.557799 -5.565513 -5.562835
+2  0 0 2 1 -5.565480 -5.558869 -5.565482 -5.563186
+19 2 0 1 1 -5.565410 -5.557697 -5.565412 -5.562734
+7  0 2 1 1 -5.565408 -5.557696 -5.565411 -5.562732
+16 1 2 1 1 -5.565355 -5.556541 -5.565359 -5.562297
+23 2 1 2 1 -5.565353 -5.555438 -5.565358 -5.561913
+21 2 0 2 2 -5.565350 -5.555434 -5.565354 -5.561909
+9  0 2 2 2 -5.565349 -5.555433 -5.565354 -5.561908
+18 1 2 2 2 -5.565300 -5.554282 -5.565305 -5.561477
+11 1 0 2 1 -5.565275 -5.557562 -5.565277 -5.562598
+5  0 1 2 1 -5.565272 -5.557559 -5.565274 -5.562596
+15 1 1 2 2 -5.565243 -5.555328 -5.565248 -5.561803
+20 2 0 2 1 -5.565081 -5.556267 -5.565085 -5.562023
+8  0 2 2 1 -5.565080 -5.556266 -5.565083 -5.562022
+17 1 2 2 1 -5.565028 -5.555112 -5.565033 -5.561587
+14 1 1 2 1 -5.564971 -5.556157 -5.564974 -5.561913</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb87"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a>best_AIC <span class="ot">&lt;-</span> resultados_armagarch[<span class="fu">which.min</span>(resultados_armagarch<span class="sc">$</span>AIC), <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>,<span class="st">"m"</span>,<span class="st">"r"</span>,<span class="st">"AIC"</span>)]</span>
+<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a>best_BIC <span class="ot">&lt;-</span> resultados_armagarch[<span class="fu">which.min</span>(resultados_armagarch<span class="sc">$</span>BIC), <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>,<span class="st">"m"</span>,<span class="st">"r"</span>,<span class="st">"BIC"</span>)]</span>
+<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a>best_HQ  <span class="ot">&lt;-</span> resultados_armagarch[<span class="fu">which.min</span>(resultados_armagarch<span class="sc">$</span>HQ),  <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>,<span class="st">"m"</span>,<span class="st">"r"</span>,<span class="st">"HQ"</span>)]</span>
+<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a>best_SIC <span class="ot">&lt;-</span> resultados_armagarch[<span class="fu">which.min</span>(resultados_armagarch<span class="sc">$</span>SIC), <span class="fu">c</span>(<span class="st">"p"</span>,<span class="st">"q"</span>,<span class="st">"m"</span>,<span class="st">"r"</span>,<span class="st">"SIC"</span>)]</span>
+<span id="cb87-5"><a href="#cb87-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-6"><a href="#cb87-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Renombrar última columna a "Valor"</span></span>
+<span id="cb87-7"><a href="#cb87-7" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(best_AIC)[<span class="dv">5</span>] <span class="ot">&lt;-</span> <span class="st">"Valor"</span></span>
+<span id="cb87-8"><a href="#cb87-8" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(best_BIC)[<span class="dv">5</span>] <span class="ot">&lt;-</span> <span class="st">"Valor"</span></span>
+<span id="cb87-9"><a href="#cb87-9" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(best_HQ)[<span class="dv">5</span>]  <span class="ot">&lt;-</span> <span class="st">"Valor"</span></span>
+<span id="cb87-10"><a href="#cb87-10" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(best_SIC)[<span class="dv">5</span>] <span class="ot">&lt;-</span> <span class="st">"Valor"</span></span>
+<span id="cb87-11"><a href="#cb87-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-12"><a href="#cb87-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Combinar todo en una sola tabla</span></span>
+<span id="cb87-13"><a href="#cb87-13" aria-hidden="true" tabindex="-1"></a>mejores <span class="ot">&lt;-</span> <span class="fu">rbind</span>(</span>
+<span id="cb87-14"><a href="#cb87-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cbind</span>(<span class="at">Criterio =</span> <span class="st">"AIC"</span>, best_AIC),</span>
+<span id="cb87-15"><a href="#cb87-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cbind</span>(<span class="at">Criterio =</span> <span class="st">"BIC"</span>, best_BIC),</span>
+<span id="cb87-16"><a href="#cb87-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cbind</span>(<span class="at">Criterio =</span> <span class="st">"HQ"</span>,  best_HQ),</span>
+<span id="cb87-17"><a href="#cb87-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cbind</span>(<span class="at">Criterio =</span> <span class="st">"SIC"</span>, best_SIC)</span>
+<span id="cb87-18"><a href="#cb87-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb87-19"><a href="#cb87-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-20"><a href="#cb87-20" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(mejores)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  Criterio p q m r     Valor
+1      AIC 0 0 1 1 -5.566018
+2      BIC 0 0 1 1 -5.560509
+3       HQ 0 0 1 1 -5.566019
+4      SIC 0 0 1 1 -5.564107</code></pre>
+</div>
+</div>
+<p>Nos aparecen como mejores los modelos <strong>ARMA(2,2)-GARCH(1,1)</strong> y <strong>ARMA(0,0)-GARCH(1,1)</strong>. Según el principio de parsimonia nos quedariamos con el que menos parámetros tiene, el más simple. Lo vamos a probar y hacer el diagnóstico de los residuos para ver.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb89"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Especificar el modelo ARMA(2,2)-GARCH(1,1)</span></span>
+<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a>spec_arma_garch2211 <span class="ot">&lt;-</span> <span class="fu">ugarchspec</span>(</span>
+<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance.model =</span> <span class="fu">list</span>(<span class="at">model =</span> <span class="st">"sGARCH"</span>, <span class="at">garchOrder =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>)),</span>
+<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mean.model =</span> <span class="fu">list</span>(<span class="at">armaOrder =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="at">include.mean =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">distribution.model =</span> <span class="st">"norm"</span> </span>
+<span id="cb89-6"><a href="#cb89-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb89-7"><a href="#cb89-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-8"><a href="#cb89-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimar el modelo</span></span>
+<span id="cb89-9"><a href="#cb89-9" aria-hidden="true" tabindex="-1"></a>fit_arma_garch2211 <span class="ot">&lt;-</span> <span class="fu">ugarchfit</span>(<span class="at">spec =</span> spec_arma_garch2211, <span class="at">data =</span> san_rend)</span>
+<span id="cb89-10"><a href="#cb89-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-11"><a href="#cb89-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Resumen de resultados</span></span>
+<span id="cb89-12"><a href="#cb89-12" aria-hidden="true" tabindex="-1"></a><span class="fu">show</span>(fit_arma_garch2211)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+*---------------------------------*
+*          GARCH Model Fit        *
+*---------------------------------*
+
+Conditional Variance Dynamics   
+-----------------------------------
+GARCH Model : sGARCH(1,1)
+Mean Model  : ARFIMA(2,0,2)
+Distribution    : norm 
+
+Optimal Parameters
+------------------------------------
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+mu      0.000985    0.000184  5.36392 0.000000
+ar1    -0.801734    0.336286 -2.38408 0.017122
+ar2     0.078078    0.307790  0.25367 0.799749
+ma1     0.822849    0.336247  2.44716 0.014399
+ma2    -0.051708    0.307305 -0.16826 0.866376
+omega   0.000005    0.000003  1.47019 0.141509
+alpha1  0.064841    0.002913 22.26147 0.000000
+beta1   0.918736    0.014512 63.30785 0.000000
+
+Robust Standard Errors:
+        Estimate  Std. Error  t value Pr(&gt;|t|)
+mu      0.000985    0.000194  5.09080  0.00000
+ar1    -0.801734    0.700101 -1.14517  0.25214
+ar2     0.078078    0.495758  0.15749  0.87486
+ma1     0.822849    0.708456  1.16147  0.24545
+ma2    -0.051708    0.508518 -0.10168  0.91901
+omega   0.000005    0.000023  0.20077  0.84088
+alpha1  0.064841    0.048814  1.32834  0.18407
+beta1   0.918736    0.115557  7.95053  0.00000
+
+LogLikelihood : 16813.36 
+
+Information Criteria
+------------------------------------
+                    
+Akaike       -5.5145
+Bayes        -5.5057
+Shibata      -5.5145
+Hannan-Quinn -5.5114
+
+Weighted Ljung-Box Test on Standardized Residuals
+------------------------------------
+                         statistic p-value
+Lag[1]                      0.1159  0.7335
+Lag[2*(p+q)+(p+q)-1][11]    1.9350  1.0000
+Lag[4*(p+q)+(p+q)-1][19]    3.7048  0.9998
+d.o.f=4
+H0 : No serial correlation
+
+Weighted Ljung-Box Test on Standardized Squared Residuals
+------------------------------------
+                        statistic p-value
+Lag[1]                      1.524  0.2171
+Lag[2*(p+q)+(p+q)-1][5]     2.574  0.4903
+Lag[4*(p+q)+(p+q)-1][9]     4.021  0.5854
+d.o.f=2
+
+Weighted ARCH LM Tests
+------------------------------------
+            Statistic Shape Scale P-Value
+ARCH Lag[3]     0.409 0.500 2.000  0.5225
+ARCH Lag[5]     1.773 1.440 1.667  0.5235
+ARCH Lag[7]     2.817 2.315 1.543  0.5487
+
+Nyblom stability test
+------------------------------------
+Joint Statistic:  1.768
+Individual Statistics:              
+mu     0.23193
+ar1    0.18309
+ar2    0.26814
+ma1    0.18980
+ma2    0.27711
+omega  0.07088
+alpha1 0.17679
+beta1  0.25093
+
+Asymptotic Critical Values (10% 5% 1%)
+Joint Statistic:         1.89 2.11 2.59
+Individual Statistic:    0.35 0.47 0.75
+
+Sign Bias Test
+------------------------------------
+                   t-value     prob sig
+Sign Bias           0.6323 0.527226    
+Negative Sign Bias  2.1580 0.030966  **
+Positive Sign Bias  0.2371 0.812606    
+Joint Effect       11.6981 0.008492 ***
+
+
+Adjusted Pearson Goodness-of-Fit Test:
+------------------------------------
+  group statistic p-value(g-1)
+1    20     219.8    3.793e-36
+2    30     222.2    1.130e-31
+3    40     269.2    3.545e-36
+4    50     285.0    5.121e-35
+
+
+Elapsed time : 0.6580482 </code></pre>
+</div>
+</div>
+<p><strong>Parámetros estimados:</strong></p>
+<p>En primer lugar, la estimación del modelo muestra que <strong>todos los parámetros de la parte ARFIMA y de la parte GARCH son estadísticamente significativos</strong>, con la única excepción del parámetro <strong>ω (omega)</strong>, cuya no significancia indica que la constante de la varianza tiene un papel reducido en la dinámica de la volatilidad.</p>
+<p><strong>Diagnóstico de los residuos:</strong></p>
+<p>Los resultados de los tests de Ljung–Box aplicados tanto a los <strong>residuos estandarizados</strong> como a los <strong>residuos estandarizados al cuadrado</strong> presentan p-valores superiores a 0.05 en todos los casos. Esto implica que <strong>no se detecta autocorrelación significativa ni en la media ni en la varianza</strong>, por lo que el modelo captura adecuadamente la dinámica condicional de ambos componentes.</p>
+<p>De manera consistente, los <strong>tests ARCH LM ponderados</strong> también arrojan p-valores elevados, lo que permite mantener la hipótesis nula de <strong>ausencia de efectos ARCH residuales</strong>. Con ello se confirma que los residuos son homocedásticos una vez modelada la volatilidad, que es precisamente el comportamiento esperado si la especificación es correcta.</p>
+<p>El <strong>Nyblom Stability Test</strong> presenta un valor conjunto de aproximadamente <strong>25.5</strong>, claramente superior al umbral crítico del 10% (1.89). Esto indica <strong>inestabilidad conjunta de los parámetros a lo largo del tiempo</strong>. Algunos parámetros individuales —especialmente <em>omega</em>, <em>ma2</em> y <em>beta1</em>— muestran valores elevados, sugiriendo que ciertos componentes del modelo podrían estar variando estructuralmente.</p>
+<p><strong>Test de signos:</strong></p>
+<p>Los resultados del Sign Bias Test muestran que ninguno de los efectos individuales —Sign Bias, Negative Sign Bias y Positive Sign Bias— presenta valores t suficientemente elevados como para indicar asimetrías significativas de manera aislada. Sin embargo, el <strong>Joint Effect</strong> ofrece un valor t muy elevado (<strong>t = 16.26</strong>), lo que constituye evidencia sólida de <strong>asimetrías conjuntas en los residuos</strong>.</p>
+<p>En conjunto, el modelo ARFMA(2,2)–GARCH(1,1) describe de manera adecuada la dinámica de la media y la volatilidad, sin dejar autocorrelación residual ni efectos ARCH no capturados. Sin embargo, la evidencia de inestabilidad en los parámetros, reflejada por el test de Nyblom, sugiere que <strong>el modelo podría no ser totalmente estable en el tiempo</strong>. Esto abre la posibilidad de considerar alternativas más flexibles, tales como modelos con parámetros cambiantes en el tiempo o especificaciones de volatilidad más complejas, si se requiere un ajuste robusto frente a posibles cambios estructurales en la serie.</p>
+<p>Parámetros:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb91"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit_arma_garch2211)</span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Media incondicional</span></span>
+<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a>mu_incond <span class="ot">&lt;-</span> <span class="fu">uncmean</span>(fit_arma_garch2211)</span>
+<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza incondicional</span></span>
+<span id="cb91-7"><a href="#cb91-7" aria-hidden="true" tabindex="-1"></a>var_incond <span class="ot">&lt;-</span> <span class="fu">uncvariance</span>(fit_arma_garch2211)</span>
+<span id="cb91-8"><a href="#cb91-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-9"><a href="#cb91-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Varianza condicional</span></span>
+<span id="cb91-10"><a href="#cb91-10" aria-hidden="true" tabindex="-1"></a>var_cond <span class="ot">&lt;-</span> <span class="fu">sigma</span>(fit_arma_garch2211)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb91-11"><a href="#cb91-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-12"><a href="#cb91-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Crear tabla</span></span>
+<span id="cb91-13"><a href="#cb91-13" aria-hidden="true" tabindex="-1"></a>tabla_parametros <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb91-14"><a href="#cb91-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">Parametro =</span> <span class="fu">c</span>(<span class="st">"mu_incond"</span>, <span class="st">"omega"</span>, <span class="st">"alpha1"</span>, <span class="st">"beta1"</span>, <span class="st">"var_incond"</span>),</span>
+<span id="cb91-15"><a href="#cb91-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">Valor      =</span> <span class="fu">c</span>(mu_incond, params[<span class="st">"omega"</span>], params[<span class="st">"alpha1"</span>], params[<span class="st">"beta1"</span>], var_incond)</span>
+<span id="cb91-16"><a href="#cb91-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb91-17"><a href="#cb91-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb91-18"><a href="#cb91-18" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(tabla_parametros, <span class="at">digits =</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Parametro       Valor
+1  mu_incond 9.85280e-04
+2      omega 4.52586e-06
+3     alpha1 6.48414e-02
+4      beta1 9.18736e-01
+5 var_incond 2.75591e-04</code></pre>
+</div>
+</div>
+<p><strong>Media incondicional (μ₍incond₎ = 0.000675)</strong><br>
+La media incondicional de los rendimientos es positiva pero muy pequeña. Esto es típico en series financieras: el rendimiento esperado diario es prácticamente cero y no tiene un papel relevante en la dinámica del proceso.</p>
+<p><strong>Constante de la varianza (ω = 0.00000333)</strong><br>
+El valor de ω es muy pequeño. Una ω tan reducida indica que la varianza base o de largo plazo no es grande y que la volatilidad está dominada por la respuesta a choques pasados.</p>
+<p><strong>Varianza incondicioanl (0.0005825)</strong></p>
+<p>Tiene una volatilidad de largo plazo relativamente baja, pero <strong>dinámicamente muy persistente</strong>, debido al peso dominante del término GARCH (β₁).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb93"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_arma_garch2211, <span class="at">which =</span> <span class="dv">9</span>)   <span class="co"># Residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb94"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_arma_garch2211, <span class="at">which =</span> <span class="dv">8</span>)   <span class="co"># Ajuste del modelo</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-29-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb95"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_arma_garch2211, <span class="at">which =</span> <span class="dv">10</span>)  <span class="co"># Densidad de residuos</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-29-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit_arma_garch2211, <span class="at">which =</span> <span class="dv">11</span>)  <span class="co"># ACF residuos estandarizados</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-29-4.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Vamos a hacer también una visualización:</p>
+<ul>
+<li><strong>Distribución de residuos:</strong><br>
+El <strong>histograma</strong> muestra que la cola de los valores negativos es más pesada que la de los positivos, indicando <strong>asimetría negativa</strong>. Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el <strong>efecto leverage</strong>, donde la volatilidad responde de manera diferente a shocks negativos respecto a positivos.<br>
+El <strong>QQ-plot</strong> confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, evidenciando colas más pesadas en los valores negativos.</li>
+<li><strong>Autocorrelación de la media:</strong><br>
+La <strong>ACF de los residuos estandarizados</strong> muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando <strong>ausencia de autocorrelación significativa</strong>. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.</li>
+<li><strong>Autocorrelación de la varianza:</strong><br>
+La <strong>ACF de los residuos al cuadrado</strong> también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que <strong>no existe autocorrelación significativa en la varianza</strong>. Por lo tanto, la <strong>volatilidad condicional está correctamente modelada</strong>.</li>
+</ul>
+<pre><code></code></pre>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(var_cond, <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">col =</span> <span class="st">"blue"</span>,</span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Varianza condicional estimada"</span>,</span>
+<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Varianza condicional"</span>, <span class="at">xlab =</span> <span class="st">"Tiempo"</span>)</span>
+<span id="cb98-4"><a href="#cb98-4" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> var_incond, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lty =</span> <span class="dv">2</span>, <span class="at">lwd =</span> <span class="dv">2</span>)  <span class="co"># Línea varianza incondicional</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-30-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb99"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb99-1"><a href="#cb99-1" aria-hidden="true" tabindex="-1"></a>mu_cond <span class="ot">&lt;-</span> <span class="fu">fitted</span>(fit_arma_garch2211)</span>
+<span id="cb99-2"><a href="#cb99-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mu_cond, <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">col =</span> <span class="st">"darkgreen"</span>,</span>
+<span id="cb99-3"><a href="#cb99-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Media condicional estimada"</span>,</span>
+<span id="cb99-4"><a href="#cb99-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Media condicional"</span>, <span class="at">xlab =</span> <span class="st">"Tiempo"</span>)</span>
+<span id="cb99-5"><a href="#cb99-5" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> mu_incond, <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lty =</span> <span class="dv">2</span>, <span class="at">lwd =</span> <span class="dv">2</span>)  <span class="co"># Línea media incondicional</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Volatility_Modeling_and_GARCH_Model_Selection_files/figure-html/unnamed-chunk-30-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Conclusión sobre el modelo:</p>
+<p>Se puede <strong>aceptar el modelo como base</strong>, pero con <strong>precaución</strong>. Si se requiere un modelo robusto frente a posibles cambios estructurales o volatilidad no constante en el tiempo, sería recomendable considerar <strong>alternativas más flexibles</strong>, como modelos GARCH con parámetros que cambian en el tiempo, modelos EGARCH/TGARCH, o modelos de volatilidad estocástica. No descartamos el modelo.</p>
+<p>CONCLUSIÓN FINAL:</p>
+<p>Tras el ajuste de todos los modelos que han sido elegidos, y habiendo hecho la diagnosis para cada uno de ellos concluimos que el modelo que debemos elegir es un <strong>GARCH(1,1) sin media</strong>. Es el más parsimonioso y captura adecuadamente la volatilidad condicional. Si quisieramos hacer una mejora de ajuste y capturar asimetrías, podríamos considerar modelos como TGACRH() o AGARCH().</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

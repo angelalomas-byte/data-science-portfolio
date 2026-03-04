@@ -1,0 +1,745 @@
+---
+title: "Volatility Modeling and GARCH Model Selection"
+author: "Ángela Lomas Anglada"
+format: html
+editor: visual
+---
+
+```{r}
+load("rendimientos_limpios.RData")
+```
+
+```{r}
+library(forecast)
+library(ggplot2)
+library(lmtest)
+library(rugarch)
+```
+
+La ventana de estimación es hasta el 31/10/2025 para predecir los datos de noviembre.
+
+```{r}
+san <- rendimientos_limpios[["ACS.MC"]]
+
+fecha_corte <- as.Date("2025-10-31")
+
+san_rend <- san[index(san) <= fecha_corte]
+
+head(san_rend)
+tail(san_rend)
+```
+
+### ESCENARIO 1: Ruido Blanco (RB)
+
+Modelo simple tipo Random Walk o ARMA(0,0):
+
+```{r}
+#ajuste:
+mod.rb <- Arima(san_rend)
+#significatividad de parámetros
+summary(mod.rb)
+coeftest(mod.rb)
+```
+
+La media estimada del rendimiento es prácticamente 0. El p-value = 0.49 \> 0.05, por lo que concluimos que no es significativa. Vamos a pasar a la diagnosis para concluir si aceptamos o no RB.
+
+DIAGNOSIS DE LOS RESIDUOS:
+
+```{r}
+# Residuos
+res.rb <- residuals(mod.rb)
+
+# Gráficos de ACF/PACF de residuos y residuos al cuadrado
+ggtsdisplay(res.rb, main="Residuos ARIMA")
+ggtsdisplay(res.rb^2, main="Residuos al cuadrado ARIMA")
+
+# Ljung-Box test sobre residuos (media)
+ljung_media_p <- sapply(1:5, function(lag) {
+  Box.test(res.rb, lag = lag, type = "Ljung-Box", fitdf = 0)$p.value
+})
+
+# Ljung-Box test sobre residuos al cuadrado (varianza)
+ljung_var_p <- sapply(c(1, 5, 10, 20, 30), function(lag) {
+  Box.test(res.rb^2, lag = lag, type = "Ljung-Box", fitdf = 0)$p.value
+})
+
+# Mostrar resultados
+data.frame(
+  Lag_Media = 1:5,
+  pvalue_Media = round(ljung_media_p, 4)
+)
+
+data.frame(
+  Lag_Varianza = c(1, 5, 10, 20, 30),
+  pvalue_Varianza = round(ljung_var_p, 4)
+)
+```
+
+-   **Diágnostico de residuos**: En los gráficos ACF y PACF, no observamos que sobresalgan barras de forma significativa. Hay alguna barra que sobresale como en el retardo 22 o 35, que puede deberse a efectos estacionarios o ciclos en la serie o simplemente ruido que no se consigue eliminar. Por lo que mediante la visualización podríamos decir que NO hay autocorrelación. Esto se respalda con en el **test de Ljung-Box** vemos p-value \> 0.05, lo que indica que NO hay evidencia para rechazar la H0: No autocorrelación. Por lo que podemos decir que NO hay autocorrelación en los residuos. Lo que significa que este modelo **captura bien** la dinámica de la **media**.
+
+-   Diagnóstico de los **residuos al cuadrado**: En los gráficos ACF y PACF de los residuos al cuadrado observamos que muchas barras sobresalen, por lo que SÍ hay autocorrelación ya que son significativas. Esto se respalda con el **test de Ljung-Box** vemos p-value \< 0.05, lo que indica que hay evidencia para rechazar la H0: No autocorrelación. Por lo que podemos decir que SÍ hay autocorrelación en los residuos. Lo que significa que este modelo **no captura bien** la dinámica de la **varianza** (sigue quedandoe structura) revelando la presencia de efectos **ARCH/GARCH**. Esto implica que la volatilidad no es constante en el tiempo y depende del comportamiento pasado, evidenciando la existencia de heterocedasticidad y persistencia en la volatilidad.
+
+Con esto podríamos descartar directamente Ruido Blanco.
+
+```{r}
+# Histograma con densidad empírica y Normal teórica
+res_df <- data.frame(Residuals = res.rb)
+
+ggplot(res_df, aes(x = Residuals)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue", color = "black") +
+  geom_density(color = "blue", size = 1) + # densidad empírica
+  stat_function(fun = dnorm, args = list(mean = mean(res.rb), sd = sd(res.rb)), 
+                color = "red", linetype = "dashed", size = 1) + # Normal teórica
+  labs(title = "Distribución de residuos ARIMA",
+       x = "Residuos",
+       y = "Densidad") +
+  theme_minimal()
+```
+
+```{r}
+# Extraer media y varianza incondicional
+mu_incond <- mod.rb$coef["intercept"]  # media incondicional
+mu_incond
+sigma_incond <- sqrt(mod.rb$sigma2)    # varianza incondicional
+sigma_incond
+```
+
+La **media incondicional** es el promedio esperado del rendimiento sin considerar información pasada, es decir, el valor alrededor del cual los rendimientos se mueven 'en promedio'. En este modelo Ruido Blanco, la media estimada es muy cercana a 0. La **varianza incondicional** representa la dispersión promedio de los rendimientos sin considerar información pasada, es decir, la volatilidad 'promedio' de la serie, en nuestro caso es 0.02 \> 0. Sin embargo, al analizar los residuos al cuadrado encontramos autocorrelación significativa, lo que indica que la volatilidad no es constante y depende del pasado.
+
+Conclusión sobre el modelo:
+
+Aunque la media de los rendimientos es cercana a cero y no significativa, los residuos muestran evidencia clara de **autocorrelación en la varianza**. Esto implica que la serie **no cumple con los supuestos de Ruido Blanco**, porque:
+
+1.  La volatilidad no es constante (heterocedasticidad y clustering de volatilidad).
+
+2.  Existe persistencia en la varianza, lo que sugiere efectos ARCH/GARCH.
+
+Por lo tanto, descartamos el escenario de Ruido Blanco y es necesario considerar un modelo que capture la dinámica de la varianza, como un **GARCH**.
+
+### ESCENARIO 2: ARMA
+
+Usamos la función `auto.arima()`, evalúa estacionariedad (d) y, si es necesario, diferencia la serie. Busca el modelo ARMA/ARIMA óptimo evaluando diferentes combinaciones de p y q (AR y MA) según AIC/BIC.
+
+```{r}
+mean.mu.bic <- auto.arima(san_rend, stationary=TRUE, seasonal=FALSE, ic = 'aic', allowmean = TRUE)
+
+#print(mean.mu.bic)
+summary(mean.mu.bic)
+```
+
+MODLEOS SELECCIONADO POR EL AIC Y BIC:
+
+```{r}
+mod_arma_aic <- auto.arima(san_rend - mean(san_rend), stationary = TRUE, seasonal = FALSE, ic = "aic", allowmean = FALSE)
+mod_arma_bic <- auto.arima(san_rend - mean(san_rend), stationary = TRUE, seasonal = FALSE, ic = "bic", allowmean = FALSE)
+summary(mod_arma_aic)
+summary(mod_arma_bic)
+```
+
+Al ajustar el modelo ARMA con la función `auto.arima()`, bajo los criterios AIC y BIC, el modelo seleccionado fue un **ARIMA(0,0,0) con media cero**, es decir, un proceso de Ruido Blanco (Escenario 1, ya hecho). Los valores de AIC (-31745.44) y BIC (-31738.64) no disminuyen respecto al modelo anterior, el de Ruido Blanco indicando que la inclusión de componentes AR o MA no mejora el ajuste del modelo.
+
+El diagnóstico es el mismo que en el anterior escenario dado que el modelo ARMA seleccionado es idéntico al modelo de Ruido Blanco:
+
+-   Los residuos de la media no presentan autocorrelación significativa, confirmando que el modelo captura correctamente la dinámica de la media.
+
+-   Los residuos al cuadrado muestran autocorrelación significativa, evidenciando que la volatilidad no es constante y depende del comportemiento pasado. Esto indica la presencia de heterocedasticidad y persistencia de la volatilidad, sugiriendo la necesidad de considerar un modelo tipo ARCH/GARCH para capturar la dinámica de la varianza.
+
+De la misma forma descartaremos este modelo.
+
+### ESCENARIO 3:
+
+#### GARCH(1,1) con media
+
+```{r}
+# Especificación del modelo GARCH(1,1)
+garch11 <- ugarchspec(
+  variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
+  mean.model     = list(armaOrder = c(0, 0), include.mean = TRUE),
+  distribution.model = "norm"
+)
+
+# Estimación del modelo
+fit_garch11 <- ugarchfit(spec = garch11, data = san_rend, solver = "hybrid")
+
+# Resumen del modelo
+print(fit_garch11)
+```
+
+Hemos ajustado un modelo GARCH(1,1) con media incluida y distribución normal.
+
+**Parámetros estimados:**
+
+-   **Media condicional (μ):** positiva y significativa, aunque de magnitud muy pequeña.
+
+-   **Constante de la varianza (ω):** no significativa (p-value = 0.076), lo que indica que la varianza base no es determinante en la dinámica de la volatilidad.
+
+-   **Efecto ARCH (α1):** mide el impacto de shocks recientes sobre la varianza actual. Es significativo, indicando que los cambios recientes en los rendimientos afectan la volatilidad condicional.
+
+-   **Efecto GARCH (β1):** mide la persistencia de la varianza condicional. Muy significativo, reflejando **clustering de volatilidad** y heterocedasticidad persistente.
+
+**Diagnóstico de residuos:**
+
+-   **Ljung-Box sobre residuos estandarizados:** todos los p-values \> 0.05, indicando que no existe autocorrelación significativa en la media y que el modelo captura adecuadamente la dinámica de los rendimientos.
+-   **Ljung-Box sobre residuos al cuadrado:** todos los p-values \> 0.05, confirmando que la volatilidad condicional está correctamente modelada y que no hay autocorrelación significativa en la varianza.
+-   **ARCH test:** p-values \> 0.05 en todos los lags, lo que indica que no hay heterocedasticidad residual no capturada y que la dinámica de la volatilidad condicional está adecuadamente representada por el modelo.
+
+**Test de signos:**
+
+-   El **p-value conjunto** asociado al efecto conjunto (Joint Effect) es muy bajo (0.0018), lo que indica **la presencia de efectos asimétricos en los residuos**. Es decir, los choques positivos y negativos no afectan de igual manera la volatilidad, lo que sugiere que el modelo GARCH(1,1) estándar no captura completamente estas diferencias.
+
+-   Para modelar correctamente estas asimetrías, sería recomendable considerar **modelos GARCH asimétricos**, como **TGARCH (Threshold GARCH)** o **AGARCH (Asymmetric GARCH)**, que permiten diferenciar la reacción de la volatilidad ante choques positivos y negativos
+
+Parámetros:
+
+```{r}
+# Parámetros estimados
+coef(fit_garch11)
+
+# Media incondicional
+mu_incond <- coef(fit_garch11)["mu"]
+
+# Varianza incondicional: omega / (1 - alpha - beta)
+omega <- coef(fit_garch11)["omega"]
+alpha <- coef(fit_garch11)["alpha1"]
+beta  <- coef(fit_garch11)["beta1"]
+var_incond <- omega / (1 - alpha - beta)
+
+# Varianza condicional (estimada por el modelo)
+var_cond <- sigma(fit_garch11)^2
+
+# Mostrar resultados
+cat("Media incondicional:", mu_incond, "\n")
+cat("Varianza incondicional:", var_incond, "\n")
+head(var_cond)
+```
+
+-   La media condicional es cercana a cero, lo que concuerda con la ausencia de tendencia fuerte en los rendimientos.
+-   La varianza condicional, en cambio, **muestra clustering de volatilidad**, con períodos de mayor y menor volatilidad, reflejando la heterocedasticidad condicional típica de series financieras.
+-   La diferencia entre varianza incondicional y condicional evidencia que **la volatilidad depende de la historia reciente de la serie**, algo que el modelo GARCH captura correctamente.
+
+```{r}
+# Gráficos estándar del modelo (según tu formato preferido)
+plot(fit_garch11, which = 9)   # Residuos estandarizados
+plot(fit_garch11, which = 8)   # Ajuste del modelo
+plot(fit_garch11, which = 10)  # Densidad de residuos
+plot(fit_garch11, which = 11)  # ACF residuos estandarizados
+```
+
+Vamos a hacer también una visualización:
+
+-   **Distribución de residuos:**\
+    El histograma muestra que la **cola de los valores negativos es más pesada** que la de los positivos, indicando **asimetría negativa** (skewness negativa). Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el **efecto leverage**, donde la volatilidad responde de manera diferente a shocks negativos respecto a los positivos.\
+    El **QQ-plot** confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, indicando colas más pesadas en los valores negativos.
+
+-   **Autocorrelación de residuos:**\
+    La **ACF de los residuos estandarizados** muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando **ausencia de autocorrelación significativa** en la media. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.
+
+-   **Autocorrelación de varianza:**\
+    La **ACF de los residuos al cuadrado** también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que **no existe autocorrelación significativa en la varianza**. Por lo tanto, la **volatilidad condicional está correctamente modelada**.
+
+```{r}
+# Gráfico de la varianza condicional
+plot(var_cond, type = "l", col = "blue",
+     main = "Varianza condicional estimada",
+     ylab = "Varianza condicional", xlab = "Tiempo")
+```
+
+Conclusión sobre el modelo:
+
+El modelo **GARCH(1,1) con media** **no debe descartarse**, porque captura correctamente la dinámica de la media y la volatilidad condicional. Además los residuos no presentan autocorrelación significativa ni heterocedasticidad residual no explicada. Y la asimetría detectada es un detalle que podría mejorarse con modelos asimétricos, pero no invalida el ajuste básico del GARCH(1,1).
+
+#### GARCH(1,1) sin media:
+
+```{r}
+garch11 <- ugarchspec(
+  variance.model = list(model="sGARCH", garchOrder=c(1,1)),
+  mean.model     = list(armaOrder=c(0,0), include.mean=FALSE),
+  distribution.model = "norm"
+)
+
+fit_garch11 <- ugarchfit(spec = garch11, data = san_rend - mean(san_rend), solver = "hybrid")
+
+print(mean(san_rend))
+print(fit_garch11)
+```
+
+**Parámetros estimados:**
+
+-   **Media condicional (μ):** positiva y significativa, aunque de magnitud muy pequeña. Esto indica que la serie tiene un ligero sesgo en la media, pero no relevante.
+
+-   **Constante de la varianza (ω):** no significativa (p-value = 0.076), lo que sugiere que la varianza base no es determinante en la dinámica de la volatilidad.
+
+-   **Efecto ARCH (α1):** mide el impacto de shocks recientes sobre la varianza actual. Resulta significativo, indicando que los cambios recientes en los rendimientos afectan la volatilidad condicional.
+
+-   **Efecto GARCH (β1):** mide la persistencia de la varianza condicional. Muy significativo, lo que refleja **clustering de volatilidad** y heterocedasticidad persistente.
+
+**Diagnóstico de residuos:**
+
+-   **Ljung-Box sobre residuos estandarizados:** todos los p-values \> 0.05, indicando ausencia de autocorrelación significativa en la media. El modelo captura correctamente la dinámica de la serie en términos de media.
+
+-   **Ljung-Box sobre residuos al cuadrado:** todos los p-values \> 0.05, confirmando que no hay autocorrelación significativa en la varianza de los residuos. La **volatilidad condicional está adecuadamente modelada**.
+
+-   **ARCH test:** p-values \> 0.05 en todos los lags, lo que indica que no hay heterocedasticidad residual no capturada por el modelo.
+
+**Test de signos:**
+
+-   El **p-value conjunto** asociado al **Joint Effect** es muy bajo, lo que indica **la presencia de efectos asimétricos en los residuos**. Es decir, los choques positivos y negativos no afectan de igual manera la volatilidad, lo que sugiere que el modelo GARCH(1,1) estándar **no captura completamente estas diferencias**.
+
+-   Para modelar correctamente estas asimetrías, sería recomendable considerar **modelos GARCH asimétricos**, como **TGARCH (Threshold GARCH)** o **AGARCH (Asymmetric GARCH)**, que permiten diferenciar la reacción de la volatilidad ante choques positivos y negativos.
+
+Parámetros:
+
+```{r}
+# Parámetros estimados
+coef(fit_garch11)
+
+# Media incondicional
+mu_incond <- coef(fit_garch11)["mu"]
+
+# Varianza incondicional: omega / (1 - alpha - beta)
+omega <- coef(fit_garch11)["omega"]
+alpha <- coef(fit_garch11)["alpha1"]
+beta  <- coef(fit_garch11)["beta1"]
+var_incond <- omega / (1 - alpha - beta)
+
+# Varianza condicional (estimada por el modelo)
+var_cond <- sigma(fit_garch11)^2
+
+# Mostrar resultados
+cat("Media incondicional:", mu_incond, "\n")
+cat("Varianza incondicional:", var_incond, "\n")
+head(var_cond)
+```
+
+-   La serie presenta **heterocedasticidad condicional**, con shocks recientes afectando la volatilidad (α1) y persistencia en la volatilidad (β1).
+
+-   La media incondicional no se reporta (NA), lo que sugiere que el modelo se centra en capturar la dinámica de la varianza condicional más que en un sesgo de media significativo.
+
+-   La diferencia entre varianza incondicional y condicional muestra que la volatilidad depende del comportamiento pasado de la serie, algo que el modelo GARCH captura adecuadamente.
+
+```{r}
+# Gráficos estándar del modelo (según tu formato preferido)
+plot(fit_garch11, which = 9)   # Residuos estandarizados
+plot(fit_garch11, which = 8)   # Ajuste del modelo
+plot(fit_garch11, which = 10)  # Densidad de residuos
+plot(fit_garch11, which = 11)  # ACF residuos estandarizados
+```
+
+Vamos a hacer también una visualización:
+
+-   **Distribución de residuos:**\
+    El **histograma** muestra que la cola de los valores negativos es más pesada que la de los positivos, indicando **asimetría negativa**. Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el **efecto leverage**, donde la volatilidad responde de manera diferente a shocks negativos respecto a positivos.\
+    El **QQ-plot** confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, evidenciando colas más pesadas en los valores negativos.
+-   **Autocorrelación de la media:**\
+    La **ACF de los residuos estandarizados** muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando **ausencia de autocorrelación significativa**. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.
+-   **Autocorrelación de la varianza:**\
+    La **ACF de los residuos al cuadrado** también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que **no existe autocorrelación significativa en la varianza**. Por lo tanto, la **volatilidad condicional está correctamente modelada**.
+
+```{r}
+# Gráfico de la varianza condicional
+plot(var_cond, type = "l", col = "blue",
+     main = "Varianza condicional estimada",
+     ylab = "Varianza condicional", xlab = "Tiempo")
+```
+
+Conclusión del modelo:
+
+El modelo **GARCH(1,1) sin media** captura correctamente la **dinámica de la volatilidad condicional** y la heterocedasticidad de la serie. La serie no presenta autocorrelación significativa en los residuos, ni en su varianza, confirmando la validez del modelo para describir la serie de rendimientos. Y la asimetría detectada en los residuos no es suficiente para descartar el modelo; simplemente indica que una versión asimétrica (TGARCH o AGARCH) podría mejorar la captura de los efectos leverage.
+
+**Por lo tanto, el modelo no debe descartarse.** Es adecuado para analizar y pronosticar la volatilidad de la serie.
+
+Entre estos dos modelos GARCH(1,1) con media vs GARCH(1,1,) sin media:
+
+Tras comparar ambos modelos, se observa que el **GARCH(1,1) con media** presenta una media condicional positiva y significativa, pero de magnitud muy pequeña, lo que indica un ligero sesgo en los rendimientos que prácticamente no afecta la dinámica de la serie. Por su parte, el **GARCH(1,1) sin media** captura igualmente bien la volatilidad condicional, el clustering de volatilidad y la heterocedasticidad de los residuos, con la ventaja de ser un modelo más **parsimonioso**, al incluir un parámetro menos.
+
+Dado que la inclusión de la media no aporta una mejora significativa en el ajuste ni en la explicación de la dinámica de la serie, se elige **el modelo GARCH(1,1) sin media** como el modelo más adecuado para analizar y pronosticar la volatilidad de los rendimientos.
+
+#### GARCH(m,r)
+
+Ese modelo elegido hay que ajustarlo y ver si realmente hay ganancia con respecto al GARCH (1,1).
+
+```{r}
+# Función para probar todos los GARCH(p,q) hasta un máximo
+auto_garch <- function(series, p_max, q_max) {
+  
+  series <- as.numeric(series)  # asegurar tipo numérico
+  
+  resultados <- list()
+  idx <- 1
+  
+  for (p in 0:p_max) {
+    for (q in 0:q_max) {
+      
+      # Si p=q=0, no tiene sentido estimar (sería varianza constante)
+      if (p == 0 && q == 0) next
+      
+      spec <- tryCatch(
+        ugarchspec(
+          mean.model = list(armaOrder = c(0, 0), include.mean = FALSE),
+          variance.model = list(model = "sGARCH", garchOrder = c(p, q)),
+          distribution.model = "norm"
+        ),
+        error = function(e) NULL
+      )
+      if (is.null(spec)) next
+      
+      fit <- tryCatch(
+        ugarchfit(spec, series, solver = "hybrid"),
+        error = function(e) NULL
+      )
+      if (is.null(fit)) next
+      
+      ic <- tryCatch(infocriteria(fit), error = function(e) NULL)
+      if (is.null(ic) || length(ic) < 4) next
+      
+      resultados[[idx]] <- data.frame(
+        p = p,
+        q = q,
+        AIC = ic[1],
+        BIC = ic[2],
+        Shibata = ic[3],
+        Hannan_Quinn = ic[4]
+      )
+      idx <- idx + 1
+    }
+  }
+  
+  df <- do.call(rbind, resultados)
+  df <- df[order(df$AIC), ]
+  rownames(df) <- NULL
+  return(df)
+}
+
+```
+
+```{r}
+resultados_garch <- auto_garch(san_rend, p_max = 3, q_max = 3)
+
+# Mostrar todos los resultados ordenados por AIC
+print(resultados_garch)
+
+# Extraer el mejor modelo según cada criterio
+best_AIC <- resultados_garch[which.min(resultados_garch$AIC), c("p","q")]
+best_BIC <- resultados_garch[which.min(resultados_garch$BIC), c("p","q")]
+best_S   <- resultados_garch[which.min(resultados_garch$Shibata), c("p","q")]
+best_H   <- resultados_garch[which.min(resultados_garch$Hannan_Quinn), c("p","q")]
+
+# Crear una tabla resumen con los 4 modelos elegidos (solo Criterio, p y q)
+mejores_modelos <- data.frame(
+  Criterio = c("AIC", "BIC", "Shibata", "Hannan-Quinn"),
+  rbind(best_AIC, best_BIC, best_S, best_H)
+)
+
+print(mejores_modelos, row.names = FALSE)
+```
+
+```{r}
+garch12 <- ugarchspec(
+  variance.model = list(model = "sGARCH", garchOrder = c(1, 2)),
+  mean.model     = list(armaOrder = c(0, 0), include.mean = TRUE),
+  distribution.model = "norm"
+)
+
+fit_garch12 <- ugarchfit(spec = garch12, data = san_rend, solver = "hybrid")
+
+print(fit_garch12)
+```
+
+**Parámetros estimados:**
+
+-   **Media condicional (μ):**\
+    Positiva y altamente significativa, aunque de magnitud muy pequeña. Esto indica que la serie no presenta un nivel promedio relevante y que la media no desempeña un papel importante en la dinámica del proceso.
+
+-   **Constante de la varianza (ω):**\
+    Significativa bajo errores estándar clásicos, pero no con errores robustos. Esto sugiere que su contribución directa a la volatilidad condicional es limitada y podría no ser un componente estructural fuerte del modelo.
+
+-   **Efecto ARCH (α1):**\
+    Mide el impacto de shocks recientes sobre la varianza actual. Es significativo, lo que indica que los movimientos recientes en los rendimientos afectan directamente a la volatilidad.
+
+-   **Efectos GARCH (β1 y β2):**\
+    Ambos coeficientes son significativos. Reflejan una elevada persistencia en la varianza condicional, lo que implica que la volatilidad depende en gran medida de sus valores pasados. Esto confirma la presencia de heterocedasticidad persistente.
+
+**Diagnóstico de residuos:**
+
+-   **Ljung-Box sobre residuos estandarizados:**\
+    Todos los p-values son mayores que 0.05, lo que indica ausencia de autocorrelación significativa en la media. El modelo captura adecuadamente la dinámica de los rendimientos.
+
+-   **Ljung-Box sobre residuos estandarizados al cuadrado:**\
+    Los p-values también son mayores a 0.05. Esto confirma que no existe autocorrelación significativa en la varianza, y por tanto la volatilidad condicional está bien modelada.
+
+-   **Weighted ARCH LM test:**\
+    Todos los p-values son superiores a 0.05, indicando que no quedan efectos ARCH residuales sin capturar. La dinámica de la volatilidad está correctamente representada por el modelo.
+
+**Test de signos:**
+
+-   El valor asociado al **Joint Effect** es elevado (t-value = 14.74), lo que indica la presencia de **asimetrías significativas en los residuos**. Esto significa que los choques positivos y negativos no afectan de la misma manera a la volatilidad, evidenciando un posible **efecto leverage** o respuesta diferente de la varianza ante movimientos bajistas y alcistas.
+
+-   Además, el **Positive Sign Bias** presenta un t-value notablemente alto (2.13), lo que refuerza la idea de que los choques positivos generan una respuesta distinta en la volatilidad respecto a los negativos.
+
+-   En conjunto, estos resultados sugieren que el modelo GARCH(1,2) estándar **no captura completamente las asimetrías presentes en la serie**. Por ello, sería recomendable considerar **modelos GARCH asimétricos**,
+
+El modelo **ARMA(0,0)–GARCH(1,2)** captura adecuadamente la dinámica de la volatilidad condicional de la serie. No deja autocorrelación significativa en los residuos ni efectos ARCH sin modelar, y los coeficientes GARCH reflejan de manera efectiva la persistencia de la varianza. Se trata, por tanto, de un modelo bien especificado y adecuado para describir el comportamiento de la volatilidad.
+
+Parámetros:
+
+```{r}
+params <- coef(fit_garch12)
+
+# Media incondicional
+mu_incond <- uncmean(fit_garch12)
+
+# Varianza incondicional
+var_incond <- uncvariance(fit_garch12)
+
+# Varianza condicional
+var_cond <- sigma(fit_garch12)^2
+
+# Crear tabla
+tabla_parametros <- data.frame(
+  Parametro = c("mu_incond", "omega", "alpha1", "beta1", "var_incond"),
+  Valor      = c(mu_incond, params["omega"], params["alpha1"], params["beta1"], var_incond)
+)
+
+print(tabla_parametros, digits = 6)
+```
+
+**Media incondicional (μ)**:\
+El valor estimado de la media incondicional es **0.000672**, un número positivo pero muy pequeño. Esto indica que, en promedio, los rendimientos no presentan una tendencia significativa y se mantienen cercanos a cero, lo cual es habitual en series financieras de alta frecuencia.
+
+**Varianza incondicional**:\
+La varianza de largo plazo estimada es **0.000568**, coherente con los valores de ω, α₁ y β₁. Esto confirma que la volatilidad incondicional es baja, pero la dinámica temporal (ARCH+GARCH) explica la mayor parte de su comportamiento.
+
+```{r}
+plot(fit_garch12, which = 9)   # Residuos estandarizados
+plot(fit_garch12, which = 8)   # Ajuste del modelo
+plot(fit_garch12, which = 10)  # Densidad de residuos
+plot(fit_garch12, which = 11)  # ACF residuos estandarizados
+```
+
+Vamos a hacer también una visualización:
+
+-   **Distribución de residuos:**\
+    El **histograma** muestra que la cola de los valores negativos es más pesada que la de los positivos, indicando **asimetría negativa**. Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el **efecto leverage**, donde la volatilidad responde de manera diferente a shocks negativos respecto a positivos.\
+    El **QQ-plot** confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, evidenciando colas más pesadas en los valores negativos.
+-   **Autocorrelación de la media:**\
+    La **ACF de los residuos estandarizados** muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando **ausencia de autocorrelación significativa**. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.
+-   **Autocorrelación de la varianza:**\
+    La **ACF de los residuos al cuadrado** también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que **no existe autocorrelación significativa en la varianza**. Por lo tanto, la **volatilidad condicional está correctamente modelada**.
+
+```{r}
+# Varianza condicional
+plot(var_cond, type = "l", col = "blue",
+     main = "Varianza condicional estimada",
+     ylab = "Varianza condicional", xlab = "Tiempo")
+abline(h = var_incond, col = "red", lty = 2, lwd = 2)  # Línea varianza incondicional
+```
+
+Conclusión del modelo:
+
+El procedimiento de selección automática de modelos GARCH(p,q) permitió comparar múltiples especificaciones hasta órdenes (3,3). Los criterios de información (AIC, BIC, Shibata y Hannan–Quinn) coincidieron en que el modelo **GARCH(1,2)** es el que mejor se ajusta entre todas las combinaciones evaluadas, mostrando una mejora clara respecto al GARCH(1,1).
+
+Al estimar el modelo ARMA(0,0)–GARCH(1,2) seleccionado, los resultados muestran que:
+
+-   Captura adecuadamente la dinámica de la volatilidad:\
+    no se detectan autocorrelaciones residuales ni efectos ARCH remanentes, lo que indica una especificación adecuada.
+
+-   Los parámetros ARCH y GARCH son significativos:\
+    reflejan una volatilidad altamente persistente, típica en series financieras y coherente con la presencia de *clustering*.
+
+-   La media condicional es muy pequeña e insignificante desde el punto de vista económico, por lo que la dinámica de la serie está dominada por la volatilidad y no por la media.
+
+-   La varianza condicional estimada reproduce correctamente los cambios en la volatilidad a lo largo del tiempo, y su nivel de largo plazo es coherente con el comportamiento histórico de los datos.
+
+**No obstante, el test de sesgo por signos reveló una asimetría importante en la respuesta de la volatilidad**, especialmente el efecto positivo (Positive Sign Bias) y el efecto conjunto (Joint Effect), con valores t elevados.
+
+Aunque el modelo GARCH(1,2) es superior al GARCH(1,1) en términos de ajuste y diagnóstico, **todavía no es el modelo óptimo**, ya que no recoge las asimetrías presentes en los datos. No descartamos este modelo.
+
+### ESCENARIO 4: ARMA-GARCH(m,r,q)
+
+```{r}
+# Escenario 4: ARMA(p,q)-GARCH(p,q)
+auto.armagarch <- function(series, p_max = 2, q_max = 2, m_max = 2, r_max = 2) {
+  results <- list()
+  idx <- 1
+  
+  for (p in 0:p_max) {
+    for (q in 0:q_max) {
+      for (m in 1:m_max) { 
+        for (r in 1:r_max) {
+          if (m<r) next
+          
+          spec <- tryCatch(
+            ugarchspec(
+              mean.model = list(armaOrder = c(p, q), include.mean = TRUE),
+              variance.model = list(model = "sGARCH", garchOrder = c(m, r)),
+              distribution.model = "std"  # t-student
+            ),
+            error = function(e) NULL
+          )
+          
+          if (is.null(spec)) next
+          
+          fit <- tryCatch(
+            ugarchfit(spec, data = series, solver = "hybrid"),
+            error = function(e) NULL
+          )
+          
+          if (is.null(fit)) next
+          
+          ic <- infocriteria(fit)
+          results[[idx]] <- data.frame(
+            p = p, q = q, m = m, r = r,
+            AIC = ic[1], BIC = ic[2], HQ = ic[3], SIC = ic[4]
+          )
+          idx <- idx + 1
+        }
+      }
+    }
+  }
+  
+  df <- do.call(rbind, results)
+  df[order(df$AIC), ]  # ordenado por AIC por defecto
+}
+
+```
+
+```{r}
+# Aplicar la función auto.armagarch
+resultados_armagarch <- auto.armagarch(san_rend)
+
+# Mostrar las primeras filas del resultado ordenado por AIC
+print(resultados_armagarch)
+```
+
+```{r}
+best_AIC <- resultados_armagarch[which.min(resultados_armagarch$AIC), c("p","q","m","r","AIC")]
+best_BIC <- resultados_armagarch[which.min(resultados_armagarch$BIC), c("p","q","m","r","BIC")]
+best_HQ  <- resultados_armagarch[which.min(resultados_armagarch$HQ),  c("p","q","m","r","HQ")]
+best_SIC <- resultados_armagarch[which.min(resultados_armagarch$SIC), c("p","q","m","r","SIC")]
+
+# Renombrar última columna a "Valor"
+names(best_AIC)[5] <- "Valor"
+names(best_BIC)[5] <- "Valor"
+names(best_HQ)[5]  <- "Valor"
+names(best_SIC)[5] <- "Valor"
+
+# Combinar todo en una sola tabla
+mejores <- rbind(
+  cbind(Criterio = "AIC", best_AIC),
+  cbind(Criterio = "BIC", best_BIC),
+  cbind(Criterio = "HQ",  best_HQ),
+  cbind(Criterio = "SIC", best_SIC)
+)
+
+print(mejores)
+```
+
+Nos aparecen como mejores los modelos **ARMA(2,2)-GARCH(1,1)** y **ARMA(0,0)-GARCH(1,1)**. Según el principio de parsimonia nos quedariamos con el que menos parámetros tiene, el más simple. Lo vamos a probar y hacer el diagnóstico de los residuos para ver.
+
+```{r}
+# Especificar el modelo ARMA(2,2)-GARCH(1,1)
+spec_arma_garch2211 <- ugarchspec(
+  variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
+  mean.model = list(armaOrder = c(2, 2), include.mean = TRUE),
+  distribution.model = "norm" 
+)
+
+# Estimar el modelo
+fit_arma_garch2211 <- ugarchfit(spec = spec_arma_garch2211, data = san_rend)
+
+# Resumen de resultados
+show(fit_arma_garch2211)
+```
+
+**Parámetros estimados:**
+
+En primer lugar, la estimación del modelo muestra que **todos los parámetros de la parte ARFIMA y de la parte GARCH son estadísticamente significativos**, con la única excepción del parámetro **ω (omega)**, cuya no significancia indica que la constante de la varianza tiene un papel reducido en la dinámica de la volatilidad.
+
+**Diagnóstico de los residuos:**
+
+Los resultados de los tests de Ljung–Box aplicados tanto a los **residuos estandarizados** como a los **residuos estandarizados al cuadrado** presentan p-valores superiores a 0.05 en todos los casos. Esto implica que **no se detecta autocorrelación significativa ni en la media ni en la varianza**, por lo que el modelo captura adecuadamente la dinámica condicional de ambos componentes.
+
+De manera consistente, los **tests ARCH LM ponderados** también arrojan p-valores elevados, lo que permite mantener la hipótesis nula de **ausencia de efectos ARCH residuales**. Con ello se confirma que los residuos son homocedásticos una vez modelada la volatilidad, que es precisamente el comportamiento esperado si la especificación es correcta.
+
+El **Nyblom Stability Test** presenta un valor conjunto de aproximadamente **25.5**, claramente superior al umbral crítico del 10% (1.89). Esto indica **inestabilidad conjunta de los parámetros a lo largo del tiempo**. Algunos parámetros individuales —especialmente *omega*, *ma2* y *beta1*— muestran valores elevados, sugiriendo que ciertos componentes del modelo podrían estar variando estructuralmente.
+
+**Test de signos:**
+
+Los resultados del Sign Bias Test muestran que ninguno de los efectos individuales —Sign Bias, Negative Sign Bias y Positive Sign Bias— presenta valores t suficientemente elevados como para indicar asimetrías significativas de manera aislada. Sin embargo, el **Joint Effect** ofrece un valor t muy elevado (**t = 16.26**), lo que constituye evidencia sólida de **asimetrías conjuntas en los residuos**.
+
+En conjunto, el modelo ARFMA(2,2)–GARCH(1,1) describe de manera adecuada la dinámica de la media y la volatilidad, sin dejar autocorrelación residual ni efectos ARCH no capturados. Sin embargo, la evidencia de inestabilidad en los parámetros, reflejada por el test de Nyblom, sugiere que **el modelo podría no ser totalmente estable en el tiempo**. Esto abre la posibilidad de considerar alternativas más flexibles, tales como modelos con parámetros cambiantes en el tiempo o especificaciones de volatilidad más complejas, si se requiere un ajuste robusto frente a posibles cambios estructurales en la serie.
+
+Parámetros:
+
+```{r}
+params <- coef(fit_arma_garch2211)
+
+# Media incondicional
+mu_incond <- uncmean(fit_arma_garch2211)
+
+# Varianza incondicional
+var_incond <- uncvariance(fit_arma_garch2211)
+
+# Varianza condicional
+var_cond <- sigma(fit_arma_garch2211)^2
+
+# Crear tabla
+tabla_parametros <- data.frame(
+  Parametro = c("mu_incond", "omega", "alpha1", "beta1", "var_incond"),
+  Valor      = c(mu_incond, params["omega"], params["alpha1"], params["beta1"], var_incond)
+)
+
+print(tabla_parametros, digits = 6)
+```
+
+**Media incondicional (μ₍incond₎ = 0.000675)**\
+La media incondicional de los rendimientos es positiva pero muy pequeña. Esto es típico en series financieras: el rendimiento esperado diario es prácticamente cero y no tiene un papel relevante en la dinámica del proceso.
+
+**Constante de la varianza (ω = 0.00000333)**\
+El valor de ω es muy pequeño. Una ω tan reducida indica que la varianza base o de largo plazo no es grande y que la volatilidad está dominada por la respuesta a choques pasados.
+
+**Varianza incondicioanl (0.0005825)**
+
+Tiene una volatilidad de largo plazo relativamente baja, pero **dinámicamente muy persistente**, debido al peso dominante del término GARCH (β₁).
+
+```{r}
+plot(fit_arma_garch2211, which = 9)   # Residuos estandarizados
+plot(fit_arma_garch2211, which = 8)   # Ajuste del modelo
+plot(fit_arma_garch2211, which = 10)  # Densidad de residuos
+plot(fit_arma_garch2211, which = 11)  # ACF residuos estandarizados
+```
+
+Vamos a hacer también una visualización:
+
+-   **Distribución de residuos:**\
+    El **histograma** muestra que la cola de los valores negativos es más pesada que la de los positivos, indicando **asimetría negativa**. Esto significa que los movimientos negativos extremos son más probables o de mayor magnitud que los positivos, reflejando el **efecto leverage**, donde la volatilidad responde de manera diferente a shocks negativos respecto a positivos.\
+    El **QQ-plot** confirma esta característica: los puntos de la cola izquierda se desvían más de la línea diagonal que los de la derecha, evidenciando colas más pesadas en los valores negativos.
+-   **Autocorrelación de la media:**\
+    La **ACF de los residuos estandarizados** muestra que todos los coeficientes se encuentran dentro de los intervalos de confianza, indicando **ausencia de autocorrelación significativa**. Esto confirma que el modelo captura adecuadamente la dinámica de la serie en términos de media.
+-   **Autocorrelación de la varianza:**\
+    La **ACF de los residuos al cuadrado** también se encuentra dentro de los intervalos de confianza en todos los lags analizados, indicando que **no existe autocorrelación significativa en la varianza**. Por lo tanto, la **volatilidad condicional está correctamente modelada**.
+
+```         
+```
+
+```{r}
+plot(var_cond, type = "l", col = "blue",
+     main = "Varianza condicional estimada",
+     ylab = "Varianza condicional", xlab = "Tiempo")
+abline(h = var_incond, col = "red", lty = 2, lwd = 2)  # Línea varianza incondicional
+
+
+mu_cond <- fitted(fit_arma_garch2211)
+plot(mu_cond, type = "l", col = "darkgreen",
+     main = "Media condicional estimada",
+     ylab = "Media condicional", xlab = "Tiempo")
+abline(h = mu_incond, col = "red", lty = 2, lwd = 2)  # Línea media incondicional
+```
+
+Conclusión sobre el modelo:
+
+Se puede **aceptar el modelo como base**, pero con **precaución**. Si se requiere un modelo robusto frente a posibles cambios estructurales o volatilidad no constante en el tiempo, sería recomendable considerar **alternativas más flexibles**, como modelos GARCH con parámetros que cambian en el tiempo, modelos EGARCH/TGARCH, o modelos de volatilidad estocástica. No descartamos el modelo.
+
+CONCLUSIÓN FINAL:
+
+Tras el ajuste de todos los modelos que han sido elegidos, y habiendo hecho la diagnosis para cada uno de ellos concluimos que el modelo que debemos elegir es un **GARCH(1,1) sin media**. Es el más parsimonioso y captura adecuadamente la volatilidad condicional. Si quisieramos hacer una mejora de ajuste y capturar asimetrías, podríamos considerar modelos como TGACRH() o AGARCH().
