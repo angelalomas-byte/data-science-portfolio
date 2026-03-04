@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ángela Lomas Anglada">
+
+<title>Bayesian Networks for Sales Prediction: Inference, Simulation and Structure Learning</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Bayesian_Networks_for_Sales_Prediction_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Bayesian_Networks_for_Sales_Prediction_files/libs/quarto-html/quarto.js"></script>
+<script src="Bayesian_Networks_for_Sales_Prediction_files/libs/quarto-html/popper.min.js"></script>
+<script src="Bayesian_Networks_for_Sales_Prediction_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Bayesian_Networks_for_Sales_Prediction_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Bayesian_Networks_for_Sales_Prediction_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Bayesian_Networks_for_Sales_Prediction_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Bayesian_Networks_for_Sales_Prediction_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Bayesian_Networks_for_Sales_Prediction_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Bayesian_Networks_for_Sales_Prediction_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Bayesian Networks for Sales Prediction: Inference, Simulation and Structure Learning</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ángela Lomas Anglada </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<p>Modelar cómo Pción, p, S y Día de la semana afectan la probabilidad de tener VsAltas (por ejemplo: &gt;=percentil 0.75).</p>
+<section id="descarga-de-librerias" class="level2">
+<h2 class="anchored" data-anchor-id="descarga-de-librerias">Descarga de librerias</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(bnlearn) <span class="co">#le da formato a la red bayesiana</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gRain) <span class="co">#para hacer infernecia</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: gRbase</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'gRbase'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:bnlearn':
+
+    ancestors, children, nodes, parents</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="creación-de-datos" class="level2">
+<h2 class="anchored" data-anchor-id="creación-de-datos">CREACIÓN DE DATOS</h2>
+<section id="crear-la-estructura-de-la-red-bayesiana" class="level3">
+<h3 class="anchored" data-anchor-id="crear-la-estructura-de-la-red-bayesiana">Crear la estructura de la red bayesiana</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>dag <span class="ot">&lt;-</span> <span class="fu">model2network</span>(<span class="st">"[P][f][D|P:f][V|D:S][S]"</span>) <span class="co">#DAG: Gráfico Atípico Dirigido</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dag)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Bayesian_Networks_for_Sales_Prediction_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Creamos un DAG (Directed Acyclic Graph) con la estructura de dependencias donde:<br>
+P (Promoción) es un nodo sin padres (independiente)<br>
+f (Fin de semana / festivo) es un nodo sin padres<br>
+D (Demanda alta) depende de P y f<br>
+V (Ventas altas) depende de D y S<br>
+S (Stock disponible) es independiente (no tiene padres)</p>
+</section>
+<section id="definir-los-estados-de-las-variables" class="level3">
+<h3 class="anchored" data-anchor-id="definir-los-estados-de-las-variables">Definir los estados de las variables</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>lev <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"0"</span>,<span class="st">"1"</span>)  <span class="co"># niveles "0" (no) y "1" (sí) decimos los estados</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># p(P)</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>P.cpt <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="fu">c</span>(<span class="fl">0.85</span>, <span class="fl">0.15</span>),<span class="at">dim =</span> <span class="dv">2</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="at">P =</span> lev))</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>P.cpt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>P
+   0    1 
+0.85 0.15 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(P.cpt)  <span class="co"># debe ser 1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># p(F)</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>f.cpt <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="fu">c</span>(<span class="fl">0.68</span>, <span class="fl">0.32</span>),</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                     <span class="at">dim =</span> <span class="dv">2</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>                     <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="at">f =</span> lev))</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>f.cpt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>f
+   0    1 
+0.68 0.32 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(f.cpt)  <span class="co"># debe ser 1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># p(S)</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>S.cpt <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="fu">c</span>(<span class="fl">0.10</span>, <span class="fl">0.90</span>),</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>                     <span class="at">dim =</span> <span class="dv">2</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>                     <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="at">S =</span> lev))</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>S.cpt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>S
+  0   1 
+0.1 0.9 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(S.cpt)  <span class="co"># debe ser 1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># p(D | P, F)</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co">#P(D=1|P,F):(1,1)=0.95; </span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co">#P(D=1|P,¬F):(1,0)=0.80; </span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co">#P(D=1|¬P,F):(0,1)=0.75; </span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co">#P(D=0):(0,0)= 0.15</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Dimensiones: D (filas), luego padres en orden P, F (columnas 2x2)</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>D.cpt <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="dv">0</span>, <span class="at">dim =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>),</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>               <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="at">D =</span> lev, <span class="at">P =</span> lev, <span class="at">f =</span> lev))</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>D.cpt[<span class="st">"1"</span>,<span class="st">"1"</span>,<span class="st">"1"</span>] <span class="ot">&lt;-</span> <span class="fl">0.95</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>D.cpt[<span class="st">"1"</span>,<span class="st">"1"</span>,<span class="st">"0"</span>] <span class="ot">&lt;-</span> <span class="fl">0.80</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>D.cpt[<span class="st">"1"</span>,<span class="st">"0"</span>,<span class="st">"1"</span>] <span class="ot">&lt;-</span> <span class="fl">0.75</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>D.cpt[<span class="st">"1"</span>,<span class="st">"0"</span>,<span class="st">"0"</span>] <span class="ot">&lt;-</span> <span class="fl">0.15</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>D.cpt[<span class="st">"0"</span>,,] <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> D.cpt[<span class="st">"1"</span>,,]  <span class="co"># completar</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>D.cpt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>, , f = 0
+
+   P
+D      0   1
+  0 0.85 0.2
+  1 0.15 0.8
+
+, , f = 1
+
+   P
+D      0    1
+  0 0.25 0.05
+  1 0.75 0.95</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">#P(v | D, S)</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co">#P(V=1|D,S):(1,1)=0.98; </span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co">#P(V=1|D,¬S):(1,0)= 0; </span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co">#P(V=1|¬D,S):(0,1)=0.75; </span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co">#P(V=0):(0,0)= 0.15</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Dimensiones: D (filas), luego padres en orden P, F (columnas 2x2)</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>V.cpt <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="dv">0</span>, <span class="at">dim =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>),</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>               <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="at">V =</span> lev, <span class="at">D =</span> lev, <span class="at">S =</span> lev))</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>V.cpt[<span class="st">"1"</span>,<span class="st">"1"</span>,<span class="st">"1"</span>] <span class="ot">&lt;-</span> <span class="fl">0.98</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>V.cpt[<span class="st">"1"</span>,<span class="st">"1"</span>,<span class="st">"0"</span>] <span class="ot">&lt;-</span> <span class="fl">0.00</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>V.cpt[<span class="st">"1"</span>,<span class="st">"0"</span>,<span class="st">"1"</span>] <span class="ot">&lt;-</span> <span class="fl">0.50</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>V.cpt[<span class="st">"1"</span>,<span class="st">"0"</span>,<span class="st">"0"</span>] <span class="ot">&lt;-</span> <span class="fl">0.00</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>V.cpt[<span class="st">"0"</span>,,] <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> V.cpt[<span class="st">"1"</span>,,]  <span class="co"># completar</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>V.cpt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>, , S = 0
+
+   D
+V   0 1
+  0 1 1
+  1 0 0
+
+, , S = 1
+
+   D
+V     0    1
+  0 0.5 0.02
+  1 0.5 0.98</code></pre>
+</div>
+</div>
+<p>En esta sección definimos los estados y probabilidades de las variables de la red bayesiana, todas binarias (“0” = no, “1” = sí).</p>
+<p>Para las variables sin padres (P, f, S) asignamos probabilidades marginales basadas en lo que consideramos típico: promociones se dan pocas, fines de semana y festivos con una frecuencia según lo establecido en el calendario laboral oficial, y stock generalmente disponible.</p>
+<p>Las variables dependientes (D y V) tienen tablas de probabilidad condicionales según sus padres: la demanda depende de la promoción y del día de la semana, mientras que las ventas dependen de la demanda y del stock. Por ejemplo, la demanda es muy alta cuando hay promoción y fin de semana (P(D=1|P=1,f=1)=0.95) y más baja sin promoción ni fin de semana (P(D=1|P=0,f=0)=0.15).</p>
+<p>Estas probabilidades se asignaron según nuestro conocimiento a priori, reflejando lo que pensamos más común o esperable antes de ajustar el modelo a datos.</p>
+</section>
+<section id="ajustar-la-red-manualmente-a-estas-probabilidades" class="level3">
+<h3 class="anchored" data-anchor-id="ajustar-la-red-manualmente-a-estas-probabilidades">Ajustar la red manualmente a estas probabilidades</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">custom.fit</span>(dag, <span class="at">dist =</span> <span class="fu">list</span>(<span class="at">P =</span> P.cpt, <span class="at">f =</span> f.cpt, <span class="at">D =</span> D.cpt, <span class="at">V =</span> V.cpt, <span class="at">S =</span> S.cpt)) <span class="co">#metemos específicamnete las porbabilidades</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>fit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  Bayesian network parameters
+
+  Parameters of node D (multinomial distribution)
+
+Conditional probability table:
+ 
+, , P = 0
+
+   f
+D      0    1
+  0 0.85 0.25
+  1 0.15 0.75
+
+, , P = 1
+
+   f
+D      0    1
+  0 0.20 0.05
+  1 0.80 0.95
+
+
+  Parameters of node f (multinomial distribution)
+
+Conditional probability table:
+ f
+   0    1 
+0.68 0.32 
+
+  Parameters of node P (multinomial distribution)
+
+Conditional probability table:
+ P
+   0    1 
+0.85 0.15 
+
+  Parameters of node S (multinomial distribution)
+
+Conditional probability table:
+ S
+  0   1 
+0.1 0.9 
+
+  Parameters of node V (multinomial distribution)
+
+Conditional probability table:
+ 
+, , S = 0
+
+   D
+V      0    1
+  0 1.00 1.00
+  1 0.00 0.00
+
+, , S = 1
+
+   D
+V      0    1
+  0 0.50 0.02
+  1 0.50 0.98</code></pre>
+</div>
+</div>
+</section>
+<section id="obtener-el-markov-blanket-de-cada-nodo" class="level3">
+<h3 class="anchored" data-anchor-id="obtener-el-markov-blanket-de-cada-nodo">Obtener el Markov Blanket de cada nodo</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Markov Blanket (gráfica) de cada nodo</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Calcular y mostrar el Markov Blanket de cada nodo</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>nodos <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"P"</span>, <span class="st">"f"</span>, <span class="st">"D"</span>, <span class="st">"V"</span>, <span class="st">"S"</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (n <span class="cf">in</span> nodos) {</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Markov Blanket de"</span>, n, <span class="st">":"</span>, <span class="fu">mb</span>(dag, n), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Markov Blanket de P : D f 
+Markov Blanket de f : D P 
+Markov Blanket de D : f P S V 
+Markov Blanket de V : D S 
+Markov Blanket de S : D V </code></pre>
+</div>
+</div>
+<p>El Markov Blanket de un nodo nos indica el conjunto mínimo de nodos que necesitamos conocer para predecirlo sin depender del resto de la red. En nuestro caso:<br>
+P depende directamente de la demanda (D) y de los días festivos/fines de semana (f);<br>
+f está conectado a la demanda y a la promoción;<br>
+D depende de f y P, y también está conectada a las ventas y al stock (sus hijos y co-padres);<br>
+V depende directamente de la demanda y del stock;<br>
+S afecta a las ventas y está relacionado con la demanda a través de V.</p>
+</section>
+<section id="comprobar-independencias-d-separation" class="level3">
+<h3 class="anchored" data-anchor-id="comprobar-independencias-d-separation">Comprobar independencias (d-separation)</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># d-separación</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"d-separación entre D y f:"</span>, <span class="fu">dsep</span>(dag, <span class="st">"D"</span>, <span class="st">"f"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>d-separación entre D y f: FALSE </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"d-separación entre D y P:"</span>, <span class="fu">dsep</span>(dag, <span class="st">"D"</span>, <span class="st">"P"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>d-separación entre D y P: FALSE </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"d-separación entre f y P:"</span>, <span class="fu">dsep</span>(dag, <span class="st">"f"</span>, <span class="st">"P"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>d-separación entre f y P: TRUE </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"d-separación entre f y P dado S y V:"</span>, <span class="fu">dsep</span>(dag, <span class="st">"f"</span>, <span class="st">"P"</span>, <span class="fu">c</span>(<span class="st">"S"</span>,<span class="st">"V"</span>)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>d-separación entre f y P dado S y V: FALSE </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"d-separación entre D y S:"</span>, <span class="fu">dsep</span>(dag, <span class="st">"D"</span>, <span class="st">"S"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>d-separación entre D y S: TRUE </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"d-separación entre D y V:"</span>, <span class="fu">dsep</span>(dag, <span class="st">"D"</span>, <span class="st">"V"</span>), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>d-separación entre D y V: FALSE </code></pre>
+</div>
+</div>
+<p>La d-separación indica si dos nodos son condicionalmente independientes dado un conjunto de nodos observados:<br>
+D (demanda) no es independiente de f (día festivo) sin condicionar nada, lo cual tiene sentido porque f influye en D.<br>
+D no es independiente de P (promoción) sin condicionar nada.&nbsp; f y P son independientes sin evidencia.<br>
+f y P son independientes normalmente, pero si miramos S y V , dejan de serlo porque al condicionar sobre S y V, que dependen de f y P a través de otros nodos, se genera una relación indirecta entre ellos.<br>
+D (demanda) es independiente de S (stock) sin evidencia, porque no hay un camino directo entre ellos<br>
+D y V (ventas) no son independientes sin condicionar nada, ya que D influye directamente en V.</p>
+</section>
+<section id="generar-datos-sintéticos-según-la-red" class="level3">
+<h3 class="anchored" data-anchor-id="generar-datos-sintéticos-según-la-red">Generar datos sintéticos según la red</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co">#SIMULACION de 1000 observaciones a partir de la red ajustada manualmente</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>datos <span class="ot">&lt;-</span> <span class="fu">rbn</span>(<span class="at">n =</span> <span class="dv">1000</span>, fit)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(datos)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  D f P S V
+1 1 1 0 1 1
+2 0 0 0 1 1
+3 0 0 0 1 1
+4 1 1 0 1 1
+5 1 0 0 1 1
+6 0 0 0 1 0</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>datos</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     D f P S V
+1    1 1 0 1 1
+2    0 0 0 1 1
+3    0 0 0 1 1
+4    1 1 0 1 1
+5    1 0 0 1 1
+6    0 0 0 1 0
+7    0 1 0 1 1
+8    1 0 1 0 0
+9    0 0 0 1 1
+10   0 0 0 0 0
+11   1 0 1 1 1
+12   1 1 0 0 0
+13   1 0 0 1 1
+14   0 0 0 1 0
+15   1 0 0 1 1
+16   0 0 0 1 1
+17   0 0 0 1 0
+18   0 0 1 1 1
+19   1 0 0 1 1
+20   1 1 1 1 1
+21   1 0 0 1 1
+22   0 0 0 0 0
+23   1 0 0 0 0
+24   0 0 0 1 1
+25   0 0 0 1 0
+26   1 1 0 1 1
+27   0 0 0 1 1
+28   0 0 0 1 1
+29   0 0 0 0 0
+30   0 0 0 1 1
+31   1 0 0 1 1
+32   1 1 0 1 1
+33   1 1 0 1 1
+34   1 0 0 0 0
+35   0 0 0 1 1
+36   1 1 1 1 1
+37   0 0 0 1 1
+38   1 1 0 1 1
+39   0 0 0 0 0
+40   0 0 0 1 1
+41   0 0 0 1 1
+42   1 1 0 1 1
+43   1 1 1 1 1
+44   1 0 0 0 0
+45   0 0 0 1 0
+46   0 0 0 0 0
+47   0 1 0 0 0
+48   0 0 0 1 0
+49   0 0 0 1 0
+50   0 0 0 1 0
+51   0 0 0 1 0
+52   1 1 0 1 1
+53   1 1 0 1 1
+54   1 0 1 1 1
+55   1 1 0 1 1
+56   0 0 0 1 1
+57   1 1 0 1 1
+58   0 0 0 1 0
+59   0 0 0 1 1
+60   0 1 0 1 0
+61   0 0 0 1 1
+62   1 0 1 1 1
+63   0 1 0 1 0
+64   0 0 0 0 0
+65   0 0 0 1 1
+66   1 1 0 1 1
+67   1 1 0 1 1
+68   1 1 0 1 1
+69   0 0 0 1 0
+70   0 1 0 1 0
+71   0 0 0 0 0
+72   1 1 1 1 1
+73   0 0 1 1 1
+74   0 0 0 1 0
+75   0 0 0 1 1
+76   0 1 0 1 0
+77   0 0 0 1 0
+78   0 0 0 1 1
+79   0 0 1 1 0
+80   1 1 1 1 1
+81   0 1 0 1 1
+82   0 0 0 1 0
+83   1 0 0 1 1
+84   0 0 0 1 1
+85   0 0 0 1 0
+86   1 0 0 1 1
+87   0 0 0 1 0
+88   1 1 0 1 1
+89   1 1 0 0 0
+90   1 1 0 1 1
+91   1 1 0 1 1
+92   1 0 0 1 1
+93   0 0 0 1 1
+94   1 1 0 1 1
+95   1 0 0 1 1
+96   0 0 0 1 1
+97   0 0 0 1 0
+98   1 1 0 1 1
+99   0 0 0 1 1
+100  1 1 0 1 1
+101  1 0 0 1 1
+102  1 1 0 0 0
+103  1 0 1 1 1
+104  0 0 0 1 1
+105  0 1 0 0 0
+106  1 1 0 1 1
+107  0 0 0 1 1
+108  0 0 0 1 0
+109  1 1 0 1 1
+110  0 0 0 1 0
+111  1 1 0 0 0
+112  1 0 0 0 0
+113  0 0 0 1 1
+114  1 0 1 1 1
+115  1 0 1 1 1
+116  0 0 0 0 0
+117  1 1 0 1 1
+118  0 0 0 1 0
+119  1 0 0 1 1
+120  0 0 0 1 0
+121  0 1 0 0 0
+122  1 0 0 1 1
+123  1 1 0 1 1
+124  0 1 0 1 1
+125  0 0 0 1 1
+126  1 1 1 1 1
+127  0 0 0 1 0
+128  1 1 1 0 0
+129  0 0 0 0 0
+130  0 0 0 1 1
+131  1 1 0 1 1
+132  0 0 0 1 0
+133  0 0 0 1 1
+134  1 1 0 1 1
+135  1 1 0 1 1
+136  1 0 1 1 1
+137  0 0 0 1 1
+138  0 0 0 1 0
+139  1 0 0 1 1
+140  0 0 0 1 1
+141  0 1 0 1 0
+142  0 0 0 1 1
+143  1 0 0 1 1
+144  0 0 0 1 1
+145  1 0 0 1 1
+146  1 1 0 0 0
+147  1 1 0 0 0
+148  1 0 0 1 1
+149  1 0 0 1 1
+150  1 1 0 1 1
+151  1 1 0 1 1
+152  0 1 0 1 1
+153  1 1 0 0 0
+154  0 0 0 1 1
+155  1 0 1 0 0
+156  1 0 0 1 1
+157  0 0 0 1 1
+158  1 1 0 1 1
+159  0 0 0 1 0
+160  0 0 0 1 1
+161  1 0 1 0 0
+162  1 0 1 1 1
+163  1 1 0 0 0
+164  1 1 1 1 1
+165  1 0 0 1 1
+166  0 0 0 0 0
+167  1 1 1 1 1
+168  1 1 0 1 1
+169  1 1 0 1 1
+170  1 1 0 1 1
+171  1 0 1 1 0
+172  0 1 0 1 1
+173  0 1 0 1 0
+174  1 0 0 1 1
+175  0 0 0 0 0
+176  0 0 0 1 1
+177  0 0 0 1 1
+178  0 0 0 1 0
+179  1 0 1 1 1
+180  0 0 0 1 0
+181  0 0 0 1 0
+182  0 1 0 1 0
+183  1 1 0 1 1
+184  0 0 0 1 1
+185  0 0 0 1 1
+186  0 0 0 1 1
+187  0 0 0 1 0
+188  0 0 0 1 0
+189  0 0 0 1 1
+190  1 0 0 1 1
+191  0 0 0 1 1
+192  1 1 0 1 1
+193  0 0 1 1 1
+194  0 0 0 1 1
+195  0 1 0 1 0
+196  0 0 0 0 0
+197  1 0 1 1 1
+198  0 0 0 0 0
+199  0 1 0 1 0
+200  0 0 0 0 0
+201  0 0 0 1 1
+202  1 1 0 1 1
+203  1 1 0 1 1
+204  1 1 1 1 1
+205  0 0 0 1 1
+206  1 0 1 1 1
+207  0 0 0 1 1
+208  1 0 0 1 1
+209  1 0 1 1 1
+210  0 0 0 1 1
+211  0 0 0 1 0
+212  0 0 0 1 1
+213  1 1 0 1 1
+214  1 1 0 0 0
+215  0 0 0 1 1
+216  0 0 0 1 1
+217  0 0 0 1 1
+218  1 0 0 1 1
+219  1 0 1 1 1
+220  0 0 0 1 0
+221  1 0 0 1 1
+222  1 0 0 0 0
+223  0 0 0 1 0
+224  1 0 0 1 1
+225  1 1 0 0 0
+226  0 0 0 0 0
+227  0 0 0 1 1
+228  1 1 1 1 1
+229  0 0 0 1 1
+230  0 0 0 1 0
+231  0 0 0 1 1
+232  0 0 0 1 0
+233  1 0 1 1 1
+234  1 0 0 1 1
+235  0 0 0 1 1
+236  1 1 0 1 1
+237  1 1 0 1 1
+238  0 1 0 1 0
+239  0 0 0 1 0
+240  0 0 0 1 1
+241  1 1 0 0 0
+242  0 0 0 1 1
+243  1 1 0 1 1
+244  0 0 0 1 1
+245  0 0 0 1 0
+246  0 0 0 1 0
+247  1 1 1 1 1
+248  1 0 1 1 1
+249  0 1 0 1 0
+250  1 1 0 1 1
+251  1 0 1 1 1
+252  0 0 1 1 1
+253  0 0 0 1 1
+254  1 0 0 1 1
+255  1 0 1 0 0
+256  0 0 0 0 0
+257  0 0 0 1 1
+258  1 0 1 1 1
+259  0 0 0 1 0
+260  1 0 1 1 1
+261  0 0 0 1 1
+262  1 0 0 1 0
+263  1 0 0 1 1
+264  0 0 0 0 0
+265  0 0 0 1 1
+266  1 1 1 1 1
+267  0 0 0 1 1
+268  1 1 0 0 0
+269  1 1 0 1 1
+270  0 0 0 1 0
+271  0 0 0 0 0
+272  0 0 0 1 0
+273  1 1 0 1 1
+274  0 0 0 1 0
+275  0 0 0 1 0
+276  0 0 0 1 1
+277  1 0 1 1 1
+278  1 1 0 1 1
+279  1 0 0 1 1
+280  0 0 0 1 1
+281  1 0 1 1 1
+282  0 0 0 0 0
+283  0 0 0 1 1
+284  1 1 0 1 1
+285  0 0 0 1 0
+286  0 0 0 1 0
+287  1 1 0 1 1
+288  0 0 0 1 0
+289  0 0 0 1 0
+290  0 0 0 1 1
+291  1 0 1 0 0
+292  1 1 0 1 1
+293  1 1 0 0 0
+294  1 0 1 1 1
+295  0 0 0 1 1
+296  1 0 0 1 1
+297  0 0 0 1 0
+298  0 1 0 1 0
+299  0 1 0 1 1
+300  0 0 0 1 1
+301  0 0 0 1 1
+302  1 1 0 1 1
+303  1 1 0 1 1
+304  1 0 0 1 1
+305  0 0 0 1 1
+306  0 1 0 1 0
+307  0 0 0 1 0
+308  1 1 0 1 1
+309  1 1 0 0 0
+310  0 0 0 1 1
+311  0 1 0 1 1
+312  1 1 0 0 0
+313  0 0 0 1 0
+314  1 1 0 0 0
+315  1 1 1 1 1
+316  0 0 0 1 0
+317  0 0 0 1 0
+318  0 0 0 1 0
+319  0 0 0 1 1
+320  1 1 1 1 1
+321  1 1 1 1 1
+322  0 0 0 1 0
+323  0 0 0 1 0
+324  0 0 0 1 0
+325  1 0 1 1 1
+326  1 1 1 1 1
+327  1 1 0 1 1
+328  0 0 0 1 1
+329  1 0 0 1 1
+330  0 0 0 1 1
+331  0 0 0 1 0
+332  1 1 1 1 1
+333  1 0 0 1 1
+334  0 1 0 1 1
+335  0 0 0 1 0
+336  1 0 0 1 1
+337  1 1 0 1 1
+338  0 0 0 1 1
+339  0 0 0 1 0
+340  1 0 1 1 1
+341  0 1 0 1 0
+342  0 0 0 1 1
+343  1 1 0 0 0
+344  0 0 0 1 0
+345  0 1 0 1 1
+346  1 0 0 1 1
+347  0 0 0 1 1
+348  0 0 0 1 1
+349  0 0 0 1 0
+350  1 1 0 1 1
+351  1 0 0 1 1
+352  0 0 0 1 1
+353  0 0 0 1 1
+354  0 0 0 1 0
+355  1 0 1 1 1
+356  0 0 0 1 1
+357  1 1 1 1 1
+358  1 1 0 1 1
+359  0 0 0 1 0
+360  0 0 0 1 1
+361  1 1 0 1 1
+362  0 0 0 1 0
+363  1 1 0 1 1
+364  0 0 0 1 0
+365  0 0 0 1 1
+366  1 0 1 1 1
+367  0 0 0 1 0
+368  1 1 0 0 0
+369  0 0 0 1 0
+370  0 0 0 1 0
+371  0 0 0 1 0
+372  1 1 0 1 1
+373  1 1 1 1 1
+374  0 0 0 1 1
+375  0 0 0 1 0
+376  0 0 0 1 0
+377  1 1 0 1 1
+378  1 1 0 1 0
+379  0 0 0 1 0
+380  0 0 0 1 1
+381  0 0 0 1 0
+382  0 0 0 1 0
+383  0 0 0 1 0
+384  0 0 0 1 0
+385  0 0 0 1 0
+386  1 1 0 1 1
+387  0 0 0 1 0
+388  0 0 0 1 0
+389  1 1 0 1 1
+390  0 1 0 1 0
+391  1 1 0 1 1
+392  1 1 0 1 1
+393  1 1 0 1 1
+394  0 0 0 1 0
+395  0 0 0 1 1
+396  0 0 0 1 1
+397  0 0 0 1 1
+398  0 0 0 1 0
+399  1 0 1 1 1
+400  1 1 0 1 1
+401  0 0 0 1 1
+402  1 1 0 1 1
+403  0 0 0 1 1
+404  1 1 0 1 1
+405  0 0 0 1 0
+406  0 0 0 1 0
+407  1 1 0 1 0
+408  1 0 1 1 1
+409  1 0 0 1 1
+410  0 0 0 1 1
+411  1 1 0 1 1
+412  0 0 0 1 0
+413  0 1 0 1 0
+414  0 0 0 1 1
+415  0 0 0 1 1
+416  1 0 1 1 1
+417  0 0 0 1 1
+418  0 0 0 0 0
+419  0 0 0 1 0
+420  1 0 1 1 1
+421  0 0 0 1 1
+422  0 0 0 1 1
+423  0 0 0 1 0
+424  0 0 1 1 0
+425  0 0 0 1 1
+426  0 0 0 1 0
+427  1 0 0 1 1
+428  0 0 0 1 0
+429  0 0 0 1 0
+430  1 1 0 1 1
+431  1 1 0 1 0
+432  1 1 0 1 1
+433  0 0 0 1 1
+434  0 0 0 1 1
+435  0 0 0 1 0
+436  1 0 1 0 0
+437  1 1 0 1 1
+438  0 0 0 1 0
+439  0 0 0 1 1
+440  1 0 1 1 1
+441  0 0 0 1 0
+442  0 0 0 1 0
+443  0 0 0 1 0
+444  1 1 0 1 1
+445  0 0 0 1 1
+446  1 1 0 1 1
+447  0 0 0 1 1
+448  0 0 0 1 1
+449  1 1 0 1 1
+450  0 0 0 1 0
+451  1 1 0 1 1
+452  1 1 0 1 1
+453  0 0 0 1 0
+454  0 0 0 1 1
+455  0 0 0 1 1
+456  0 0 0 1 0
+457  1 0 1 1 1
+458  0 0 0 1 1
+459  1 1 0 1 1
+460  0 1 0 1 1
+461  1 1 0 1 1
+462  1 1 0 1 1
+463  0 0 0 1 0
+464  0 0 0 1 1
+465  0 0 0 1 1
+466  0 0 0 0 0
+467  1 1 0 0 0
+468  0 0 0 1 1
+469  1 1 0 1 1
+470  0 0 0 1 1
+471  1 0 0 1 1
+472  0 0 0 1 0
+473  0 0 0 0 0
+474  1 0 1 1 1
+475  0 0 0 1 0
+476  0 0 0 1 0
+477  1 1 1 1 1
+478  1 1 0 1 1
+479  0 0 0 1 1
+480  0 0 0 1 1
+481  0 0 0 1 0
+482  0 0 0 1 1
+483  0 0 0 1 0
+484  0 0 0 0 0
+485  0 1 0 1 0
+486  0 0 0 1 1
+487  1 0 0 1 1
+488  0 0 0 1 1
+489  1 0 0 1 1
+490  0 0 0 1 0
+491  0 0 0 1 0
+492  0 0 0 1 1
+493  1 0 0 1 1
+494  1 0 0 1 1
+495  0 0 0 1 0
+496  1 0 1 1 1
+497  1 1 0 1 1
+498  0 0 0 0 0
+499  0 0 0 1 0
+500  1 1 1 1 1
+501  0 0 0 1 0
+502  0 0 0 1 1
+503  1 1 0 1 1
+504  1 1 1 1 1
+505  0 0 0 1 0
+506  0 0 0 1 1
+507  1 0 1 1 1
+508  1 1 0 1 1
+509  1 0 0 0 0
+510  0 0 0 0 0
+511  1 1 0 1 1
+512  0 0 0 1 1
+513  1 1 1 1 0
+514  0 0 0 1 1
+515  1 1 0 1 1
+516  0 0 0 1 1
+517  1 1 0 1 1
+518  1 0 1 1 1
+519  1 1 0 1 1
+520  1 0 0 0 0
+521  0 0 0 1 0
+522  0 0 0 1 0
+523  0 1 0 1 1
+524  0 0 0 1 0
+525  1 0 1 1 1
+526  0 0 0 1 0
+527  0 0 0 1 1
+528  0 0 0 1 1
+529  1 1 0 1 1
+530  0 0 0 1 1
+531  1 1 0 1 1
+532  1 1 1 1 1
+533  0 0 0 1 0
+534  0 0 0 1 0
+535  0 0 0 0 0
+536  1 1 0 1 1
+537  1 0 1 0 0
+538  0 0 0 1 0
+539  0 0 0 1 0
+540  0 0 0 1 1
+541  0 0 0 1 0
+542  1 0 0 1 1
+543  1 0 0 1 1
+544  1 0 1 1 1
+545  1 0 0 1 1
+546  1 0 0 1 1
+547  0 0 0 1 1
+548  0 0 0 1 1
+549  0 1 0 1 0
+550  0 0 0 0 0
+551  0 0 0 1 0
+552  0 0 0 1 0
+553  0 0 0 0 0
+554  1 1 0 1 1
+555  0 0 0 1 1
+556  0 0 0 1 1
+557  0 0 0 1 1
+558  0 0 0 1 1
+559  0 0 0 1 0
+560  0 0 0 1 1
+561  1 1 0 1 1
+562  1 1 0 1 1
+563  0 1 0 1 0
+564  0 0 0 1 0
+565  0 0 0 1 1
+566  0 0 0 1 0
+567  1 1 0 1 1
+568  0 0 0 1 1
+569  0 0 0 1 1
+570  1 1 1 0 0
+571  0 0 0 1 0
+572  0 0 0 1 0
+573  1 0 0 1 1
+574  0 0 0 1 0
+575  0 0 0 1 0
+576  0 0 0 1 1
+577  1 0 1 1 1
+578  1 0 1 1 1
+579  0 0 1 1 0
+580  1 1 0 1 1
+581  1 1 0 1 1
+582  1 1 0 0 0
+583  0 0 0 1 0
+584  0 0 0 1 0
+585  0 0 0 1 1
+586  0 0 0 1 1
+587  0 1 0 1 0
+588  0 0 0 1 0
+589  1 1 0 1 1
+590  0 0 0 1 0
+591  1 1 0 1 1
+592  1 0 1 0 0
+593  1 1 0 0 0
+594  1 0 1 1 1
+595  0 0 1 1 1
+596  1 0 0 1 1
+597  0 0 0 1 0
+598  1 0 0 1 1
+599  0 0 0 1 1
+600  1 0 1 1 1
+601  1 0 1 1 1
+602  0 0 0 1 0
+603  0 0 0 1 0
+604  0 0 0 1 0
+605  1 0 0 1 1
+606  0 0 0 1 1
+607  0 0 0 1 0
+608  0 0 0 1 0
+609  1 1 0 0 0
+610  0 0 0 1 1
+611  0 0 0 1 0
+612  1 1 1 1 1
+613  0 0 0 1 1
+614  0 1 0 1 0
+615  0 0 0 1 0
+616  1 1 0 1 1
+617  0 0 0 1 0
+618  1 1 0 1 1
+619  0 0 0 0 0
+620  0 1 0 1 1
+621  0 0 0 1 0
+622  0 0 0 1 1
+623  1 1 0 1 1
+624  0 0 0 1 0
+625  0 0 0 1 0
+626  0 0 0 1 1
+627  1 1 0 1 1
+628  1 1 0 1 1
+629  0 0 0 1 1
+630  0 0 0 0 0
+631  1 0 0 0 0
+632  1 0 1 1 1
+633  0 0 0 1 0
+634  1 1 0 1 1
+635  0 0 0 1 1
+636  0 1 0 1 0
+637  0 0 0 1 1
+638  1 1 1 1 1
+639  0 0 0 1 0
+640  0 1 0 1 0
+641  0 0 0 1 1
+642  0 0 0 0 0
+643  0 0 0 1 1
+644  1 1 0 1 1
+645  0 0 0 0 0
+646  0 0 0 1 1
+647  0 0 0 1 0
+648  0 0 0 1 1
+649  0 0 0 1 1
+650  0 0 0 1 0
+651  1 0 1 1 1
+652  0 0 1 1 1
+653  0 0 0 1 1
+654  0 0 0 1 0
+655  1 1 1 1 1
+656  1 1 0 1 1
+657  0 0 0 1 1
+658  1 1 0 1 1
+659  1 0 0 1 1
+660  1 1 0 1 1
+661  1 1 0 1 1
+662  0 0 0 1 1
+663  1 0 1 0 0
+664  1 0 1 1 1
+665  1 0 1 1 1
+666  1 0 1 1 1
+667  1 1 0 1 1
+668  0 1 0 1 0
+669  0 0 0 0 0
+670  0 0 0 1 1
+671  1 0 0 1 1
+672  0 0 0 1 0
+673  0 0 0 1 0
+674  0 1 0 1 0
+675  0 0 0 1 0
+676  0 0 0 1 1
+677  0 0 0 1 1
+678  1 0 0 1 1
+679  0 0 0 1 0
+680  1 1 0 1 1
+681  1 1 0 1 1
+682  1 1 0 1 1
+683  0 1 0 1 1
+684  1 1 0 1 1
+685  1 0 1 1 1
+686  0 0 0 1 1
+687  1 1 0 1 1
+688  0 0 0 1 0
+689  1 1 0 1 1
+690  1 1 0 1 1
+691  0 1 0 1 0
+692  0 0 0 1 0
+693  1 0 0 1 1
+694  1 1 0 1 1
+695  0 0 0 0 0
+696  1 1 0 1 1
+697  0 0 0 1 0
+698  0 0 0 1 1
+699  1 0 0 1 1
+700  0 0 0 1 0
+701  0 0 0 1 1
+702  0 0 0 1 1
+703  0 0 0 1 1
+704  1 0 0 1 1
+705  0 0 0 1 1
+706  1 0 0 1 1
+707  0 0 0 1 1
+708  0 0 0 1 0
+709  0 1 0 1 0
+710  0 0 0 1 1
+711  1 0 1 0 0
+712  0 0 0 1 0
+713  0 0 0 1 0
+714  0 0 0 0 0
+715  1 0 0 1 0
+716  1 0 0 1 1
+717  0 0 0 1 1
+718  0 0 0 1 0
+719  0 0 0 0 0
+720  1 1 0 1 1
+721  0 0 0 1 1
+722  0 1 0 1 1
+723  0 0 0 1 0
+724  0 0 0 1 1
+725  1 0 0 1 1
+726  1 1 0 0 0
+727  0 0 0 1 1
+728  1 0 1 1 1
+729  1 1 0 1 1
+730  0 0 0 1 0
+731  1 0 0 1 1
+732  0 0 0 1 0
+733  1 0 1 0 0
+734  0 1 0 1 0
+735  1 0 0 1 1
+736  0 0 0 1 1
+737  0 0 0 1 1
+738  0 0 0 1 0
+739  1 1 1 1 1
+740  1 0 1 1 1
+741  0 0 0 1 0
+742  0 0 0 1 1
+743  0 0 0 1 1
+744  0 0 0 1 0
+745  1 0 1 1 1
+746  0 0 0 1 1
+747  0 0 0 1 1
+748  0 0 0 1 0
+749  0 0 0 1 1
+750  0 0 0 1 0
+751  0 0 0 1 0
+752  1 1 1 1 1
+753  1 1 0 1 1
+754  1 1 1 1 1
+755  0 0 0 1 0
+756  0 0 0 1 1
+757  0 0 0 0 0
+758  0 0 0 1 1
+759  1 0 0 1 1
+760  1 1 0 1 1
+761  1 0 1 1 1
+762  1 1 0 1 1
+763  0 0 0 1 1
+764  1 1 0 1 1
+765  1 0 0 1 1
+766  0 1 0 1 0
+767  0 0 0 1 0
+768  1 0 1 1 1
+769  1 0 0 1 1
+770  0 0 0 1 1
+771  0 0 0 1 1
+772  0 0 0 1 0
+773  1 1 0 1 1
+774  1 1 0 0 0
+775  1 0 1 1 1
+776  0 0 0 1 1
+777  1 1 1 1 1
+778  0 0 0 1 0
+779  0 0 0 1 1
+780  1 0 0 1 1
+781  0 1 0 1 0
+782  0 0 0 1 1
+783  0 0 0 1 0
+784  0 1 0 1 0
+785  1 1 0 1 1
+786  0 0 0 1 1
+787  0 0 0 1 1
+788  0 0 0 1 1
+789  1 1 0 1 1
+790  0 0 0 1 0
+791  0 0 0 0 0
+792  1 1 0 1 0
+793  0 0 0 0 0
+794  0 0 0 1 1
+795  1 1 0 1 1
+796  1 1 0 1 1
+797  0 0 0 1 1
+798  1 0 0 1 1
+799  0 0 0 1 0
+800  0 1 0 1 1
+801  1 0 1 0 0
+802  1 1 0 1 1
+803  0 1 0 1 0
+804  1 1 0 1 1
+805  0 0 0 1 1
+806  0 0 1 1 0
+807  1 1 0 1 1
+808  1 1 0 0 0
+809  0 0 0 1 0
+810  0 0 0 1 1
+811  0 0 0 1 1
+812  0 0 0 1 1
+813  0 0 0 1 0
+814  0 0 0 1 1
+815  1 0 1 1 1
+816  0 0 0 1 1
+817  1 1 0 1 1
+818  1 1 0 1 1
+819  0 1 0 1 1
+820  1 1 0 1 1
+821  0 0 0 1 0
+822  0 0 0 1 1
+823  0 0 0 1 1
+824  0 0 0 0 0
+825  0 1 0 1 1
+826  1 0 0 0 0
+827  0 0 0 1 1
+828  0 0 0 1 0
+829  0 0 0 0 0
+830  0 0 0 1 1
+831  1 1 0 1 1
+832  0 0 0 1 0
+833  1 1 0 1 1
+834  0 0 0 0 0
+835  0 1 0 1 0
+836  1 1 0 1 1
+837  1 0 0 1 1
+838  1 0 1 1 1
+839  0 0 0 1 1
+840  1 0 1 1 1
+841  0 0 0 1 0
+842  0 0 0 1 0
+843  1 1 1 1 1
+844  0 0 0 0 0
+845  0 0 0 1 1
+846  0 0 0 1 0
+847  1 0 1 1 1
+848  0 0 0 1 0
+849  1 1 0 1 1
+850  0 0 1 0 0
+851  0 0 0 0 0
+852  0 0 0 1 0
+853  1 1 0 1 1
+854  0 0 0 0 0
+855  1 1 0 1 1
+856  0 0 0 1 0
+857  1 1 0 1 1
+858  0 0 0 1 1
+859  0 0 0 1 1
+860  0 0 0 0 0
+861  0 0 0 1 0
+862  0 0 0 1 1
+863  1 1 0 1 1
+864  1 1 0 0 0
+865  1 1 0 1 1
+866  1 1 0 1 1
+867  1 1 0 1 1
+868  1 1 0 1 1
+869  0 0 0 1 0
+870  0 0 0 1 1
+871  1 1 0 1 1
+872  0 0 0 1 1
+873  0 0 0 1 0
+874  0 0 0 1 0
+875  0 0 0 1 1
+876  1 1 0 1 1
+877  0 0 0 1 1
+878  1 1 0 1 1
+879  0 0 0 1 0
+880  0 0 0 1 1
+881  0 0 0 1 0
+882  1 1 0 1 1
+883  0 0 0 1 1
+884  1 0 0 1 1
+885  1 1 0 1 1
+886  1 0 1 1 1
+887  0 1 0 1 1
+888  1 1 0 1 1
+889  1 1 0 0 0
+890  0 0 0 1 1
+891  0 0 0 1 1
+892  0 1 0 1 0
+893  1 0 1 1 1
+894  0 0 0 0 0
+895  1 0 1 1 1
+896  1 1 1 0 0
+897  1 0 0 0 0
+898  0 0 1 1 0
+899  0 0 0 1 0
+900  1 0 1 1 1
+901  1 1 0 1 1
+902  1 1 0 1 1
+903  0 0 0 1 1
+904  1 1 1 1 1
+905  0 0 0 1 0
+906  0 0 0 0 0
+907  0 0 0 1 0
+908  1 0 0 1 1
+909  0 0 0 1 1
+910  1 0 0 1 1
+911  1 1 0 1 1
+912  0 0 0 1 0
+913  0 0 0 1 1
+914  1 1 0 1 1
+915  1 0 0 1 1
+916  1 0 0 1 1
+917  1 1 0 1 1
+918  0 0 0 1 0
+919  1 0 1 1 1
+920  0 0 0 1 1
+921  0 0 0 1 1
+922  0 0 0 1 0
+923  0 0 0 1 0
+924  1 1 1 1 1
+925  0 1 0 1 0
+926  0 1 0 1 1
+927  0 0 0 1 0
+928  1 0 1 1 1
+929  1 0 1 1 1
+930  0 0 0 1 0
+931  0 0 0 1 1
+932  0 0 0 1 0
+933  1 1 0 1 1
+934  0 0 0 1 1
+935  0 0 0 1 1
+936  0 0 0 1 1
+937  1 1 1 1 1
+938  0 1 0 1 0
+939  0 0 0 0 0
+940  1 1 0 1 1
+941  1 0 1 1 1
+942  0 0 0 1 0
+943  1 0 1 1 1
+944  0 0 0 1 1
+945  0 0 0 1 1
+946  0 0 0 1 1
+947  0 1 0 1 0
+948  1 1 0 1 1
+949  0 1 0 1 1
+950  0 0 0 1 1
+951  1 0 1 1 1
+952  1 0 1 1 1
+953  1 1 0 1 1
+954  0 0 0 1 0
+955  0 0 0 1 1
+956  0 0 0 1 1
+957  1 1 0 1 1
+958  1 0 1 1 1
+959  1 1 0 1 1
+960  1 1 0 1 1
+961  1 0 1 1 1
+962  0 0 0 1 1
+963  1 1 0 1 1
+964  0 0 0 1 1
+965  0 0 0 1 1
+966  0 0 0 1 0
+967  1 1 1 1 0
+968  1 1 0 1 1
+969  0 0 0 1 0
+970  1 0 0 1 1
+971  1 1 0 1 1
+972  1 1 0 1 1
+973  1 0 0 1 1
+974  1 1 0 1 1
+975  1 1 1 1 1
+976  0 0 0 1 0
+977  1 1 0 1 1
+978  1 0 0 1 1
+979  1 0 0 1 1
+980  1 0 0 1 1
+981  1 1 0 1 1
+982  0 0 0 1 0
+983  1 0 1 1 1
+984  1 0 0 1 1
+985  0 0 0 1 0
+986  1 0 1 1 1
+987  0 0 0 1 0
+988  0 1 0 1 1
+989  0 0 0 1 0
+990  1 1 0 1 1
+991  1 0 0 1 1
+992  1 0 0 1 1
+993  1 0 1 1 1
+994  0 1 0 0 0
+995  0 0 0 1 1
+996  1 1 0 1 1
+997  0 0 0 1 0
+998  0 0 0 1 0
+999  1 0 0 1 1
+1000 0 1 0 1 1</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="ajustar-red-y-calcular-probabilidades" class="level2">
+<h2 class="anchored" data-anchor-id="ajustar-red-y-calcular-probabilidades">AJUSTAR RED Y CALCULAR PROBABILIDADES</h2>
+<section id="ajustar-una-red-a-los-datos" class="level3">
+<h3 class="anchored" data-anchor-id="ajustar-una-red-a-los-datos">Ajustar una red a los datos</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>fit_data <span class="ot">&lt;-</span> <span class="fu">bn.fit</span>(dag, <span class="at">data =</span> datos)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>fit_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  Bayesian network parameters
+
+  Parameters of node D (multinomial distribution)
+
+Conditional probability table:
+ 
+, , P = 0
+
+   f
+D           0         1
+  0 0.8392555 0.2333333
+  1 0.1607445 0.7666667
+
+, , P = 1
+
+   f
+D           0         1
+  0 0.1212121 0.0000000
+  1 0.8787879 1.0000000
+
+
+  Parameters of node f (multinomial distribution)
+
+Conditional probability table:
+    0    1 
+0.69 0.31 
+
+  Parameters of node P (multinomial distribution)
+
+Conditional probability table:
+     0     1 
+0.861 0.139 
+
+  Parameters of node S (multinomial distribution)
+
+Conditional probability table:
+     0     1 
+0.106 0.894 
+
+  Parameters of node V (multinomial distribution)
+
+Conditional probability table:
+ 
+, , S = 0
+
+   D
+V            0          1
+  0 1.00000000 1.00000000
+  1 0.00000000 0.00000000
+
+, , S = 1
+
+   D
+V            0          1
+  0 0.49516441 0.02387268
+  1 0.50483559 0.97612732</code></pre>
+</div>
+</div>
+</section>
+<section id="convertir-el-modelo-a-grain-para-hacer-inferencia" class="level3">
+<h3 class="anchored" data-anchor-id="convertir-el-modelo-a-grain-para-hacer-inferencia">Convertir el modelo a gRain para hacer inferencia</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>grain_data <span class="ot">&lt;-</span> <span class="fu">as.grain</span>(fit_data)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>grain_data <span class="ot">&lt;-</span> <span class="fu">compile</span>(grain_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="calcular-la-probabilidades-marginales" class="level3">
+<h3 class="anchored" data-anchor-id="calcular-la-probabilidades-marginales">Calcular la probabilidades marginales</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Marginales</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="fu">querygrain</span>(grain_data, <span class="at">nodes =</span> <span class="st">"P"</span>)  <span class="co"># P(P)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$P
+P
+    0     1 
+0.861 0.139 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">querygrain</span>(grain_data, <span class="at">nodes =</span> <span class="st">"f"</span>)  <span class="co"># P(f)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$f
+f
+   0    1 
+0.69 0.31 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">querygrain</span>(grain_data, <span class="at">nodes =</span> <span class="st">"S"</span>)  <span class="co"># P(S)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$S
+S
+    0     1 
+0.106 0.894 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">querygrain</span>(grain_data, <span class="at">nodes =</span> <span class="st">"D"</span>)  <span class="co"># P(D)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$D
+D
+        0         1 
+0.5724978 0.4275022 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">querygrain</span>(grain_data, <span class="at">nodes =</span> <span class="st">"V"</span>)  <span class="co"># P(V)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$V
+V
+        0         1 
+0.3685554 0.6314446 </code></pre>
+</div>
+</div>
+<p>Las probabilidades marginales calculadas a partir de los datos simulados muestran resultados muy similares a los que definimos inicialmente en las tablas CPT de la red (a priori). Muestran la frecuencia de cada variable sin condicionar.</p>
+<p>Podemos ver que la mayoría de los días no hay promoción (86%), los días festivos ocurren aproximadamente un 30% del tiempo y el stock generalmente está disponible (89%). La demanda ocurre en torno al 39%, mientras que las ventas se producen en un 61% de los casos sin condicionar por otras variables.</p>
+</section>
+<section id="probabilidades-condicionales-vs-monte-carlo" class="level3">
+<h3 class="anchored" data-anchor-id="probabilidades-condicionales-vs-monte-carlo">Probabilidades Condicionales vs Monte Carlo</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Crear tabla para guardar resultados</span></span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>resultados_final <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Consulta =</span> <span class="fu">character</span>(),</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">Prob_Exacta =</span> <span class="fu">numeric</span>(),</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">Prob_MC =</span> <span class="fu">numeric</span>(),</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Función auxiliar para agregar resultados</span></span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>agregar_resultado_final <span class="ot">&lt;-</span> <span class="cf">function</span>(desc, exacta, mc) {</span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>  resultados_final <span class="ot">&lt;&lt;-</span> <span class="fu">rbind</span>(resultados_final, <span class="fu">data.frame</span>(</span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">Consulta =</span> desc,</span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">Prob_Exacta =</span> exacta,</span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Prob_MC =</span> mc</span>
+<span id="cb56-14"><a href="#cb56-14" aria-hidden="true" tabindex="-1"></a>  ))</span>
+<span id="cb56-15"><a href="#cb56-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb56-16"><a href="#cb56-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Probabilidades condicionales</span></span>
+<span id="cb56-17"><a href="#cb56-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-18"><a href="#cb56-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Demanda sin promo y fin de semana</span></span>
+<span id="cb56-19"><a href="#cb56-19" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">P=</span><span class="st">"0"</span>, <span class="at">f=</span><span class="st">"1"</span>))</span>
+<span id="cb56-20"><a href="#cb56-20" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"D"</span>)[[<span class="st">"D"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-21"><a href="#cb56-21" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(D<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(P<span class="sc">==</span><span class="st">"0"</span><span class="sc">&amp;</span>f<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-22"><a href="#cb56-22" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(D=1 | P=0, f=1)"</span>, exacta, mc)</span>
+<span id="cb56-23"><a href="#cb56-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-24"><a href="#cb56-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Demanda sin promo ni fin de semana</span></span>
+<span id="cb56-25"><a href="#cb56-25" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">P=</span><span class="st">"0"</span>, <span class="at">f=</span><span class="st">"0"</span>))</span>
+<span id="cb56-26"><a href="#cb56-26" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"D"</span>)[[<span class="st">"D"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-27"><a href="#cb56-27" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(D<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(P<span class="sc">==</span><span class="st">"0"</span><span class="sc">&amp;</span>f<span class="sc">==</span><span class="st">"0"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-28"><a href="#cb56-28" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(D=1 | P=0, f=0)"</span>, exacta, mc)</span>
+<span id="cb56-29"><a href="#cb56-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-30"><a href="#cb56-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Venta con demanda baja y stock</span></span>
+<span id="cb56-31"><a href="#cb56-31" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">D=</span><span class="st">"0"</span>, <span class="at">S=</span><span class="st">"1"</span>))</span>
+<span id="cb56-32"><a href="#cb56-32" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"V"</span>)[[<span class="st">"V"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-33"><a href="#cb56-33" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(V<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(D<span class="sc">==</span><span class="st">"0"</span><span class="sc">&amp;</span>S<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-34"><a href="#cb56-34" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(V=1 | D=0, S=1)"</span>, exacta, mc)</span>
+<span id="cb56-35"><a href="#cb56-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-36"><a href="#cb56-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Probabilidad de venta dado promocion, no findesemana, demanda y stock</span></span>
+<span id="cb56-37"><a href="#cb56-37" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">P=</span><span class="st">"1"</span>, <span class="at">f=</span><span class="st">"0"</span>, <span class="at">D=</span><span class="st">"1"</span>, <span class="at">S=</span><span class="st">"1"</span>))</span>
+<span id="cb56-38"><a href="#cb56-38" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"V"</span>)[[<span class="st">"V"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-39"><a href="#cb56-39" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(V<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(P<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>f<span class="sc">==</span><span class="st">"0"</span><span class="sc">&amp;</span>D<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>S<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-40"><a href="#cb56-40" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(V=1 | P=1, f=0, D=1, S=1)"</span>, exacta, mc)</span>
+<span id="cb56-41"><a href="#cb56-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-42"><a href="#cb56-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Probabilidad de no venta dado misma evidencia</span></span>
+<span id="cb56-43"><a href="#cb56-43" aria-hidden="true" tabindex="-1"></a>exacta0 <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"V"</span>)[[<span class="st">"V"</span>]][<span class="st">"0"</span>]</span>
+<span id="cb56-44"><a href="#cb56-44" aria-hidden="true" tabindex="-1"></a>mc0 <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(V<span class="sc">==</span><span class="st">"0"</span>), <span class="at">evidence=</span>(P<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>f<span class="sc">==</span><span class="st">"0"</span><span class="sc">&amp;</span>D<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>S<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-45"><a href="#cb56-45" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(V=0 | P=1, f=0, D=1, S=1)"</span>, exacta0, mc0)</span>
+<span id="cb56-46"><a href="#cb56-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-47"><a href="#cb56-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Probabilidad de promocion habiendo venta</span></span>
+<span id="cb56-48"><a href="#cb56-48" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">V=</span><span class="st">"1"</span>))</span>
+<span id="cb56-49"><a href="#cb56-49" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"P"</span>)[[<span class="st">"P"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-50"><a href="#cb56-50" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(P<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(V<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-51"><a href="#cb56-51" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(P=1 | V=1)"</span>, exacta, mc)</span>
+<span id="cb56-52"><a href="#cb56-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-53"><a href="#cb56-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Probabiliad de venta habiendo promocion, festivo y stock </span></span>
+<span id="cb56-54"><a href="#cb56-54" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">P=</span><span class="st">"1"</span>, <span class="at">f=</span><span class="st">"1"</span>, <span class="at">S=</span><span class="st">"1"</span>))</span>
+<span id="cb56-55"><a href="#cb56-55" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"V"</span>)[[<span class="st">"V"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-56"><a href="#cb56-56" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(V<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(P<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>f<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>S<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-57"><a href="#cb56-57" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(V=1 | P=1, f=1, S=1)"</span>, exacta, mc)</span>
+<span id="cb56-58"><a href="#cb56-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-59"><a href="#cb56-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Provabiliadd de venta habiendo demanda y stock P(V=1 | D=1, S=1)</span></span>
+<span id="cb56-60"><a href="#cb56-60" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">D=</span><span class="st">"1"</span>, <span class="at">S=</span><span class="st">"1"</span>))</span>
+<span id="cb56-61"><a href="#cb56-61" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"V"</span>)[[<span class="st">"V"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-62"><a href="#cb56-62" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(V<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(D<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>S<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-63"><a href="#cb56-63" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(V=1 | D=1, S=1)"</span>, exacta, mc)</span>
+<span id="cb56-64"><a href="#cb56-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-65"><a href="#cb56-65" aria-hidden="true" tabindex="-1"></a><span class="co"># Probabilidad de stock dado alta demanda  P(S=1 | D=1)</span></span>
+<span id="cb56-66"><a href="#cb56-66" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">D=</span><span class="st">"1"</span>))</span>
+<span id="cb56-67"><a href="#cb56-67" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"S"</span>)[[<span class="st">"S"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-68"><a href="#cb56-68" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(S<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(D<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-69"><a href="#cb56-69" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(S=1 | D=1)"</span>, exacta, mc)</span>
+<span id="cb56-70"><a href="#cb56-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-71"><a href="#cb56-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Probabiliad de alta demanda dado promoción y festivo P(D=1 | P=1, f=1) </span></span>
+<span id="cb56-72"><a href="#cb56-72" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">setEvidence</span>(grain_data, <span class="at">evidence =</span> <span class="fu">list</span>(<span class="at">P=</span><span class="st">"1"</span>, <span class="at">f=</span><span class="st">"1"</span>))</span>
+<span id="cb56-73"><a href="#cb56-73" aria-hidden="true" tabindex="-1"></a>exacta <span class="ot">&lt;-</span> <span class="fu">querygrain</span>(g, <span class="at">nodes=</span><span class="st">"D"</span>)[[<span class="st">"D"</span>]][<span class="st">"1"</span>]</span>
+<span id="cb56-74"><a href="#cb56-74" aria-hidden="true" tabindex="-1"></a>mc <span class="ot">&lt;-</span> <span class="fu">cpquery</span>(fit, <span class="at">event=</span>(D<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence=</span>(P<span class="sc">==</span><span class="st">"1"</span><span class="sc">&amp;</span>f<span class="sc">==</span><span class="st">"1"</span>), <span class="at">n=</span><span class="fl">1e5</span>)</span>
+<span id="cb56-75"><a href="#cb56-75" aria-hidden="true" tabindex="-1"></a><span class="fu">agregar_resultado_final</span>(<span class="st">"P(D=1 | P=1, f=1)"</span>, exacta, mc)</span>
+<span id="cb56-76"><a href="#cb56-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-77"><a href="#cb56-77" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(resultados_final) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb56-78"><a href="#cb56-78" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(resultados_final, <span class="at">digits=</span><span class="dv">3</span>, <span class="at">caption=</span><span class="st">"Resumen Probabilidades Exactas vs Monte Carlo"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<caption>Resumen Probabilidades Exactas vs Monte Carlo</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Consulta</th>
+<th style="text-align: right;">Prob_Exacta</th>
+<th style="text-align: right;">Prob_MC</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">P(D=1 | P=0, f=1)</td>
+<td style="text-align: right;">0.767</td>
+<td style="text-align: right;">0.745</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P(D=1 | P=0, f=0)</td>
+<td style="text-align: right;">0.161</td>
+<td style="text-align: right;">0.150</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P(V=1 | D=0, S=1)</td>
+<td style="text-align: right;">0.505</td>
+<td style="text-align: right;">0.501</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P(V=1 | P=1, f=0, D=1, S=1)</td>
+<td style="text-align: right;">0.976</td>
+<td style="text-align: right;">0.980</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P(V=0 | P=1, f=0, D=1, S=1)</td>
+<td style="text-align: right;">0.024</td>
+<td style="text-align: right;">0.021</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P(P=1 | V=1)</td>
+<td style="text-align: right;">0.184</td>
+<td style="text-align: right;">0.195</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P(V=1 | P=1, f=1, S=1)</td>
+<td style="text-align: right;">0.976</td>
+<td style="text-align: right;">0.955</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P(V=1 | D=1, S=1)</td>
+<td style="text-align: right;">0.976</td>
+<td style="text-align: right;">0.980</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">P(S=1 | D=1)</td>
+<td style="text-align: right;">0.894</td>
+<td style="text-align: right;">0.901</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">P(D=1 | P=1, f=1)</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">0.948</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>En esta tabla se comparan probabilidades condicionales calculadas de dos formas: mediante inferencia exacta en la red bayesiana (<code>setEvidence</code> y <code>querygrain</code>) o mediante simulación Monte Carlo (<code>cpquery</code>), donde se generan muchas muestras para aproximar la probabilidad.<br>
+Como observación general, ambas probabilidades son bastante similares, mostrando que la red bayesiana refleja correctamente las relaciones entre promoción, días festivos, demanda, ventas y stock.<br>
+<br>
+Cabe destacar que las diferencias más notables se observan en casos con eventos poco probables, ya que Monte Carlo tiende a sobreestimar ligeramente este tipo de eventos debido a la variabilidad de la muestra. Por ejemplo:<br>
+<code>P(D=1 | P=0, f=1)</code> → Exacta: 0.706 vs Monte Carlo: 0.754<br>
+<code>P(V=0 | P=1, f=0, D=1, S=1)</code> → Exacta: 0.015 vs Monte Carlo: 0.019<br>
+<br>
+Tendencias generales de la red:<br>
+La demanda es alta cuando hay promoción y finde/festivo.<br>
+Las ventas alcanzan valores muy altos si hay alta demanda y stock, mostrando una dependencia fuerte de ambos.<br>
+El stock tiende a estar disponible incluso con alta demanda.<br>
+La probabilidad de promoción dado que hubo venta es relativamente baja, lo que indica que las ventas pueden ocurrir incluso sin promoción.</p>
+</section>
+</section>
+<section id="aprendizaje-de-estructura" class="level2">
+<h2 class="anchored" data-anchor-id="aprendizaje-de-estructura">APRENDIZAJE DE ESTRUCTURA</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Simular datos sintéticos a partir del DAG y las CPTs definidas arriba</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>datos_big <span class="ot">&lt;-</span> <span class="fu">rbn</span>(<span class="at">n =</span> <span class="dv">2000</span>, fit)  <span class="co"># fit es tu custom.fit con las probabilidades</span></span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Aprendizaje de estructura desde los datos simulados usando 3 distintos algoritmos</span></span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a>dag_hc_big   <span class="ot">&lt;-</span> <span class="fu">hc</span>(datos_big,  <span class="at">score =</span> <span class="st">"bic"</span>)  <span class="co"># Hill-Climbing</span></span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>dag_gs_big   <span class="ot">&lt;-</span> <span class="fu">gs</span>(datos_big,  <span class="at">test  =</span> <span class="st">"mi"</span>)   <span class="co"># Grow-Shrink</span></span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a>dag_mmhc_big <span class="ot">&lt;-</span> <span class="fu">mmhc</span>(datos_big,</span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>                     <span class="at">restrict.args =</span> <span class="fu">list</span>(<span class="at">test =</span> <span class="st">"mi"</span>),</span>
+<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>                     <span class="at">maximize.args =</span> <span class="fu">list</span>(<span class="at">score =</span> <span class="st">"bic"</span>))  <span class="co"># MMHC (Hybrid)</span></span>
+<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar Hamming distances</span></span>
+<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Hamming distance Hill-Climbing vs DAG original: "</span>, <span class="fu">hamming</span>(dag, dag_hc_big), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hamming distance Hill-Climbing vs DAG original:  1 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Hamming distance Grow-Shrink vs DAG original: "</span>, <span class="fu">hamming</span>(dag, dag_gs_big), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hamming distance Grow-Shrink vs DAG original:  0 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Hamming distance MMHC vs DAG original: "</span>, <span class="fu">hamming</span>(dag, dag_mmhc_big), <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hamming distance MMHC vs DAG original:  0 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convertir PDAG a DAG para gs()</span></span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>dag_gs_big_DAG <span class="ot">&lt;-</span> <span class="fu">pdag2dag</span>(dag_gs_big, <span class="at">ordering =</span> <span class="fu">c</span>(<span class="st">"P"</span>, <span class="st">"f"</span>, <span class="st">"D"</span>, <span class="st">"V"</span>, <span class="st">"S"</span>))</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Evalua mejor modelo con bic</span></span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a>bic_hc   <span class="ot">&lt;-</span> <span class="fu">score</span>(dag_hc_big, <span class="at">data =</span> datos_big, <span class="at">type =</span> <span class="st">"bic"</span>)</span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a>bic_gs   <span class="ot">&lt;-</span> <span class="fu">score</span>(dag_gs_big_DAG, <span class="at">data =</span> datos_big, <span class="at">type =</span> <span class="st">"bic"</span>)</span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a>bic_mmhc <span class="ot">&lt;-</span> <span class="fu">score</span>(dag_mmhc_big, <span class="at">data =</span> datos_big, <span class="at">type =</span> <span class="st">"bic"</span>)</span>
+<span id="cb63-8"><a href="#cb63-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar BIC de cada modelo</span></span>
+<span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(bic_hc, <span class="st">" -&gt; BIC Hill-Climbing</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>-4480.277  -&gt; BIC Hill-Climbing</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(bic_gs, <span class="st">" -&gt; BIC Grow-Shrink</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>-4476.864  -&gt; BIC Grow-Shrink</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(bic_mmhc, <span class="st">" -&gt; BIC MMHC</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>-4528.96  -&gt; BIC MMHC</code></pre>
+</div>
+</div>
+<p>Hamming distances mide cuántos arcos difieren entre el DAG original y el aprendido por cada algoritmo. Grow-Shrink y MMHC recuperan perfectamente la estructura de la red a partir de los datos simulados, mientras que Hill-Climbing presenta un pequeño error, con un arco diferente.</p>
+<p>Dado que un BIC más bajo indica mejor ajuste, MMHC es el algoritmo más recomendable en este caso, tanto por el BIC como por la correcta recuperación de la estructura. HC y GS también funcionan adecuadamente, aunque HC introduce un pequeño error en la estructura y GS tiene un ajuste BIC ligeramente peor.</p>
+</section>
+<section id="aprendizaje-de-parametros" class="level2">
+<h2 class="anchored" data-anchor-id="aprendizaje-de-parametros">APRENDIZAJE DE PARAMETROS</h2>
+<p>¿Con qué probabilidad ocurre cada evento dado sus padres?</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Aprendizaje de parametros (MLE y Bayesiano)</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>fit_mle   <span class="ot">&lt;-</span> <span class="fu">bn.fit</span>(dag, <span class="at">data =</span> datos_big, <span class="at">method =</span> <span class="st">"mle"</span>)<span class="co">#Maximum Likelihood</span></span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>fit_bayes <span class="ot">&lt;-</span> <span class="fu">bn.fit</span>(dag, <span class="at">data =</span> datos_big, <span class="at">method =</span> <span class="st">"bayes"</span>)<span class="co">#Bayesiano</span></span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Inferencia probabilística (Aproximada / Monte Carlo)</span></span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Probabilidad de demanda alta dada promoción y festivo (D=1 | P=1, f=1):"</span>, </span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cpquery</span>(fit_mle, <span class="at">event =</span> (D<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence =</span> (P<span class="sc">==</span><span class="st">"1"</span> <span class="sc">&amp;</span> f<span class="sc">==</span><span class="st">"1"</span>)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Probabilidad de demanda alta dada promoción y festivo (D=1 | P=1, f=1): 1 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Probabilidad de venta dado alta demanda y stock (V=1 | D=1, S=1):"</span>, </span>
+<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cpquery</span>(fit_mle, <span class="at">event =</span> (V<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence =</span> (D<span class="sc">==</span><span class="st">"1"</span> <span class="sc">&amp;</span> S<span class="sc">==</span><span class="st">"1"</span>)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Probabilidad de venta dado alta demanda y stock (V=1 | D=1, S=1): 0.986774 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Probabilidad de venta dada baja demanda y stock (V=1 | D=0, S=1):"</span>, </span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cpquery</span>(fit_mle, <span class="at">event =</span> (V<span class="sc">==</span><span class="st">"1"</span>), <span class="at">evidence =</span> (D<span class="sc">==</span><span class="st">"0"</span> <span class="sc">&amp;</span> S<span class="sc">==</span><span class="st">"1"</span>)), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Probabilidad de venta dada baja demanda y stock (V=1 | D=0, S=1): 0.5068595 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulación (forward sampling / posterior sampling)</span></span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>sim <span class="ot">&lt;-</span> <span class="fu">rbn</span>(<span class="at">n =</span> <span class="dv">1000</span>, fit_mle)</span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(sim)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  D f P S V
+1 0 0 0 1 1
+2 1 0 1 1 1
+3 1 0 0 1 1
+4 0 1 0 1 0
+5 0 0 0 1 0
+6 1 1 0 1 1</code></pre>
+</div>
+</div>
+<p>Se aprende la red bayesiana usando MLE, adecuado dado que contamos con muchos datos, estimando directamente las probabilidades. Con inferencia Monte Carlo se verifican relaciones importante: ventas muy altas con demanda y stock y se reduce a la mitad cuando hay stock y demanda baja . Finalmente, se generan nuevas observaciones siguiendo la distribución de la red.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
