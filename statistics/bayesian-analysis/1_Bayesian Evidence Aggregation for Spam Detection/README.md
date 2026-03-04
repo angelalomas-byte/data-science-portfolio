@@ -48,4 +48,37 @@ Construction of Document-Term Matrix (DFM)
 
 Output: Clean numerical matrix suitable for modeling.
 
-2. Train/Test Split 
+2. Train/Test Split
+80% training
+20% testing
+Stratified sampling (createDataPartition)
+Reproducibility ensured (set.seed)
+
+## IMPLEMENTED METHODS:
+MODEL 1: Support Vector Machine (SVM)
+Sensitivity ≈ 0.899       Specificity ≈ ~1           AUC ≈ 0.9972        Brier Score ≈ 0.0033
+
+MODEL 2: LASSO Logistic Regression (GLMNET)
+L1 regularization
+Automatic feature selection
+Hyperparameter tuned via CV (cross-validation)
+Sensitivity ≈ 0.8725             AUC ≈ 0.9939                      Brier Score ≈ 0.0046
+
+## EXERCISES
+1. Bayesian Model Aggregation
+Combies SVM predictions & LASSO predictions
+The joint probabilities for Spam is 0.784 and for ham 0.0001
+The posterior probability of spam is 0.9998, the model agreement drematically increases posterior confidence
+
+2. Bayesian Calibration Analysis
+The models used were evaluated using:
+- AUC
+- Brier Score
+- ECE
+- MCE
+
+SVM shows slightly better average calibration (lower ECE). Logistic regression is marginally more stable in extreme bins. Both models exhibit near-perfect probabilistic behavior.
+
+3. Bayesian Lexial Analysis
+Estimated P(Word∣Spam) & P(Word∣Ham) using Laplace smoothing. The words that strongly increase Spam Probability are 'claim', 'prize', 'won', 'guaranteed', 'awarded'...The words that reduce Spam Probability are 'it', 'gt', 'lor', 'later', 'morning'... more typical conversational tokens from legitimate SMS messages
+
