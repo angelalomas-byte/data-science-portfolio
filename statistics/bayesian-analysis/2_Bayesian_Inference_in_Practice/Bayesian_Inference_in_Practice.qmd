@@ -1,0 +1,533 @@
+---
+title: "Bayesian Modeling of Enrollment, Interest, and AI Usage: A Beta–Binomial and Poisson–Gamma Approach"
+author: "Ángela Lomas Anglada"
+format: html
+editor: visual
+---
+
+## Introducción
+
+El objetivo de nuestro trabajo es realizar un estudio bayesiano combinando información a priori (creencias razonadas antes de ver los datos) y datos actuales obtenidos tras una encuesta a la clase de 4º curso de Ciencia de Datos.
+
+Primero, definimos nuestras creencias o estimaciones iniciales sobre cada pregunta de la encuesta, que constituyen la información a priori. A continuación, mediante la encuesta recogimos datos actuales de los estudiantes, que utilizamos para actualizar nuestras creencias y calcular la probabilidad a posteriori.
+
+A partir de estas distribuciones posteriores, pudimos extraer conclusiones sobre el comportamiento y las características de los estudiantes, y además predecir aproximadamente cuántos se matricularán en la asignatura el próximo año.
+
+## Descripción de la encuesta
+
+La encuesta constaba de cuatro preguntas principales:
+
+-   ¿Estás matriculado en la Optativa de Análisis Bayesianos? (Sí/No): permite identificar qué estudiantes forman parte del grupo objetivo.
+
+-   Para matriculados, ¿era vuestra primera opción? (Sí/No): solo se responde si el estudiante está matriculado.
+
+-   ¿Te interesa aprender más sobre un enfoque bayesiano en análisis de datos? (1–5): evalúa el nivel de interés de los estudiantes.
+
+-   Número de veces promedio que te metes en ChatGPT en un día normal (0–10 o más): mide el uso de herramientas de IA.
+
+## Descarga de Librerías
+
+```{r}
+packages <- c("dplyr", "tidyverse", "HDInterval")
+
+install_if_missing <- function(pkg){
+  if(!require(pkg, character.only = TRUE)){
+    install.packages(pkg)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+lapply(packages, install_if_missing)
+
+```
+
+## Descarga y adecuación de Datos
+
+```{r}
+# Datos (ejemplo)
+df = read_csv("encuestass.csv")
+```
+
+```{r}
+# Renombrar columnas
+colnames(df)[colnames(df) == "Numero de veces promedio que te metes en chat gpt en un dia normal."] <- "chatgpt"
+colnames(df)[colnames(df) == "¿Te interesa aprender más sobre el enfoque bayesiano en análisis de datos?"] <- "interes"
+colnames(df)[colnames(df) == "¿Estás matriculado en la Optativa de Analisis Bayesianos?"] <- "matriculado"
+colnames(df)[colnames(df) == "Para matriculados en Analisis Bayesiano, ¿Era vuestra primera opción?"] <- "opcion"
+
+# Convertir a binario sobrescribiendo la columna
+df$matriculado <- ifelse(df$matriculado == "Si", 1, 0)
+df$opcion <- ifelse(df$opcion == "Si", 1, 0)
+
+# Convertir a NA las respuestas de 'opcion' para los no matriculados
+# Suposición: solo tiene sentido preguntar si era su primera opción a quienes se matricularon. Suponemos que los no matriculados no fue por preferencia a otras asignaturas y no por limitación de plazas.
+
+df$opcion <- ifelse(df$matriculado == 0, NA, df$opcion)
+```
+
+## Analisis Descriptivo
+
+```{r}
+# Conteo simple de cada variable
+df %>% count(matriculado)
+df %>% count(opcion,matriculado)
+df %>% count(chatgpt,matriculado)
+df %>% count(interes,matriculado)
+```
+
+La encuesta obtuvo un total de 31 respuestas (8 de ellos están matriculados y 23 no). Únicamnete un matriculado eligió la asignatura como primera opción. Todos los encuestados consultan ChatGPT al menos una vez al día.
+
+Existe interés general en el análisis bayesiano, tanto entre matriculados como no matriculados.
+
+El uso de ChatGPT alto y bajo muestra cierta divergencia entre matriculados y no matriculados, aunque ambos grupos incluyen usuarios de distintos niveles.
+
+## Probabilidades Condicionales
+
+Planeamos realizar probabilidades condicionales, con el objetivo de entender mejor el tipo de estudiantes que eligen la asignatura y si difieren de otros estudiantes.
+
+```{r}
+
+# P(matriculado | uso IA = 1) y P(no_matriculado | uso IA = 1)
+P_matric_uso1 <- sum(df$matriculado == 1 & df$chatgpt == 1) / sum(df$chatgpt == 1)
+P_no_matric_uso1 <- sum(df$matriculado == 0 & df$chatgpt ==1) / sum(df$chatgpt == 1)
+
+# P(matriculado | uso IA <= 3)  P(no_matriculado | uso IA <= 3)
+P_matric_uso3 <- sum(df$matriculado == 1 & df$chatgpt <= 3) / sum(df$chatgpt <= 3)
+P_no_matric_uso3 <- sum(df$matriculado == 0 & df$chatgpt <= 3) / sum(df$chatgpt <= 3)
+
+
+# P(matriculado | uso IA = 9)  P(no_matriculado | uso IA = 9)
+P_matric_uso9 <- sum(df$matriculado == 1 & df$chatgpt == 9) / sum(df$chatgpt == 9)
+P_no_matric_uso9 <- sum(df$matriculado == 0 & df$chatgpt == 9) / sum(df$chatgpt == 9)
+
+# P(matriculado | uso IA >= 8)  P(no_matriculado | uso IA >= 8)
+P_matric_uso8 <- sum(df$matriculado == 1 & df$chatgpt >= 8) / sum(df$chatgpt >= 8)
+P_no_matric_uso8 <- sum(df$matriculado == 0 & df$chatgpt >= 8) / sum(df$chatgpt >= 8)
+
+
+# P(interes = 5 | matriculado)
+P_interes5_matric <- sum(df$interes == 5 & df$matriculado == 1) / sum(df$matriculado == 1)
+P_interes5_no_matric <- sum(df$interes == 5 & df$matriculado == 0) / sum(df$matriculado == 0)
+
+# P(interes >= 4 | matriculado)
+P_interes4_matric <- sum(df$interes >= 4 & df$matriculado == 1) / sum(df$matriculado == 1)
+P_interes4_no_matric <- sum(df$interes >= 4 & df$matriculado == 0) / sum(df$matriculado == 0)
+
+# P(interes = 1 | matriculado)
+P_interes1_matric <- sum(df$interes == 1 & df$matriculado == 1) / sum(df$matriculado == 1)
+P_interes1_no_matric <- sum(df$interes == 1 & df$matriculado == 0) / sum(df$matriculado == 0)
+
+
+
+# Mostrar resultados
+cat("P(matriculado | uso IA = 1) =", P_matric_uso1, "\n")
+cat("P(no matriculado | uso IA = 1) =", P_no_matric_uso1, "\n")
+cat("P(matriculado | uso IA <= 3) =", P_matric_uso3, "\n")
+cat("P(no matriculado | uso IA <= 3) =", P_no_matric_uso3, "\n")
+cat("P(matriculado | uso IA = 9) =", P_matric_uso9, "\n")
+cat("P(no matriculado | uso IA = 9) =", P_no_matric_uso9, "\n")
+cat("P(matriculado | uso IA >= 8) =", P_matric_uso8, "\n")
+cat("P(no matriculado | uso IA >= 8) =", P_no_matric_uso8, "\n")
+cat("P(interes = 5 | matriculado) =", P_interes5_matric, "\n")
+cat("P(interes = 5 | no matriculado) =", P_interes5_no_matric, "\n")
+cat("P(interes >= 4 | matriculado) =", P_interes4_matric, "\n")
+cat("P(interes >= 4 | no matriculado) =", P_interes4_no_matric, "\n")
+cat("P(interes = 1 | matriculado) =", P_interes1_matric, "\n")
+cat("P(interes = 1 | no matriculado) =", P_interes1_no_matric, "\n")
+
+
+```
+
+La muestra es pequeña, así que las cifras no son precisas. Podemos sacar algunas conclusiones como que en niveles bajos de IA, la proporción de matriculados frente a no matriculados es bastante similar. Obseravmos también una tendencia en que los no matriculados tienden a usar más ChatGPT, especialmente en los valores altos (≥8). Las probabilidades condicionales nos revelan que un usuario con uso elevado de ChatGPT es más probable que no esté matriculado en la asignatura optativa.
+
+Los matriculados muestran mayor interés en análisis bayesiano que los no matriculados.
+
+## Creencias a priori sobre las preguntas
+
+Antes de analizar los datos recogidos, definimos nuestras creencias a priori para cada pregunta:
+
+-   Pregunta 1 (matriculados en la asignatura): estimaciones de Paco (15/50), Marta (9/50) y Ángela (13/50), con creencia promedio p=0.2467.
+
+-   Pregunta 2 (primera opción): decidimos usar una prior no informativa, al no contar con información previa.
+
+-   Pregunta 3 (interés por Bayes): creencias de Paco (4), Marta (2) y Ángela (3), con creencia promedio 3.
+
+-   Pregunta 4 (uso de ChatGPT): mismas estimaciones que la pregunta 1, con creencia promedio p=0.2467
+
+Con estas priors y los datos recogidos, aplicaremos modelos bayesiando con el objetivo de obtener las distribuciones a posteriori posibles y hacer predicciones sobre el número de matriculados y las características de los estudiantes el próximo año, incorporando la incertidumbre de manera bayesiana.
+
+PREGUNTA 1:
+
+Nosotros hemos ofrecido unas estimaciones previas sobre cuántos estudiantes esperábamos que estuvieran matriculados. La media de estas creencias es de p = 0.2467. Para construir un priori Beta adecuado, debemos de transformar la probabilidad en 'casos iamginarios' de éxitos y fracasos. Los éxitos serían 13 y los fracasos 37. Usamos α + β = 10 porque da una prior moderada, que refleja las estimaciones previas sin dominar los datos.
+
+p ∼Beta( α = 2.6, β =7.4)
+
+PREGUNTA 2:
+
+No contábamos con infroamción previa clara sobre la probabilidad de que un estudiante matriculado tuviera la asignatura como primera opción, decidiendo usar prior no informativa, asignando la misma probabilidad a cualquier valor de p entre 0 y 1.
+
+p ∼ Beta(1,1)
+
+Añadid una frase breve explicando por qué α y β deben ser números \> 0 y representar pseudo-casos.
+
+PREGUNTA 3:
+
+La escala 1–5 no se puede modelar directamente con una Beta, por lo que transformamos la variable en interés-alto (≥3) para poder usar un modelo Beta–Binomial. Como las opiniones previas eran ordinales y no se pueden convertir de forma consistente en éxitos/fracasos, usamos una prior Beta(1,1).
+
+p ∼ Beta(1,1)
+
+PREGUNTA 4:
+
+Estamos frente a una variable de conteo, que modelamos medinate una distribución Poisson con parámetro L. Para construir el prior, partimos de la misma creencia previa que en la pregunta 1, interpretamos el valor como la fracción aproximada del rango máximo (0–10).
+
+λ prior​≈0.2467×10=2.467
+
+λ∼Gamma(α =2.467,β =1)
+
+## Modelos Bayesianos
+
+Aplicamos modelos bayesianos para estimar las distribuciones a posteriori de cada variable, usando Beta–Binomial para proporciones y Poisson–Gamma para conteos.
+
+### 1- Beta-Binomial
+
+```{r}
+# PREGUNTA 1: Matriculado (0/1)
+
+# Prior basada en creencias previas:
+# 13 matriculados-exitos 
+# 37 no matriculados-fracasos
+
+
+alpha1 <- 2.6 
+beta1  <- 7.4  
+
+cat("Prior P1 = Beta(", alpha1, ",", beta1, ")\n")
+
+# Datos
+x1 <- sum(df$matriculado == 1)
+n1 <- length(df$matriculado)
+
+# Posterior
+alpha_post1 <- alpha1 + x1
+beta_post1  <- beta1  + (n1 - x1)
+
+cat("Posterior P1 = Beta(", alpha_post1, ",", beta_post1, ")\n")
+
+# Estadísticos
+post_mean1   <- alpha_post1 / (alpha_post1 + beta_post1)
+post_mode1   <- (alpha_post1 - 1) / (alpha_post1 + beta_post1 - 2)
+post_median1 <- qbeta(0.5, alpha_post1, beta_post1)
+
+ci95_1 <- qbeta(c(0.025, 0.975), alpha_post1, beta_post1)
+hdi_1  <- hdi(qbeta, credMass=0.95, shape1=alpha_post1, shape2=beta_post1)
+
+cat("Media posterior =", round(post_mean1,3), "\n")
+cat("Moda posterior =", round(post_mode1,3), "\n")
+cat("Mediana posterior =", round(post_median1,3), "\n")
+cat("IC 95% =", round(ci95_1[1],3), "-", round(ci95_1[2],3), "\n")
+cat("HDI 95% =", round(hdi_1[1],3), "-", round(hdi_1[2],3), "\n")
+
+```
+
+La media, mediana y moda posteriores (≈0.25) son muy similares, lo que indica que la distribución posterior es bastante estable y con poca asimetría.
+
+Tanto el intervalo de credibilidad del 95% \[0.138, 0.401\] como el HDI \[0.131, 0.392\] muestran que, pese a la incertidumbre, la proporción real de estudiantes matriculados probablemente se sitúa entre un 13% y un 40%. Esto sugiere que la asignatura atrae a una minoría significativa, pero no despreciable, dentro del conjunto de estudiantes.
+
+```{r}
+p_samples <- rbeta(10000, alpha_post1, beta_post1)
+pred <- rbinom(10000, size = 50, prob = p_samples)
+
+mean(pred)
+quantile(pred, c(0.025, 0.5, 0.975))
+
+```
+
+A partir de la distribución posterior de la proporción de matriculados, la simulación predictiva para un grupo futuro de 50 estudiantes indica que se espera alrededor de **13 matriculados** (media ≈ 12.95).
+
+El intervalo de credibilidad del 95% para este número predicho va aproximadamente de **5 a 23 estudiantes**, lo que refleja la variabilidad inherente tanto a la incertidumbre sobre la proporción verdadera como al propio proceso binomial.
+
+En conjunto, la predicción sugiere que, aunque lo más probable es que se matriculen alrededor de una docena de estudiantes, valores más bajos o más altos siguen siendo plausibles.
+
+```{r}
+CI_prior <- diff(qbeta(c(0.025,0.975), 38,114))
+CI_post  <- diff(qbeta(c(0.025,0.975), 46,137))
+CI_prior; CI_post
+
+```
+
+Comparamos la amplitud del intervalo de credibilidad previo (0.137) con el posterior (0.125) y observamos que la incertidumbre se reduce aproximadamente un **9%** tras incorporar los datos de la encuesta. Esto indica que la información nueva afina nuestra creencia sobre la proporción de matriculados, haciendo la estimación más precisa, aunque de manera moderada debido al tamaño limitado de la muestra.
+
+```{r}
+# PREGUNTA 2: Primera opción (0/1)
+# Prior no informativa
+
+alpha2 <- 1
+beta2  <- 1
+
+cat("Prior P2 = Beta(1,1)\n")
+
+# Datos: solo matriculados
+op <- df$opcion[df$matriculado == 1]
+x2 <- sum(op == 1, na.rm=TRUE)
+n2 <- sum(op %in% c(0,1), na.rm=TRUE)
+
+# Posterior
+alpha_post2 <- alpha2 + x2
+beta_post2  <- beta2  + (n2 - x2)
+
+cat("Posterior P2 = Beta(", alpha_post2, ",", beta_post2, ")\n")
+
+# Estadísticos
+post_mean2   <- alpha_post2 / (alpha_post2 + beta_post2)
+post_mode2   <- (alpha_post2 - 1) / (alpha_post2 + beta_post2 - 2)
+post_median2 <- qbeta(0.5, alpha_post2, beta_post2)
+
+ci95_2 <- qbeta(c(0.025, 0.975), alpha_post2, beta_post2)
+hdi_2  <- hdi(qbeta, credMass=0.95, shape1=alpha_post2, shape2=beta_post2)
+
+cat("Media posterior =", round(post_mean2,3), "\n")
+cat("Moda posterior =", round(post_mode2,3), "\n")
+cat("Mediana posterior =", round(post_median2,3), "\n")
+cat("IC 95% =", round(ci95_2[1],3), "-", round(ci95_2[2],3), "\n")
+cat("HDI 95% =", round(hdi_2[1],3), "-", round(hdi_2[2],3), "\n")
+
+```
+
+La media, la mediana y la moda posterior (0.20, 0.18 y 0.125, respectivamente) muestran cierta **asimetría** en la distribución posterior, aunque todas indican que la proporción de estudiantes que elegirán la primera opción es baja.
+
+```{r}
+# Simulación posterior
+p_samples2 <- rbeta(10000, alpha_post2, beta_post2)
+pred2 <- rbinom(10000, size = 12, prob = p_samples2)
+
+mean(pred2) # media predicha
+quantile(pred2, c(0.025, 0.5, 0.975)) #IC 95%
+
+```
+
+La predicción para el próximo curso, considerando un grupo de 12 estudiantes matriculados, sugiere que **probablemente 2–3 estudiantes elegirán la primera opción**, con un rango plausible de 0 a 6, reflejando la variabilidad esperada debido al tamaño limitado del grupo y la proporción baja observada.
+
+```{r}
+# Ancho del intervalo de credibilidad del 95%
+CI_prior <- diff(qbeta(c(0.025, 0.975), 1, 1))
+CI_post  <- diff(qbeta(c(0.025, 0.975), 2, 8))
+
+CI_prior;CI_post
+
+```
+
+**CI_prior** = 0.95 → refleja la máxima incertidumbre con la prior uniforme. **CI_post** = 0.454 → ancho del IC 95% posterior, mucho menor que el de la prior, indicando que los datos reducen significativamente la incertidumbre sobre la proporción de estudiantes que elegirán la primera opción.
+
+```{r}
+# PREGUNTA 3: Interés (1-5)
+
+# El interés está medido en una escala ordinal del 1 al 5. 
+# Este tipo de variable NO es un conteo (como requiere Poisson),
+# ni representa directamente una proporción de éxitos/fracasos.
+# Por este motivo, NO puede modelarse con Poisson-Gamma.
+
+# Para aplicar un modelo conjugado necesitamos una variable binaria.
+# Por eso la transformamos a:
+#     interes_alto = 1 si interés >= 3
+#     interes_alto = 0 si interés < 3
+# Así podemos modelar p = P(interés alto) con un modelo Beta-Binomial.
+
+df$interes_alto <- ifelse(df$interes >= 3, 1, 0)
+
+# SOBRE LA PRIOR:
+# Aunque teníamos creencias previas de Paco (4), Marta (2) y Ángela (3),
+# estos valores están en una escala ordinal y NO representan frecuencias
+# ni proporciones. 
+#
+# La media 3 tampoco sirve para construir una prior Beta porque:
+# - una media no determina cuántos estarían con interés >= 3,
+# - muchas distribuciones ordinales distintas tienen la misma media,
+# - por ejemplo: (5,1), (3,3), (4,2) todas tienen media 3 pero producen
+#   probabilidades completamente distintas para interés>=3.
+#
+# Por tanto, NO existe una forma coherente de convertir los valores 
+# (4,2,3) en "éxitos previos" y "fracasos previos" para una Beta(α,β).
+#
+# En ausencia de información previa válida para p = P(interés alto),
+# usamos una prior NO informativa:
+#           p ~ Beta(1,1)
+# que es uniforme en [0,1] y no favorece ningún valor.
+
+alpha3 <- 1
+beta3  <- 1
+
+cat("Prior P3 = Beta(1,1)\n")
+
+# Datos
+x3 <- sum(df$interes_alto == 1)
+n3 <- length(df$interes_alto)
+
+# Posterior (modelo Beta-Binomial)
+alpha_post3 <- alpha3 + x3
+beta_post3  <- beta3  + (n3 - x3)
+
+cat("Posterior P3 = Beta(", alpha_post3, ",", beta_post3, ")\n")
+
+# Estadísticos posteriores
+post_mean3   <- alpha_post3 / (alpha_post3 + beta_post3)
+post_mode3   <- (alpha_post3 - 1) / (alpha_post3 + beta_post3 - 2)
+post_median3 <- qbeta(0.5, alpha_post3, beta_post3)
+
+ci95_3 <- qbeta(c(0.025, 0.975), alpha_post3, beta_post3)
+hdi_3  <- hdi(qbeta, credMass=0.95, shape1=alpha_post3, shape2=beta_post3)
+
+cat("Media posterior =", round(post_mean3,3), "\n")
+cat("Moda posterior =", round(post_mode3,3), "\n")
+cat("Mediana posterior =", round(post_median3,3), "\n")
+cat("IC 95% =", round(ci95_3[1],3), "-", round(ci95_3[2],3), "\n")
+cat("HDI 95% =", round(hdi_3[1],3), "-", round(hdi_3[2],3), "\n")
+
+```
+
+La media, la mediana y la moda posterior (0.788, 0.794 y 0.806, respectivamente) coinciden muy de cerca, lo que indica que la **distribución posterior es bastante simétrica y estable**. Esto refleja que la proporción de estudiantes con interés alto (≥3) está claramente concentrada alrededor de 0.79–0.81.
+
+El intervalo de credibilidad del 95% \[0.636, 0.907\] y el HDI \[0.649, 0.917\] muestran que, incluso considerando la incertidumbre, es muy probable que entre un 64% y un 92% de los estudiantes tengan un interés alto por la asignatura. Esto confirma que la mayoría de los estudiantes muestran un nivel de interés alto
+
+```{r}
+# Simulación posterior
+p_samples3 <- rbeta(10000, alpha_post3, beta_post3)
+pred3 <- rbinom(10000, size = 50, prob = p_samples3)
+
+mean(pred3) # media predicha
+quantile(pred3, c(0.025, 0.5, 0.975)) #IC 95%
+
+```
+
+A partir de la **distribución posterior** de la proporción de estudiantes con interés alto (≥3), simulamos cuántos de un **grupo completo de 50 estudiantes** mostrarán interés alto.
+
+-   La **media predicha** ≈ 39 indica que, en promedio, **unos 39 estudiantes de 50 probablemente tendrán un interés alto**.
+
+-   El **intervalo de credibilidad del 95%** \[32, 46\] muestra que, incluso considerando la incertidumbre, **es muy probable que entre 32 y 46 estudiantes del grupo total muestren interés alto**.
+
+-   La mediana de la predicción ≈ 40 refuerza que **la mayoría del grupo estará motivada y mostrará interés alto**.
+
+```{r}
+# Ancho del intervalo 
+CI_prior <- diff(qbeta(c(0.025, 0.975), 1, 1))      # prior no informativa
+CI_post  <- diff(qbeta(c(0.025, 0.975), 26, 7))     # posterior calculada
+
+CI_prior;CI_post
+
+```
+
+**CI_prior** = 0.95 → refleja la máxima incertidumbre con la prior uniforme.
+
+**CI_post** ≈ 0.271 → ancho del IC 95% posterior, mucho menor que el de la prior, indicando que los datos reducen significativamente la incertidumbre sobre la proporción de estudiantes con interés alto.
+
+### 2- Poisson-Gamma
+
+```{r}
+# PREGUNTA 4: Uso de ChatGPT (0-10+)
+# Prior: misma que pregunta 1, p = 0.2467 escalado a rango 0-10
+lambda4_prior <- 0.2467 * 10
+alpha4 <- lambda4_prior
+beta4 <- 1
+cat("Pregunta 4 (ChatGPT): alpha =", round(alpha4,2), " beta =", round(beta4,2), "\n")
+
+# Datos recogidos en la encuesta
+sum_chatgpt <- sum(df$chatgpt, na.rm = TRUE)  # suma total de usos
+n_chatgpt <- sum(!is.na(df$chatgpt))          # número de observaciones
+
+# Parámetros posteriores
+alpha_post4 <- alpha4 + sum_chatgpt
+beta_post4 <- beta4 + n_chatgpt
+cat("Posterior ChatGPT: alpha =", round(alpha_post4,2), " beta =", round(beta_post4,2), "\n")
+
+# Media posterior
+post_mean4 <- alpha_post4 / beta_post4
+cat("Media posterior ChatGPT =", round(post_mean4,3), "\n")
+
+# Moda posterior
+post_mode4 <- (alpha_post4 - 1) / beta_post4
+cat("Moda posterior ChatGPT =", round(post_mode4,3), "\n")
+
+# Mediana posterior
+post_median4 <- qgamma(0.5, alpha_post4, rate = beta_post4)
+cat("Mediana posterior ChatGPT =", round(post_median4,3), "\n")
+
+# Intervalo de credibilidad 95% (colas iguales)
+ci_95_4 <- qgamma(c(0.025,0.975), alpha_post4, rate = beta_post4)
+cat("IC 95% posterior =", round(ci_95_4[1],3), "-", round(ci_95_4[2],3), "\n")
+
+# Intervalo de mayor densidad 95% (HDI)
+hdi_res4 <- hdi(qgamma, credMass = 0.95, shape = alpha_post4, rate = beta_post4)
+cat("HDI 95% posterior =", round(hdi_res4[1],3), "-", round(hdi_res4[2],3), "\n")
+```
+
+La **media, la mediana y la moda posterior** (5.015, 5.004 y 4.983, respectivamente) coinciden prácticamente, lo que indica que la **distribución posterior de la tasa de uso diario de ChatGPT es bastante simétrica y estable**.
+
+El **intervalo de credibilidad del 95%** \[4.269, 5.82\] y el **HDI 95%** \[4.249, 5.798\] muestran que, incluso considerando la incertidumbre, es muy probable que la media de usos diarios de ChatGPT se encuentre entre aproximadamente **4 y 6 veces al día**. Esto refleja un uso moderado-alto entre los estudiantes y confirma que la mayoría utiliza ChatGPT de manera consistente a lo largo del día.
+
+```{r}
+# Simulación posterior para un nuevo estudiante
+lambda_samples <- rgamma(10000, shape = 160.47, rate = 32)
+pred_individual <- rpois(10000, lambda = lambda_samples)
+
+cat("Predicción media de usos diarios (nuevo estudiante) =", round(mean(pred_individual),1), "\n")
+cat("IC 95% predicción =", quantile(pred_individual, c(0.025, 0.975)), "\n")
+
+# Predicción para un grupo de 50 estudiantes
+n_group <- 50
+pred_group <- rpois(10000, lambda = lambda_samples * n_group)
+
+cat("Predicción media de usos diarios (grupo de 50) =", round(mean(pred_group),1), "\n")
+cat("IC 95% predicción =", quantile(pred_group, c(0.025, 0.975)), "\n")
+
+```
+
+**Para un estudiante individual**:
+
+-   La **media predicha** ≈ 5 usos diarios, coincidiendo con la media posterior de λ.
+
+<!-- -->
+
+-   El **intervalo de credibilidad del 95%** refleja que la mayoría de los estudiantes probablemente usarán ChatGPT entre aproximadamente **2 y 8 veces al día**, considerando la variabilidad individual.
+
+**Para un grupo de 50 estudiantes**:
+
+-   La **media predicha** ≈ 250 usos diarios totales (50 × 5).
+
+-   El **IC 95%** refleja la variabilidad combinada y probablemente se encuentra entre aproximadamente **215 y 290 usos diarios** en total para el grupo.
+
+```{r}
+# Ancho del IC 95% de la prior
+CI_prior <- diff(qgamma(c(0.025, 0.975), shape = 2.467, rate = 1))
+
+# Ancho del IC 95% de la posterior
+CI_post  <- diff(qgamma(c(0.025, 0.975), shape = 160.47, rate = 32))
+
+# Reducción de incertidumbre (%)
+reduc_uncert <- 100 * (CI_prior - CI_post) / CI_prior
+
+cat("Ancho IC prior =", round(CI_prior,3), "\n")
+cat("Ancho IC posterior =", round(CI_post,3), "\n")
+cat("Reducción de incertidumbre (%) =", round(reduc_uncert,1), "%\n")
+
+```
+
+La **reducción de incertidumbre del 74%** indica que los datos observados aportan información sustancial, refinando nuestra estimación de la tasa promedio de usos diarios de ChatGPT y haciendo la posterior mucho más precisa y confiable.
+
+### Conclusión Final
+
+El análisis bayesiano realizado nos ha permitido combinar las **creencias previas** con los **datos observados en la encuesta**, obteniendo estimaciones más precisas y robustas sobre los estudiantes de 4º curso de Ciencia de Datos.
+
+1.  **Matriculados en la asignatura (Pregunta 1)**:\
+    La proporción de estudiantes que probablemente se matriculará se sitúa entre un 19% y un 32%, con una predicción media de 12–13 estudiantes en el próximo curso. La posterior es bastante simétrica, y la incertidumbre se reduce un 9% respecto a la prior, reflejando que los datos aportan información adicional aunque la muestra es pequeña.
+
+2.  **Primera opción (Pregunta 2)**:\
+    La proporción de matriculados que eligieron la asignatura como primera opción es baja (media posterior ≈ 0.20). La posterior muestra cierta asimetría, pero los datos reducen significativamente la incertidumbre (CI posterior ≈ 0.454 vs CI prior = 0.95). Para un grupo de 12 estudiantes, se predice que probablemente 2–3 elegirán la primera opción.
+
+3.  **Interés en análisis bayesiano (Pregunta 3)**:\
+    La mayoría de los estudiantes muestran un interés alto (≥3) en la asignatura, con media posterior ≈ 0.79. La predicción para 50 estudiantes indica que aproximadamente 39 mostrarán interés alto, con un IC 95% de 32–46. La incertidumbre se reduce notablemente respecto a la prior, lo que refleja que los datos son informativos y consistentes con un nivel de interés elevado.
+
+4.  **Uso diario de ChatGPT (Pregunta 4)**:\
+    La media de usos diarios se estima en ≈5, con IC 95% de 4.3–5.8. Para un grupo de 50 estudiantes, se predicen unos 250 usos diarios totales, con un rango plausible de 215–290. La reducción de incertidumbre del 74% indica que la información observada es altamente informativa, afinando sustancialmente nuestras estimaciones.
+
+En conjunto, este análisis muestra cómo los modelos bayesianos permiten integrar **información previa y observada**, estimar probabilidades con incertidumbre explícita y realizar **predicciones futuras**. Los resultados reflejan patrones claros en la población encuestada: el interés por la asignatura es alto, la matrícula se concentra en una minoría consistente, y el uso de herramientas de IA como ChatGPT es habitual y significativo.
+
+Este enfoque proporciona una visión cuantitativa más completa y confiable que un análisis puramente descriptivo
