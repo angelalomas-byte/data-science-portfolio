@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ángela Lomas Anglada">
+
+<title>Breast Cancer Classification Using Machine Learning and Bayesian Inference</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/quarto-html/quarto.js"></script>
+<script src="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/quarto-html/popper.min.js"></script>
+<script src="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Breast Cancer Classification Using Machine Learning and Bayesian Inference_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Breast Cancer Classification Using Machine Learning and Bayesian Inference</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ángela Lomas Anglada </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="dataset" class="level2">
+<h2 class="anchored" data-anchor-id="dataset">DATASET</h2>
+<p><strong>Variable dependiente y binaria:</strong> <code>diagnosis</code> con dos posibles valores: <code>'Maligno'</code> y <code>'Benigno'</code> . Esta variable indica la presencia o ausencia de cáncer maligno en los pacientes.</p>
+<p><strong>Objetivo:</strong> Estimar de manera precisa la probabilidad de un diagnóstico maligno usando métodos Bayesianos, complementando el análisis clásico.</p>
+<section id="librerias" class="level3">
+<h3 class="anchored" data-anchor-id="librerias">LIBRERIAS</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(corrplot)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>corrplot 0.95 loaded</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: lattice</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(xgboost)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(LearnBayes)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(HDInterval)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="descarga-de-datos" class="level3">
+<h3 class="anchored" data-anchor-id="descarga-de-datos">DESCARGA DE DATOS:</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>New names:
+• `` -&gt; `...33`</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: One or more parsing issues, call `problems()` on your data frame for details,
+e.g.:
+  dat &lt;- vroom(...)
+  problems(dat)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> data[, <span class="dv">1</span><span class="sc">:</span>(<span class="fu">ncol</span>(data)<span class="sc">-</span><span class="dv">1</span>)]</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">View</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>R leía mal el data.csv y nos añadía una columna con nombre ‘…33’ cuyos valores eran NAs, así que eliminamos esta columna para evitar problemas</p>
+</section>
+<section id="breve-exploración" class="level3">
+<h3 class="anchored" data-anchor-id="breve-exploración">BREVE EXPLORACIÓN:</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 32
+        id diagnosis radius_mean texture_mean perimeter_mean area_mean
+     &lt;dbl&gt; &lt;chr&gt;           &lt;dbl&gt;        &lt;dbl&gt;          &lt;dbl&gt;     &lt;dbl&gt;
+1   842302 M                18.0         10.4          123.      1001 
+2   842517 M                20.6         17.8          133.      1326 
+3 84300903 M                19.7         21.2          130       1203 
+4 84348301 M                11.4         20.4           77.6      386.
+5 84358402 M                20.3         14.3          135.      1297 
+6   843786 M                12.4         15.7           82.6      477.
+# ℹ 26 more variables: smoothness_mean &lt;dbl&gt;, compactness_mean &lt;dbl&gt;,
+#   concavity_mean &lt;dbl&gt;, `concave points_mean` &lt;dbl&gt;, symmetry_mean &lt;dbl&gt;,
+#   fractal_dimension_mean &lt;dbl&gt;, radius_se &lt;dbl&gt;, texture_se &lt;dbl&gt;,
+#   perimeter_se &lt;dbl&gt;, area_se &lt;dbl&gt;, smoothness_se &lt;dbl&gt;,
+#   compactness_se &lt;dbl&gt;, concavity_se &lt;dbl&gt;, `concave points_se` &lt;dbl&gt;,
+#   symmetry_se &lt;dbl&gt;, fractal_dimension_se &lt;dbl&gt;, radius_worst &lt;dbl&gt;,
+#   texture_worst &lt;dbl&gt;, perimeter_worst &lt;dbl&gt;, area_worst &lt;dbl&gt;, …</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 568  32</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       id             diagnosis          radius_mean      texture_mean  
+ Min.   :     8670   Length:568         Min.   : 6.981   Min.   : 9.71  
+ 1st Qu.:   869222   Class :character   1st Qu.:11.707   1st Qu.:16.17  
+ Median :   906157   Mode  :character   Median :13.375   Median :18.84  
+ Mean   : 30425140                      Mean   :14.139   Mean   :19.28  
+ 3rd Qu.:  8825022                      3rd Qu.:15.797   3rd Qu.:21.79  
+ Max.   :911320502                      Max.   :28.110   Max.   :39.28  
+ perimeter_mean     area_mean      smoothness_mean   compactness_mean 
+ Min.   : 43.79   Min.   : 143.5   Min.   :0.06251   Min.   :0.01938  
+ 1st Qu.: 75.20   1st Qu.: 420.3   1st Qu.:0.08640   1st Qu.:0.06517  
+ Median : 86.29   Median : 551.4   Median :0.09589   Median :0.09312  
+ Mean   : 92.05   Mean   : 655.7   Mean   :0.09644   Mean   :0.10445  
+ 3rd Qu.:104.15   3rd Qu.: 784.1   3rd Qu.:0.10533   3rd Qu.:0.13043  
+ Max.   :188.50   Max.   :2501.0   Max.   :0.16340   Max.   :0.34540  
+ concavity_mean    concave points_mean symmetry_mean    fractal_dimension_mean
+ Min.   :0.00000   Min.   :0.00000     Min.   :0.1060   Min.   :0.04996       
+ 1st Qu.:0.02958   1st Qu.:0.02035     1st Qu.:0.1620   1st Qu.:0.05770       
+ Median :0.06155   Median :0.03360     Median :0.1792   Median :0.06155       
+ Mean   :0.08896   Mean   :0.04901     Mean   :0.1812   Mean   :0.06280       
+ 3rd Qu.:0.13100   3rd Qu.:0.07401     3rd Qu.:0.1957   3rd Qu.:0.06613       
+ Max.   :0.42680   Max.   :0.20120     Max.   :0.3040   Max.   :0.09744       
+   radius_se        texture_se      perimeter_se       area_se       
+ Min.   :0.1115   Min.   :0.3602   Min.   : 0.757   Min.   :  6.802  
+ 1st Qu.:0.2324   1st Qu.:0.8331   1st Qu.: 1.605   1st Qu.: 17.850  
+ Median :0.3240   Median :1.1080   Median : 2.285   Median : 24.565  
+ Mean   :0.4052   Mean   :1.2165   Mean   : 2.867   Mean   : 40.374  
+ 3rd Qu.:0.4798   3rd Qu.:1.4743   3rd Qu.: 3.360   3rd Qu.: 45.237  
+ Max.   :2.8730   Max.   :4.8850   Max.   :21.980   Max.   :542.200  
+ smoothness_se      compactness_se      concavity_se     concave points_se 
+ Min.   :0.001713   Min.   :0.002252   Min.   :0.00000   Min.   :0.000000  
+ 1st Qu.:0.005166   1st Qu.:0.013133   1st Qu.:0.01510   1st Qu.:0.007663  
+ Median :0.006374   Median :0.020460   Median :0.02592   Median :0.010950  
+ Mean   :0.007041   Mean   :0.025515   Mean   :0.03195   Mean   :0.011817  
+ 3rd Qu.:0.008151   3rd Qu.:0.032455   3rd Qu.:0.04212   3rd Qu.:0.014730  
+ Max.   :0.031130   Max.   :0.135400   Max.   :0.39600   Max.   :0.052790  
+  symmetry_se       fractal_dimension_se  radius_worst   texture_worst  
+ Min.   :0.007882   Min.   :0.0008948    Min.   : 7.93   Min.   :12.02  
+ 1st Qu.:0.015128   1st Qu.:0.0022445    1st Qu.:13.03   1st Qu.:21.07  
+ Median :0.018725   Median :0.0031955    Median :14.97   Median :25.41  
+ Mean   :0.020531   Mean   :0.0037967    Mean   :16.28   Mean   :25.67  
+ 3rd Qu.:0.023398   3rd Qu.:0.0045585    3rd Qu.:18.80   3rd Qu.:29.68  
+ Max.   :0.078950   Max.   :0.0298400    Max.   :36.04   Max.   :49.54  
+ perimeter_worst    area_worst     smoothness_worst  compactness_worst
+ Min.   : 50.41   Min.   : 185.2   Min.   :0.07117   Min.   :0.02729  
+ 1st Qu.: 84.15   1st Qu.: 515.7   1st Qu.:0.11660   1st Qu.:0.14758  
+ Median : 97.67   Median : 686.5   Median :0.13135   Median :0.21300  
+ Mean   :107.35   Mean   : 881.7   Mean   :0.13244   Mean   :0.25460  
+ 3rd Qu.:125.53   3rd Qu.:1085.0   3rd Qu.:0.14602   3rd Qu.:0.33930  
+ Max.   :251.20   Max.   :4254.0   Max.   :0.22260   Max.   :1.05800  
+ concavity_worst  concave points_worst symmetry_worst   fractal_dimension_worst
+ Min.   :0.0000   Min.   :0.00000      Min.   :0.1565   Min.   :0.05504        
+ 1st Qu.:0.1159   1st Qu.:0.06497      1st Qu.:0.2504   1st Qu.:0.07147        
+ Median :0.2275   Median :0.10002      Median :0.2821   Median :0.08005        
+ Mean   :0.2727   Mean   :0.11481      Mean   :0.2901   Mean   :0.08397        
+ 3rd Qu.:0.3835   3rd Qu.:0.16168      3rd Qu.:0.3180   3rd Qu.:0.09208        
+ Max.   :1.2520   Max.   :0.29100      Max.   :0.6638   Max.   :0.20750        </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>tibble [568 × 32] (S3: tbl_df/tbl/data.frame)
+ $ id                     : num [1:568] 842302 842517 84300903 84348301 84358402 ...
+ $ diagnosis              : chr [1:568] "M" "M" "M" "M" ...
+ $ radius_mean            : num [1:568] 18 20.6 19.7 11.4 20.3 ...
+ $ texture_mean           : num [1:568] 10.4 17.8 21.2 20.4 14.3 ...
+ $ perimeter_mean         : num [1:568] 122.8 132.9 130 77.6 135.1 ...
+ $ area_mean              : num [1:568] 1001 1326 1203 386 1297 ...
+ $ smoothness_mean        : num [1:568] 0.1184 0.0847 0.1096 0.1425 0.1003 ...
+ $ compactness_mean       : num [1:568] 0.2776 0.0786 0.1599 0.2839 0.1328 ...
+ $ concavity_mean         : num [1:568] 0.3001 0.0869 0.1974 0.2414 0.198 ...
+ $ concave points_mean    : num [1:568] 0.1471 0.0702 0.1279 0.1052 0.1043 ...
+ $ symmetry_mean          : num [1:568] 0.242 0.181 0.207 0.26 0.181 ...
+ $ fractal_dimension_mean : num [1:568] 0.0787 0.0567 0.06 0.0974 0.0588 ...
+ $ radius_se              : num [1:568] 1.095 0.543 0.746 0.496 0.757 ...
+ $ texture_se             : num [1:568] 0.905 0.734 0.787 1.156 0.781 ...
+ $ perimeter_se           : num [1:568] 8.59 3.4 4.58 3.44 5.44 ...
+ $ area_se                : num [1:568] 153.4 74.1 94 27.2 94.4 ...
+ $ smoothness_se          : num [1:568] 0.0064 0.00522 0.00615 0.00911 0.01149 ...
+ $ compactness_se         : num [1:568] 0.049 0.0131 0.0401 0.0746 0.0246 ...
+ $ concavity_se           : num [1:568] 0.0537 0.0186 0.0383 0.0566 0.0569 ...
+ $ concave points_se      : num [1:568] 0.0159 0.0134 0.0206 0.0187 0.0188 ...
+ $ symmetry_se            : num [1:568] 0.03 0.0139 0.0225 0.0596 0.0176 ...
+ $ fractal_dimension_se   : num [1:568] 0.00619 0.00353 0.00457 0.00921 0.00511 ...
+ $ radius_worst           : num [1:568] 25.4 25 23.6 14.9 22.5 ...
+ $ texture_worst          : num [1:568] 17.3 23.4 25.5 26.5 16.7 ...
+ $ perimeter_worst        : num [1:568] 184.6 158.8 152.5 98.9 152.2 ...
+ $ area_worst             : num [1:568] 2019 1956 1709 568 1575 ...
+ $ smoothness_worst       : num [1:568] 0.162 0.124 0.144 0.21 0.137 ...
+ $ compactness_worst      : num [1:568] 0.666 0.187 0.424 0.866 0.205 ...
+ $ concavity_worst        : num [1:568] 0.712 0.242 0.45 0.687 0.4 ...
+ $ concave points_worst   : num [1:568] 0.265 0.186 0.243 0.258 0.163 ...
+ $ symmetry_worst         : num [1:568] 0.46 0.275 0.361 0.664 0.236 ...
+ $ fractal_dimension_worst: num [1:568] 0.1189 0.089 0.0876 0.173 0.0768 ...</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">colSums</span>(<span class="fu">is.na</span>(data))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                     id               diagnosis             radius_mean 
+                      0                       0                       0 
+           texture_mean          perimeter_mean               area_mean 
+                      0                       0                       0 
+        smoothness_mean        compactness_mean          concavity_mean 
+                      0                       0                       0 
+    concave points_mean           symmetry_mean  fractal_dimension_mean 
+                      0                       0                       0 
+              radius_se              texture_se            perimeter_se 
+                      0                       0                       0 
+                area_se           smoothness_se          compactness_se 
+                      0                       0                       0 
+           concavity_se       concave points_se             symmetry_se 
+                      0                       0                       0 
+   fractal_dimension_se            radius_worst           texture_worst 
+                      0                       0                       0 
+        perimeter_worst              area_worst        smoothness_worst 
+                      0                       0                       0 
+      compactness_worst         concavity_worst    concave points_worst 
+                      0                       0                       0 
+         symmetry_worst fractal_dimension_worst 
+                      0                       0 </code></pre>
+</div>
+</div>
+<p>Nuestro conjunto de datos <code>data</code> tiene <strong>568 observaciones</strong> y <strong>32 variables.</strong> Todas las columnas numéricas, no tienen valores faltantes. Como hemos comentado antes la variable dependiente <code>diagnosis</code> es bianria con valores <code>''M''</code> y <code>''B''</code>, tipo <code>character</code>. Es necesario codificar esta variable para usar los modelos, 0 = Benigno, 1 = Maligno.</p>
+<p>Convertimos la variable <code>diagnosis</code> a factor, nuestro evento de referencia, será benigno, enfermedad ausente y el otro nivel es nuestro evento de interés, enfermedad presente, maligno.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>diagnosis <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>diagnosis, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"B"</span>, <span class="st">"M"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 32
+        id diagnosis radius_mean texture_mean perimeter_mean area_mean
+     &lt;dbl&gt; &lt;fct&gt;           &lt;dbl&gt;        &lt;dbl&gt;          &lt;dbl&gt;     &lt;dbl&gt;
+1   842302 M                18.0         10.4          123.      1001 
+2   842517 M                20.6         17.8          133.      1326 
+3 84300903 M                19.7         21.2          130       1203 
+4 84348301 M                11.4         20.4           77.6      386.
+5 84358402 M                20.3         14.3          135.      1297 
+6   843786 M                12.4         15.7           82.6      477.
+# ℹ 26 more variables: smoothness_mean &lt;dbl&gt;, compactness_mean &lt;dbl&gt;,
+#   concavity_mean &lt;dbl&gt;, `concave points_mean` &lt;dbl&gt;, symmetry_mean &lt;dbl&gt;,
+#   fractal_dimension_mean &lt;dbl&gt;, radius_se &lt;dbl&gt;, texture_se &lt;dbl&gt;,
+#   perimeter_se &lt;dbl&gt;, area_se &lt;dbl&gt;, smoothness_se &lt;dbl&gt;,
+#   compactness_se &lt;dbl&gt;, concavity_se &lt;dbl&gt;, `concave points_se` &lt;dbl&gt;,
+#   symmetry_se &lt;dbl&gt;, fractal_dimension_se &lt;dbl&gt;, radius_worst &lt;dbl&gt;,
+#   texture_worst &lt;dbl&gt;, perimeter_worst &lt;dbl&gt;, area_worst &lt;dbl&gt;, …</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(data, <span class="fu">aes</span>(<span class="at">x =</span> diagnosis)) <span class="sc">+</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">fill =</span> <span class="fu">c</span>(<span class="st">"lightgreen"</span>, <span class="st">"red"</span>)) <span class="sc">+</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="at">stat =</span> <span class="st">"count"</span>, <span class="fu">aes</span>(<span class="at">label =</span> ..count..), <span class="at">vjust =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Distribución de diagnósticos"</span>, <span class="at">x =</span> <span class="st">"Diagnóstico"</span>, <span class="at">y =</span> <span class="st">"Frecuencia"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The dot-dot notation (`..count..`) was deprecated in ggplot2 3.4.0.
+ℹ Please use `after_stat(count)` instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Observamos que el equilibrio no es perfecto, pero tampoco es extremadamente desbalanceado. Hay más casos benignos, lo que es bastante común en este tipo de datasets.</p>
+<p>Visualizamos la correlación de variables, mediante la <strong>matriz</strong> <strong>de correlaciones</strong>. Los valores más oscuros nos muestran que esas variables tienen fuerte correlación y dependeindo del color, será una correlación positiva (azul) o en el caso contrario, correlación negativa (rojo).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>numeric_vars <span class="ot">&lt;-</span> data[, <span class="fu">sapply</span>(data, is.numeric)]</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>cor_matrix <span class="ot">&lt;-</span> <span class="fu">cor</span>(numeric_vars)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="fu">corrplot</span>(cor_matrix, <span class="at">method =</span> <span class="st">"color"</span>, <span class="at">tl.cex =</span> <span class="fl">0.5</span>, <span class="at">tl.col =</span> <span class="st">"black"</span>,<span class="at">tl.srt =</span> <span class="dv">45</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Decido no tocar el tema de variables porque los modelos que aplicaremos son menos sensibles a la multicolinealidad que otros.</p>
+</section>
+<section id="división-del-data-set" class="level3">
+<h3 class="anchored" data-anchor-id="división-del-data-set">0. DIVISIÓN DEL DATA SET</h3>
+<p>El dataset se ha dividido en tres subconjuntos:</p>
+<ul>
+<li><p><strong>Train (70%):</strong> Tendrá 398 observaciones. Se utiliza para entrenar los modelos de Machine Learning.</p></li>
+<li><p><strong>Test_1 (15%):</strong> Tendrá 85 observaciones. Se utiliza para evaluar el rendimiento de los modelos.</p></li>
+<li><p><strong>Test_2 (15%):</strong> Tendrá 85 observaciones. Se reserva para ejercicios posteriores del análisis bayesiano.</p></li>
+</ul>
+<p>Se ha realizado un <strong>muestreo aleatorio estratificado</strong> respecto a la variable <code>diagnosis</code>, de modo que la proporción de casos malignos y benignos se mantiene en los tres subconjuntos, evitando sesgos en el entrenamiento y evaluación.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>) <span class="co">#reproducibilidad</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Train (70%)</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>train_idx <span class="ot">&lt;-</span> <span class="fu">createDataPartition</span>(data<span class="sc">$</span>diagnosis, <span class="at">p =</span> <span class="fl">0.7</span>, <span class="at">list =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> data[train_idx, ]</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Resto (30%)</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>rest <span class="ot">&lt;-</span> data[<span class="sc">-</span>train_idx, ]</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="co">#test_1 y test_2 (15% cada uno)</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>test1_idx <span class="ot">&lt;-</span> <span class="fu">createDataPartition</span>(rest<span class="sc">$</span>diagnosis, <span class="at">p =</span> <span class="fl">0.5</span>, <span class="at">list =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>test_1 <span class="ot">&lt;-</span> rest[test1_idx, ]</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>test_2 <span class="ot">&lt;-</span> rest[<span class="sc">-</span>test1_idx, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Comprobación de proporciones de la variable dependeinte</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(<span class="fu">table</span>(train<span class="sc">$</span>diagnosis))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        B         M 
+0.6265664 0.3734336 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(<span class="fu">table</span>(test_1<span class="sc">$</span>diagnosis))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        B         M 
+0.6235294 0.3764706 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(<span class="fu">table</span>(test_2<span class="sc">$</span>diagnosis))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        B         M 
+0.6309524 0.3690476 </code></pre>
+</div>
+</div>
+</section>
+<section id="ajuste-de-4-modelos" class="level3">
+<h3 class="anchored" data-anchor-id="ajuste-de-4-modelos">1. AJUSTE DE 4 MODELOS</h3>
+<p>Realizaremos un <strong><em>fine-tuning</em></strong> (ajuste fino), en <em>Machine Learning</em> consiste en buscar la <strong>configuración óptima de un modelo ajustando sus hiperparámetros</strong> para mejorar su rendimiento. El objetivo es <strong>adaptar el modelo</strong> a nuestro problema concreto, evitando el sobreajuste y aprovechando mejor la información disponible.</p>
+<p>Una vez obtenida la mejor versión de cada modelo, generaremos nuevas columnas en el dataset con sus <strong>predicciones nítidas (0= benigno, 1= maligno)</strong> y sus <strong>predicciones probabilísticas</strong> (probabilidad de maligno). En total, se añaden <strong>ocho nuevas variables</strong>, junto con la columna <code>type</code>, que identifica si cada observación pertenece a <em>train, test_1, test_2</em>.</p>
+<p>En nuestro caso, realizaremos el fine-tuning para los cuatro modelos: <strong>Random Forest, XGBoost, SVM y KNN</strong>. Para ello, usaremos <strong>validación cruzada</strong> (<em>cross-validation)</em> que permite evaluar distintas combinaciones de hiperparámetros y elegir la que <strong>maximiza el rendimiento</strong> dentro del conjunto de entrenamiento. Elegir correctamente los hiperparámetros es clave: determina la capacidad del modelo para <strong>generalizar</strong> y prevenir el <strong>sobreajuste</strong>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>ctrl <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(<span class="at">method=</span><span class="st">"cv"</span>, <span class="at">number=</span><span class="dv">5</span>, <span class="at">classProbs =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Como hemos mencionado antes, el argumento <code>method= 'cv'</code>, indica que se usará <strong>validación cruzada</strong>. Este procedimiento consiste en dividir el conjunto de entrenamiento (<em>train</em>) en varios subconjuntos llamados <em>folds</em>. El modelo se entrena varias veces, dejando en cada iteración uno de esos <em>folds</em> fuera para validarlo. En nuestro caso, hemos especificado <code>number = 5</code>, por lo que se aplica una validación cruzada <strong>de 5 folds</strong>. Lo que implica que el conjunto <em>train</em> se divide en 5 partes iguales. El modelo se entrena 5 veces. En cada iteración, 4 partes se utilizan para entrenar y la parte restante para validar.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="cv5folds.avif" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption"><em>Cross Validation with 5-folds</em></figcaption>
+</figure>
+</div>
+<section id="random-forest" class="level4">
+<h4 class="anchored" data-anchor-id="random-forest">RANDOM FOREST:</h4>
+<p>Es una <strong>colección de múltiples árboles de decisión</strong> , lo que lo hace menos sensible a los datos de entrenamiento y más robusto frente al sobreajuste.</p>
+<p>Primero, se crean <strong>conjuntos de datos a partir de los datos originales</strong> mediante un <strong>muestreo aleatorio con reemplazo</strong> (<em>bootstrapping</em>). Esto significa que, después de seleccionar una fila, ésta se vuelve a incluir en el conjunto. Cada nuevo conjunto tendrá la misma cantidad de filas que el original.</p>
+<p>Segundo, se entrena un <strong>árbol de decisión independiente</strong> en cada uno de estos conjuntos bootstrap. Durante el entrenamiento, se realiza una <strong>selección aleatoria de características</strong> (<em>feature selection</em>) para determinar qué variables considerar en cada división de los nodos, lo que aumenta la diversidad entre árboles y mejora la capacidad de generalización del modelo.</p>
+<p>Finalmente, se aplica <strong>agregación</strong> (<em>aggregation</em>). En el caso de clasificación, la predicción final se obtiene mediante <strong>votación mayoritaria</strong> de todos los árboles.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>model_rf <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  diagnosis <span class="sc">~</span> ., </span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> train,</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"rf"</span>,</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> ctrl,</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneLength =</span> <span class="dv">5</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="Random_Forest.jpg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Random Forest</figcaption>
+</figure>
+</div>
+</section>
+<section id="xgboosting" class="level4">
+<h4 class="anchored" data-anchor-id="xgboosting">XGBOOSTING:</h4>
+<p>Su nombre completo es <strong>Extreme Gradient Boosting</strong>, un algoritmo de <strong>boosting</strong> <strong>basado en árboles de decisión</strong>. Este algoritmo construye los árboles de forma <strong>secuencial</strong>, donde cada nuevo árbol intenta <strong>corregir los errores de los árboles anteriores</strong>.</p>
+<p>El proceso es el siguiente: primero hace una <strong>predicción inicial</strong> para todos los datos. Luego se comparan estas predicciones con las <strong>etiquetas reales</strong>, calculando los <strong>residuos</strong>, se construye un <strong>árbol de decisión</strong> que intenta predecir estos residuos. La predicción del nuevo árbol se <strong>suma a la predicción anterior</strong>, aplicando un <strong>factor de aprendizaje</strong> (<em>learning rate</em>) para que la actualización sea gradual.</p>
+<p>Este proceso se repite muchas veces, agregando <strong>árbol tras árbol</strong>. Para mejorar la <strong>generalización</strong>, se aplican <strong>penalizaciones y restricciones</strong> que evitan árboles demasiado complejos, controlando la <strong>profundiad de los árboles, la cantidad mínima de observaciones un una hoja</strong>, entre otros parámetros.</p>
+<p>La <strong>predicción final</strong> de cada observación es la <strong>suma ponderada de las predicciones de todos los árboles</strong>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>model_xgb <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>    diagnosis <span class="sc">~</span> .,</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> train,</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">"xgbTree"</span>,</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">trControl =</span> ctrl,</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">tuneLength =</span> <span class="dv">3</span>,</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">verbosity =</span> <span class="dv">0</span></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="XGBoosting.png" class="img-fluid figure-img" width="345"></p>
+</figure>
+</div>
+</section>
+<section id="support-vector-machines" class="level4">
+<h4 class="anchored" data-anchor-id="support-vector-machines">SUPPORT VECTOR MACHINES:</h4>
+<p>El objetivo de <strong>SVM</strong> (<strong>Support Vector Machines</strong>) es encontrar un <strong>hiperplano óptimo</strong> que separe las clases de manera que el <strong>margen</strong> sea máximo. El margen es la <strong>distancia entre el hiperplano y los puntos más cercanos de cada clase</strong>, conocidos como <strong>vectores de soporte</strong>, que son los puntos críticos que definen la frontera de decisión.</p>
+<p>Los datos se representan en un <strong>espacio n-dimensional</strong>, donde n es el <strong>número de características</strong>. SVM busca un hiperplano que divida las clases de manera que la <strong>distancia a los vectores de soporte</strong> sea la mayor posible, lo que permite una <strong>mejor generalización</strong> en datos no vistos.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>model_svm <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  diagnosis <span class="sc">~</span> .,</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> train,</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"svmRadial"</span>,</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> ctrl,</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneLength =</span> <span class="dv">10</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="svm.webp" class="img-fluid figure-img" width="314"></p>
+</figure>
+</div>
+</section>
+<section id="k-nearest-neighbors" class="level4">
+<h4 class="anchored" data-anchor-id="k-nearest-neighbors">K-NEAREST NEIGHBORS</h4>
+<p>KNN se basa en la <strong>proximidad entre puntos</strong> en el espacio de características. La predicción para un <strong>nuevo punto</strong> se realiza observando sus <strong>k vecinos más cercanos</strong> (los puntos más próximos en el espacio de características) y asignando la <strong>clase más frecuente</strong> entre ellos.</p>
+<p>El procedimiento es el siguiente:</p>
+<ol type="1">
+<li><p>Se define un valor <strong>k</strong>, que indica la <strong>cantidad de vecinos</strong> a considerar.</p></li>
+<li><p>Se calcula la <strong>distancia</strong> entre el nuevo punto y todos los puntos del conjunto de entrenamiento. Las métricas de distancia más comunes son <strong>Euclidiana</strong> o <strong>Manhattan</strong>.</p></li>
+<li><p>Se seleccionan los <strong>k puntos más cercanos</strong>.</p></li>
+<li><p>Se asigna al nuevo punto la <strong>clase más común</strong> entre esos vecinos.</p></li>
+</ol>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>model_knn <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  diagnosis <span class="sc">~</span> .,</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> train,</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"knn"</span>,</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> ctrl,</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneLength =</span> <span class="dv">10</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="knn.png" class="img-fluid figure-img" width="335"></p>
+</figure>
+</div>
+<section id="predicciones-de-todos-los-modelos" class="level6">
+<h6 class="anchored" data-anchor-id="predicciones-de-todos-los-modelos">PREDICCIONES DE TODOS LOS MODELOS</h6>
+<p>Las predicciones nítidas consisten en asignar directamente una clase a cada observación según lo que el modelo considere más probable. Cada observación recibe un valor 0, Benigno, ausencia de cáncer maligno o 1, presencia de cáncer maligno</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_rf   <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">predict</span>(model_rf, data) <span class="sc">==</span> <span class="st">"M"</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_xgb  <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">predict</span>(model_xgb, data) <span class="sc">==</span> <span class="st">"M"</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_svm  <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">predict</span>(model_svm, data) <span class="sc">==</span> <span class="st">"M"</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_knn  <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">predict</span>(model_knn, data) <span class="sc">==</span> <span class="st">"M"</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Función para calcular porcentaje por clase</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>calc_percent <span class="ot">&lt;-</span> <span class="cf">function</span>(pred){</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  prop <span class="ot">&lt;-</span> <span class="fu">prop.table</span>(<span class="fu">table</span>(pred)) <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(prop)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Random Forest</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="fu">calc_percent</span>(data<span class="sc">$</span>pred_rf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>pred
+       0        1 
+61.61972 38.38028 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># XGBoost</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="fu">calc_percent</span>(data<span class="sc">$</span>pred_xgb)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>pred
+       0        1 
+62.32394 37.67606 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># SVM</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">calc_percent</span>(data<span class="sc">$</span>pred_svm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>pred
+       0        1 
+63.38028 36.61972 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co"># KNN</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="fu">calc_percent</span>(data<span class="sc">$</span>pred_knn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>pred
+      0       1 
+77.8169 22.1831 </code></pre>
+</div>
+</div>
+<p>Las <strong>predicciones probabilísticas</strong>,indican la probabilidad de que una observación pertenezca a cada clase según el modelo</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_prob_rf   <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_rf,  data, <span class="at">type =</span> <span class="st">"prob"</span>)[, <span class="st">"M"</span>]</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_prob_xgb  <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_xgb, data, <span class="at">type =</span> <span class="st">"prob"</span>)[, <span class="st">"M"</span>]</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_prob_svm  <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_svm, data, <span class="at">type =</span> <span class="st">"prob"</span>)[, <span class="st">"M"</span>]</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_prob_knn  <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_knn, data, <span class="at">type =</span> <span class="st">"prob"</span>)[, <span class="st">"M"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Creamos la columna <code>type</code> :</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>type <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>type[train_idx] <span class="ot">&lt;-</span> <span class="st">"train"</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>type[<span class="fu">setdiff</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(data), train_idx)[test1_idx]] <span class="ot">&lt;-</span> <span class="st">"test_1"</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>type[<span class="fu">setdiff</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(data), train_idx)[<span class="sc">-</span>test1_idx]] <span class="ot">&lt;-</span> <span class="st">"test_2"</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(data<span class="sc">$</span>type, data<span class="sc">$</span>diagnosis)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        
+           B   M
+  test_1  53  32
+  test_2  53  31
+  train  250 149</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="evaluación-en-test_1" class="level3">
+<h3 class="anchored" data-anchor-id="evaluación-en-test_1">2. EVALUACIÓN EN TEST_1</h3>
+<p>Ya hemos desarrollado varios modelos de Machine Learning para detectar casos de cáncer maligno en pacientes, a partir de los diagnósticos y predicciones de distints algoritmos.</p>
+<p>Vamos a hacer un análisis sobre el desempeño de los modelos sobre <code>test_1</code></p>
+<p><strong>Sensibilidad (recall):</strong> Veraderos positivos sobre todos los positivos. La probabilidad de detectar correctamente una clase. Será la proporción de casos malignos correctamente detectados por el modelo.</p>
+<p><img src="images/clipboard-1336013388.png" class="img-fluid"></p>
+<p><strong>Especificidad:</strong> Verdaderso negativos sobre todos los negativos. La probabilidad de detectar correctamente un caso no clase. Será la proporción de casos benignos correctamente identificados.</p>
+<p><img src="images/clipboard-1500753035.png" class="img-fluid"></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>idx_test1 <span class="ot">&lt;-</span> <span class="fu">which</span>(data<span class="sc">$</span>type <span class="sc">==</span> <span class="st">"test_1"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Niveles de factor que coinciden con diagnosis</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>levels_diag <span class="ot">&lt;-</span> <span class="fu">levels</span>(data<span class="sc">$</span>diagnosis) <span class="co"># c("B","M")</span></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Convertir predicciones a factor</span></span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>preds <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">RF  =</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(data<span class="sc">$</span>pred_rf <span class="sc">==</span> <span class="dv">1</span>, <span class="st">"M"</span>, <span class="st">"B"</span>), <span class="at">levels =</span> levels_diag),</span>
+<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">XGB =</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(data<span class="sc">$</span>pred_xgb <span class="sc">==</span> <span class="dv">1</span>, <span class="st">"M"</span>, <span class="st">"B"</span>), <span class="at">levels =</span> levels_diag),</span>
+<span id="cb51-8"><a href="#cb51-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">SVM =</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(data<span class="sc">$</span>pred_svm <span class="sc">==</span> <span class="dv">1</span>, <span class="st">"M"</span>, <span class="st">"B"</span>), <span class="at">levels =</span> levels_diag),</span>
+<span id="cb51-9"><a href="#cb51-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">KNN =</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(data<span class="sc">$</span>pred_knn <span class="sc">==</span> <span class="dv">1</span>, <span class="st">"M"</span>, <span class="st">"B"</span>), <span class="at">levels =</span> levels_diag)</span>
+<span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-12"><a href="#cb51-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Referencia</span></span>
+<span id="cb51-13"><a href="#cb51-13" aria-hidden="true" tabindex="-1"></a>ref_test1 <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>diagnosis[idx_test1], <span class="at">levels =</span> levels_diag)</span>
+<span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Matrices de confusión</span></span>
+<span id="cb51-16"><a href="#cb51-16" aria-hidden="true" tabindex="-1"></a>cms <span class="ot">&lt;-</span> <span class="fu">lapply</span>(preds, <span class="cf">function</span>(p) <span class="fu">confusionMatrix</span>(p[idx_test1], ref_test1, <span class="at">positive =</span> <span class="st">"M"</span>))</span>
+<span id="cb51-17"><a href="#cb51-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-18"><a href="#cb51-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Extraer sensibilidad y especificidad</span></span>
+<span id="cb51-19"><a href="#cb51-19" aria-hidden="true" tabindex="-1"></a>df_metrics <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb51-20"><a href="#cb51-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">Modelo =</span> <span class="fu">names</span>(cms),</span>
+<span id="cb51-21"><a href="#cb51-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">Sensibilidad =</span> <span class="fu">sapply</span>(cms, <span class="cf">function</span>(x) x<span class="sc">$</span>byClass[<span class="st">"Sensitivity"</span>]),</span>
+<span id="cb51-22"><a href="#cb51-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">Especificidad =</span> <span class="fu">sapply</span>(cms, <span class="cf">function</span>(x) x<span class="sc">$</span>byClass[<span class="st">"Specificity"</span>])</span>
+<span id="cb51-23"><a href="#cb51-23" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb51-24"><a href="#cb51-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-25"><a href="#cb51-25" aria-hidden="true" tabindex="-1"></a>df_metrics</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                Modelo Sensibilidad Especificidad
+RF.Sensitivity      RF      1.00000     0.9433962
+XGB.Sensitivity    XGB      1.00000     0.9811321
+SVM.Sensitivity    SVM      1.00000     0.9622642
+KNN.Sensitivity    KNN      0.46875     0.9622642</code></pre>
+</div>
+</div>
+<p>Suponiendo que los errores de los cuatro modelos (Random Forest, XGBoost, SVM y KNN) son independientes condicionados al diagnóstico, es decir, que no presentan correlación entre sí, se solicita:</p>
+<section id="a.-calcula-la-sensibilidad-capacidad-de-detectar-correctamnete-un-cáncer-maligo-y-la-especificidad-capacidad-de-identificar-correctamente-un-paciente-benigno-conjunta-de-los-modelos." class="level6">
+<h6 class="anchored" data-anchor-id="a.-calcula-la-sensibilidad-capacidad-de-detectar-correctamnete-un-cáncer-maligo-y-la-especificidad-capacidad-de-identificar-correctamente-un-paciente-benigno-conjunta-de-los-modelos.">A. Calcula la sensibilidad (capacidad de detectar correctamnete un cáncer maligo) y la especificidad (capacidad de identificar correctamente un paciente benigno) conjunta de los modelos.</h6>
+<p><img src="images/clipboard-4060527341.png" class="img-fluid"><img src="images/clipboard-1625709434.png" class="img-fluid"></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>sens_conjunta <span class="ot">&lt;-</span> <span class="fu">prod</span>(df_metrics<span class="sc">$</span>Sensibilidad)</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>spec_conjunta <span class="ot">&lt;-</span> <span class="fu">prod</span>(df_metrics<span class="sc">$</span>Especificidad)</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Sensibilidad conjunta:"</span>,sens_conjunta, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sensibilidad conjunta: 0.46875 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Especificidad conjunta:"</span>, spec_conjunta, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Especificidad conjunta: 0.857058 </code></pre>
+</div>
+</div>
+<p>La <strong>sensibilidad conjunta</strong> es de <strong>0.46875</strong>. Esto significa que, si consideramos los cuatro modelos trabajando juntos bajo la suposición de independencia condicional de errores, la <strong>probabilidad de que todos</strong> los modelos <strong>detecten</strong> correctamente un <strong>cáncer maligno</strong> en una <strong>misma observación</strong> es del <strong>46.9%</strong>. Es decir, menos de la mitad de los casos malignos serían detectados simultáneamente por los cuatro modelos. Esto ocurre porque al multiplicar las sensibilidades individuales, cualquier modelo con sensibilidad menor a 1 reduce la probabilidad conjunta.</p>
+<p>La <strong>especificidad conjunta</strong> es de <strong>0.8571</strong>. Esto indica que, bajo la misma suposición de independencia de errores, la <strong>probabilidad de que todos</strong> los modelos <strong>identifiquen</strong> correctamente a un paciente <strong>benigno</strong> es del <strong>85.7%</strong>.</p>
+</section>
+<section id="b.-de-qué-modelo-prescindirías-de-tu-ensamblaje-justifica-tu-respuesta." class="level6">
+<h6 class="anchored" data-anchor-id="b.-de-qué-modelo-prescindirías-de-tu-ensamblaje-justifica-tu-respuesta.">B. ¿De qué modelo prescindirías de tu ensamblaje? Justifica tu respuesta.</h6>
+<p>Para decidir qué modelo eliminar del ensamblaje, debemos fijarnos en su desempeño individual en términos de <strong>sensibilidad</strong> y <strong>especificidad</strong>, así como en cómo contribuye a la probabilidad conjunta de aciertos.</p>
+<p>Si observamos la tabla de métricas individuales (<code>df_metrics</code>), el modelo que presenta menor <strong>sensibilidad</strong> o menor <strong>equilibrio general</strong> aporta menos al objetivo principal de detectar casos malignos. Por ejemplo:</p>
+<ul>
+<li><p>Un modelo con <strong>muy baja sensibilidad</strong> no detecta correctamente suficientes casos malignos, reduciendo la efectividad conjunta.</p></li>
+<li><p>Un modelo con <strong>especificidad muy alta pero sensibilidad muy baja</strong> apenas aporta detecciones útiles de maligno, y su inclusión puede “arrastrar hacia abajo” la probabilidad de aciertos conjuntos.</p></li>
+</ul>
+<p>En nuestro caso, <strong>KNN</strong> tiene la <strong>menor sensibilidad</strong> (o menor equilibrio entre sensibilidad y especificidad). Por lo tanto, <strong>prescindir de este modelo</strong> podría mejorar la eficiencia del ensamblaje sin afectar significativamente la identificación de casos benignos.</p>
+<p>Si un modelo tiene poca sensibilidad o especificidad, reducirá las probabilidad de acierto del ensamblaje. La decisión se basa en qué modelo reduce más la sensibilidad y especificidad conjuntas. Al calcular la porbabilidad de maligno dado la alerta del ensamblaje podemos identificar qué modelo aporta poco o incluso empeora la precisión, y así justificar cuál descartamos.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prevalencia de casos malignos en el dataset</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>prevalence <span class="ot">&lt;-</span> <span class="fu">mean</span>(data<span class="sc">$</span>diagnosis <span class="sc">==</span> <span class="st">"M"</span>)  <span class="co"># ~0.3732</span></span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Vector de sensibilidades y especificidades de cada modelo</span></span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>sens_vec <span class="ot">&lt;-</span> df_metrics<span class="sc">$</span>Sensibilidad</span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>spec_vec <span class="ot">&lt;-</span> df_metrics<span class="sc">$</span>Especificidad</span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>models   <span class="ot">&lt;-</span> df_metrics<span class="sc">$</span>Modelo</span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Función para calcular el posterior del ensamble bajo independencia condicional</span></span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a>posterior_ensemble <span class="ot">&lt;-</span> <span class="cf">function</span>(sens, spec, prevalence) {</span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>  p_all_given_F <span class="ot">&lt;-</span> <span class="fu">prod</span>(sens) <span class="co">#P(todos positivos|maligno)</span></span>
+<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>  p_all_given_notF <span class="ot">&lt;-</span> <span class="fu">prod</span>(<span class="dv">1</span> <span class="sc">-</span> spec) <span class="co">#P(todos positivos|benigno)</span></span>
+<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>  posterior <span class="ot">&lt;-</span> (p_all_given_F <span class="sc">*</span> prevalence) <span class="sc">/</span> </span>
+<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a>               (p_all_given_F <span class="sc">*</span> prevalence <span class="sc">+</span> p_all_given_notF <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> prevalence))</span>
+<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">posterior =</span> posterior,</span>
+<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_all_given_F =</span> p_all_given_F,</span>
+<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_all_given_notF =</span> p_all_given_notF</span>
+<span id="cb57-19"><a href="#cb57-19" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb57-20"><a href="#cb57-20" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb57-21"><a href="#cb57-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-22"><a href="#cb57-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Posterior con todos los modelos</span></span>
+<span id="cb57-23"><a href="#cb57-23" aria-hidden="true" tabindex="-1"></a>res_all <span class="ot">&lt;-</span> <span class="fu">posterior_ensemble</span>(sens_vec, spec_vec, prevalence)</span>
+<span id="cb57-24"><a href="#cb57-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-25"><a href="#cb57-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Leave-one-out: recalcular posterior dejando fuera un modelo </span></span>
+<span id="cb57-26"><a href="#cb57-26" aria-hidden="true" tabindex="-1"></a>loo <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">seq_along</span>(models), <span class="cf">function</span>(i) {</span>
+<span id="cb57-27"><a href="#cb57-27" aria-hidden="true" tabindex="-1"></a>  res <span class="ot">&lt;-</span> <span class="fu">posterior_ensemble</span>(sens_vec[<span class="sc">-</span>i], spec_vec[<span class="sc">-</span>i], prevalence)</span>
+<span id="cb57-28"><a href="#cb57-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb57-29"><a href="#cb57-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">ModelRemoved =</span> models[i],</span>
+<span id="cb57-30"><a href="#cb57-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">Posterior =</span> res<span class="sc">$</span>posterior,</span>
+<span id="cb57-31"><a href="#cb57-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">P_all_given_F =</span> res<span class="sc">$</span>p_all_given_F,</span>
+<span id="cb57-32"><a href="#cb57-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">P_all_given_notF =</span> res<span class="sc">$</span>p_all_given_notF</span>
+<span id="cb57-33"><a href="#cb57-33" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb57-34"><a href="#cb57-34" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb57-35"><a href="#cb57-35" aria-hidden="true" tabindex="-1"></a>loo <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, loo)</span>
+<span id="cb57-36"><a href="#cb57-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-37"><a href="#cb57-37" aria-hidden="true" tabindex="-1"></a><span class="co"># Resultados</span></span>
+<span id="cb57-38"><a href="#cb57-38" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Sensibilidad conjunta:"</span>, res_all<span class="sc">$</span>p_all_given_F, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sensibilidad conjunta: 0.46875 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Especificidad conjunta:"</span>, <span class="fu">prod</span>(spec_vec), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Especificidad conjunta: 0.857058 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Posterior P(M | todos positivos):"</span>, res_all<span class="sc">$</span>posterior, <span class="st">"</span><span class="sc">\n\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Posterior P(M | todos positivos): 0.9999946 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>loo</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  ModelRemoved Posterior P_all_given_F P_all_given_notF
+1           RF 0.9999038       0.46875     2.686782e-05
+2          XGB 0.9997113       0.46875     8.060345e-05
+3          SVM 0.9998556       0.46875     4.030173e-05
+4          KNN 0.9999323       1.00000     4.030173e-05</code></pre>
+</div>
+</div>
+<p>La decisión depende del objetivo. Si buscamos <strong>evitar falsos negativos</strong>, la sensibilidad es el criterio clave. KNN presenta una sensibilidad muy baja (~0.47), mientras que los demás modelos están cerca de 1. Como la sensibilidad del ensamble es el <strong>producto</strong> de las sensibilidades individuales, incluir KNN reduce mucho la capacidad de detectar todos los casos malignos.</p>
+<p>En términos de especificidad y de la probabilidad posterior, KNN sí aporta valor: su especificidad ayuda a que el posterior del ensamble sea muy alto (~99.99%). El análisis leave-one-out confirma que retirar cualquier modelo disminuye ese posterior, aunque retirar KNN lo reduce menos que retirar XGB.</p>
+<p><strong>Conclusión:</strong></p>
+<ul>
+<li><p>Si priorizamos <strong>certeza en los positivos</strong> (minimizar falsos positivos), KNN puede mantenerse.</p></li>
+<li><p>Si priorizamos <strong>sensibilidad</strong> (no perder ningún maligno), entonces <strong>KNN debe eliminarse</strong>, pues es el único modelo que compromete la detección de casos malignos.</p></li>
+</ul>
+<p>Dado que nuestro objetivo es evitar falsos negativos, <strong>descartamos KNN</strong> del ensamble.</p>
+</section>
+<section id="c.-si-tuvieras-que-escoger-únicamente-un-modelo-para-detectar-un-cáncer-maligno-y-no-equivocarte-cuál-escogerías-justifica-adecuadamente-tu-respuesta." class="level6">
+<h6 class="anchored" data-anchor-id="c.-si-tuvieras-que-escoger-únicamente-un-modelo-para-detectar-un-cáncer-maligno-y-no-equivocarte-cuál-escogerías-justifica-adecuadamente-tu-respuesta.">C. Si tuvieras que escoger únicamente un modelo para detectar un cáncer “maligno” y no equivocarte, ¿Cuál escogerías? Justifica adecuadamente tu respuesta.</h6>
+<p>El modelo con mayor probabilidad de maligno ante alerta positiva será el modelo más confiable para usar individualmente, porque maximiza la certeza de detectar maligno y minimiza falsos positivos.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Función que calcula el valor predictivo positivo individual</span></span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>vpp_individual <span class="ot">&lt;-</span> <span class="cf">function</span>(sens, spec, prevalence) {</span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>  numerador   <span class="ot">&lt;-</span> sens <span class="sc">*</span> prevalence</span>
+<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a>  denominador <span class="ot">&lt;-</span> numerador <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> spec) <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> prevalence)</span>
+<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a>  numerador <span class="sc">/</span> denominador</span>
+<span id="cb65-6"><a href="#cb65-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb65-7"><a href="#cb65-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-8"><a href="#cb65-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Aplicar la fórmula a cada modelo</span></span>
+<span id="cb65-9"><a href="#cb65-9" aria-hidden="true" tabindex="-1"></a>df_vpp <span class="ot">&lt;-</span> df_metrics</span>
+<span id="cb65-10"><a href="#cb65-10" aria-hidden="true" tabindex="-1"></a>df_vpp<span class="sc">$</span>VPP <span class="ot">&lt;-</span> <span class="fu">mapply</span>(</span>
+<span id="cb65-11"><a href="#cb65-11" aria-hidden="true" tabindex="-1"></a>  vpp_individual,</span>
+<span id="cb65-12"><a href="#cb65-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">sens =</span> df_metrics<span class="sc">$</span>Sensibilidad,</span>
+<span id="cb65-13"><a href="#cb65-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">spec =</span> df_metrics<span class="sc">$</span>Especificidad,</span>
+<span id="cb65-14"><a href="#cb65-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">prevalence =</span> prevalence</span>
+<span id="cb65-15"><a href="#cb65-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb65-16"><a href="#cb65-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-17"><a href="#cb65-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Mostrar resultados ordenados del mejor al peor modelo individual</span></span>
+<span id="cb65-18"><a href="#cb65-18" aria-hidden="true" tabindex="-1"></a>df_vpp <span class="ot">&lt;-</span> df_vpp[<span class="fu">order</span>(<span class="sc">-</span>df_vpp<span class="sc">$</span>VPP), ]</span>
+<span id="cb65-19"><a href="#cb65-19" aria-hidden="true" tabindex="-1"></a>df_vpp</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                Modelo Sensibilidad Especificidad       VPP
+XGB.Sensitivity    XGB      1.00000     0.9811321 0.9692892
+SVM.Sensitivity    SVM      1.00000     0.9622642 0.9404084
+RF.Sensitivity      RF      1.00000     0.9433962 0.9131990
+KNN.Sensitivity    KNN      0.46875     0.9622642 0.8809141</code></pre>
+</div>
+</div>
+<p>El VPP se calcula combina sensibilidad, especificidad y prevalencia.</p>
+<ol type="1">
+<li><p><strong>Sensibilidad:</strong> Todos los modelos excepto KNN detectan todos los casos malignos (sensibilidad = 1.0). KNN detecta menos de la mitad de los casos malignos (0.469), por lo que podría generar muchos falsos negativos si se usara solo.</p></li>
+<li><p><strong>Especificidad y VPP:</strong> Entre los modelos con sensibilidad perfecta, la diferencia radica en la especificidad:</p>
+<ul>
+<li><strong>XGBoost (XGB)</strong> tiene la mayor especificidad (0.981), lo que significa que casi todos los tumores benignos son clasificados correctamente. Su valor predictivo positivo (VPP ≈ 0.97) indica que casi el 97% de los casos que predice como malignos realmente lo son.</li>
+<li>SVM y RF también tienen sensibilidad perfecta, pero su especificidad es menor, reduciendo su VPP (0.94 y 0.91 respectivamente).</li>
+</ul></li>
+</ol>
+<p>La decisión final es utilizar <strong>XGBoost</strong> como modelo individual para la detección de cáncer maligno.<br>
+Este modelo logra <strong>sensibilidad perfecta</strong>, evitando que se escape cualquier caso maligno, y además presenta la <strong>mayor especificidad y el valor predictivo positivo (VPP) más alto</strong> entre todas las alternativas analizadas.</p>
+<p>En conjunto, XGBoost es el modelo que mejor equilibra la detección completa de malignos con una correcta clasificación de los casos benignos, por lo que se selecciona como la opción óptima.</p>
+</section>
+</section>
+<section id="enfoque-bayesiano" class="level3">
+<h3 class="anchored" data-anchor-id="enfoque-bayesiano">3. ENFOQUE BAYESIANO</h3>
+<section id="a.-obtén-una-nueva-variable-pred_prob_global-que-sea-la-media-ponderada-de-cada-una-de-las-pred_probs-donde-los-pesos-se-obtienen-de-acuerdo-a-lo-que-aporta-cada-modelo-a-la-sensibilidad-global-claculada-en-el-ejercicio-2-para-todo-el-dataset." class="level6">
+<h6 class="anchored" data-anchor-id="a.-obtén-una-nueva-variable-pred_prob_global-que-sea-la-media-ponderada-de-cada-una-de-las-pred_probs-donde-los-pesos-se-obtienen-de-acuerdo-a-lo-que-aporta-cada-modelo-a-la-sensibilidad-global-claculada-en-el-ejercicio-2-para-todo-el-dataset.">A. Obtén una nueva variable (pred_prob_global) que sea la media ponderada de cada una de las pred_probs, donde los pesos se obtienen de acuerdo a lo que aporta cada modelo a la sensibilidad global claculada en el ejercicio 2, para todo el dataset.</h6>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>df_metrics</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                Modelo Sensibilidad Especificidad
+RF.Sensitivity      RF      1.00000     0.9433962
+XGB.Sensitivity    XGB      1.00000     0.9811321
+SVM.Sensitivity    SVM      1.00000     0.9622642
+KNN.Sensitivity    KNN      0.46875     0.9622642</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sensibilidades individuales</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>sens_vec <span class="ot">&lt;-</span> df_metrics<span class="sc">$</span>Sensibilidad</span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(sens_vec) <span class="ot">&lt;-</span> df_metrics<span class="sc">$</span>Modelo</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalizar pesos</span></span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalizar sensibilidades para obtener pesos</span></span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>weights <span class="ot">&lt;-</span> sens_vec <span class="sc">/</span> <span class="fu">sum</span>(sens_vec)</span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>weights</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       RF       XGB       SVM       KNN 
+0.2882883 0.2882883 0.2882883 0.1351351 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(weights)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Crear pred_prob_global</span></span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>pred_prob_global <span class="ot">&lt;-</span> </span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>  weights[<span class="st">"RF"</span>] <span class="sc">*</span> data<span class="sc">$</span>pred_prob_rf <span class="sc">+</span></span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>  weights[<span class="st">"XGB"</span>] <span class="sc">*</span> data<span class="sc">$</span>pred_prob_xgb <span class="sc">+</span></span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>  weights[<span class="st">"SVM"</span>] <span class="sc">*</span> data<span class="sc">$</span>pred_prob_svm <span class="sc">+</span></span>
+<span id="cb74-6"><a href="#cb74-6" aria-hidden="true" tabindex="-1"></a>  weights[<span class="st">"KNN"</span>] <span class="sc">*</span> data<span class="sc">$</span>pred_prob_knn</span>
+<span id="cb74-7"><a href="#cb74-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb74-8"><a href="#cb74-8" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data<span class="sc">$</span>pred_prob_global)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.9530690 0.9962732 0.9996863 0.9562116 0.9726683 0.9437879</code></pre>
+</div>
+</div>
+<p>Para obtener una predicción probabilística global (<code>pred_prob_global</code>) a partir de los cuatro modelos, se calculó una media ponderada de las probabilidades individuales que cada modelo asigna a la clase “maligno”. Los <strong>pesos</strong> utilizados en esta media se basaron en la <strong>contribución de cada modelo a la sensibilidad conjunta</strong> calculada previamente, de manera que los modelos con mayor capacidad para detectar correctamente los casos malignos aportan más a la predicción global.</p>
+<p>De manera más específica, se normalizaron las sensibilidades individuales para que sumen uno, obteniendo así los pesos relativos de cada modelo. Posteriormente, la probabilidad global para cada observación se obtuvo multiplicando cada predicción probabilística individual por su peso correspondiente y sumando los resultados. Esto permite que la <strong>predicción global refleje de forma equilibrada la fuerza de cada modelo, priorizando aquellos más efectivos en detectar casos malignos</strong>.</p>
+<p>Como comprobación, se visualizaron las primeras filas de la nueva variable <code>pred_prob_global</code>, confirmando que se calculó correctamente.</p>
+</section>
+<section id="b.-representa-la-función-a-priori-a-posteriori-y-de-verosimilitud-de-theta-donde-las-nuevas-observaciones-son-los-resultados-de-probabilidad-nítida-en-test_1-con-el-modelo-beta-binomial-elicitando-alpha-y-beta-con-al-menos-de-métodos-distintos" class="level6">
+<h6 class="anchored" data-anchor-id="b.-representa-la-función-a-priori-a-posteriori-y-de-verosimilitud-de-theta-donde-las-nuevas-observaciones-son-los-resultados-de-probabilidad-nítida-en-test_1-con-el-modelo-beta-binomial-elicitando-alpha-y-beta-con-al-menos-de-métodos-distintos">B. Representa la función a priori, a posteriori y de verosimilitud de theta, donde las nuevas observaciones son los resultados de probabilidad nítida en test_1 con el modelo beta-binomial, elicitando alpha y beta con, al menos de métodos distintos</h6>
+<p>Vamos a usar la veriable construida en el anterior apartado, <code>pred_prob_global</code> y obtener de esta las predicciones nítidas mediante un umbral. La variable <code>pred_prob_global</code>, usa pesos proporcionales a la sensibilidad global. Como vamos a construir un Beta-Binomial, nesceitamos observaciones nítidas 0 (=tumos benigno)/1(=tumor maligno)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>test_1 <span class="ot">&lt;-</span> data[idx_test1, ]</span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>test_1<span class="sc">$</span>pred_nitida <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(data<span class="sc">$</span>pred_prob_global[idx_test1] <span class="sc">&gt;</span> <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-4"><a href="#cb76-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(test_1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 43
+      id diagnosis radius_mean texture_mean perimeter_mean area_mean
+   &lt;dbl&gt; &lt;fct&gt;           &lt;dbl&gt;        &lt;dbl&gt;          &lt;dbl&gt;     &lt;dbl&gt;
+1 842517 M                20.6         17.8          133.      1326 
+2 844359 M                18.2         20.0          120.      1040 
+3 846226 M                19.2         24.8          132.      1123 
+4 848406 M                14.7         20.1           94.7      684.
+5 857155 B                12.0         14.6           78.0      449.
+6 857392 M                18.2         18.7          120.      1033 
+# ℹ 37 more variables: smoothness_mean &lt;dbl&gt;, compactness_mean &lt;dbl&gt;,
+#   concavity_mean &lt;dbl&gt;, `concave points_mean` &lt;dbl&gt;, symmetry_mean &lt;dbl&gt;,
+#   fractal_dimension_mean &lt;dbl&gt;, radius_se &lt;dbl&gt;, texture_se &lt;dbl&gt;,
+#   perimeter_se &lt;dbl&gt;, area_se &lt;dbl&gt;, smoothness_se &lt;dbl&gt;,
+#   compactness_se &lt;dbl&gt;, concavity_se &lt;dbl&gt;, `concave points_se` &lt;dbl&gt;,
+#   symmetry_se &lt;dbl&gt;, fractal_dimension_se &lt;dbl&gt;, radius_worst &lt;dbl&gt;,
+#   texture_worst &lt;dbl&gt;, perimeter_worst &lt;dbl&gt;, area_worst &lt;dbl&gt;, …</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>idx_train <span class="ot">&lt;-</span> <span class="fu">which</span>(data<span class="sc">$</span>type <span class="sc">==</span> <span class="st">"train"</span>)</span>
+<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> data[idx_train, ]  <span class="co"># ya incluye pred_prob_global</span></span>
+<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>train<span class="sc">$</span>pred_nitida <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(data<span class="sc">$</span>pred_prob_global[idx_train] <span class="sc">&gt;</span> <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb78-4"><a href="#cb78-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb78-5"><a href="#cb78-5" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(train)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 43
+        id diagnosis radius_mean texture_mean perimeter_mean area_mean
+     &lt;dbl&gt; &lt;fct&gt;           &lt;dbl&gt;        &lt;dbl&gt;          &lt;dbl&gt;     &lt;dbl&gt;
+1 84300903 M                19.7         21.2          130       1203 
+2 84348301 M                11.4         20.4           77.6      386.
+3 84358402 M                20.3         14.3          135.      1297 
+4   843786 M                12.4         15.7           82.6      477.
+5 84458202 M                13.7         20.8           90.2      578.
+6   844981 M                13           21.8           87.5      520.
+# ℹ 37 more variables: smoothness_mean &lt;dbl&gt;, compactness_mean &lt;dbl&gt;,
+#   concavity_mean &lt;dbl&gt;, `concave points_mean` &lt;dbl&gt;, symmetry_mean &lt;dbl&gt;,
+#   fractal_dimension_mean &lt;dbl&gt;, radius_se &lt;dbl&gt;, texture_se &lt;dbl&gt;,
+#   perimeter_se &lt;dbl&gt;, area_se &lt;dbl&gt;, smoothness_se &lt;dbl&gt;,
+#   compactness_se &lt;dbl&gt;, concavity_se &lt;dbl&gt;, `concave points_se` &lt;dbl&gt;,
+#   symmetry_se &lt;dbl&gt;, fractal_dimension_se &lt;dbl&gt;, radius_worst &lt;dbl&gt;,
+#   texture_worst &lt;dbl&gt;, perimeter_worst &lt;dbl&gt;, area_worst &lt;dbl&gt;, …</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Parámetros binomiales</span></span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a>x_test  <span class="ot">&lt;-</span> <span class="fu">sum</span>(test_1<span class="sc">$</span>pred_nitida <span class="sc">==</span> <span class="dv">1</span>)     <span class="co"># éxitos= casos predichos como malignos</span></span>
+<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a>n_test  <span class="ot">&lt;-</span> <span class="fu">nrow</span>(test_1)           <span class="co"># ensayos = total de obs</span></span>
+<span id="cb80-4"><a href="#cb80-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb80-5"><a href="#cb80-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Nuestro test_1 tiene un tamaño de"</span>,n_test, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Nuestro test_1 tiene un tamaño de 85 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La cantidad de éxitos en test_1 es de"</span>,x_test, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La cantidad de éxitos en test_1 es de 32 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Parámetros binomiales</span></span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>x_train  <span class="ot">&lt;-</span> <span class="fu">sum</span>(train<span class="sc">$</span>pred_nitida <span class="sc">==</span> <span class="dv">1</span>)     <span class="co"># éxitos= casos predichos como malignos</span></span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a>n_train  <span class="ot">&lt;-</span> <span class="fu">nrow</span>(train)           <span class="co"># ensayos = total de obs</span></span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Nuestro train tiene un tamaño de"</span>,n_train, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Nuestro train tiene un tamaño de 399 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La cantidad de éxitos en train es de"</span>,x_train, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La cantidad de éxitos en train es de 148 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(test_1<span class="sc">$</span>pred_prob_global, <span class="at">breaks=</span><span class="dv">20</span>, </span>
+<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">main=</span><span class="st">"Distribución de pred_prob_global"</span>, </span>
+<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab=</span><span class="st">"Predicción global de maligno"</span>, </span>
+<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">col=</span><span class="st">"skyblue"</span>, <span class="at">border=</span><span class="st">"white"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-31-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb89"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(test_1<span class="sc">$</span>pred_prob_global)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0001779 0.0272070 0.1274030 0.3872523 0.8766688 0.9999500 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb91"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(train<span class="sc">$</span>pred_prob_global, <span class="at">breaks=</span><span class="dv">20</span>, </span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">main=</span><span class="st">"Distribución de pred_prob_global"</span>, </span>
+<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab=</span><span class="st">"Predicción global de maligno"</span>, </span>
+<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">col=</span><span class="st">"skyblue"</span>, <span class="at">border=</span><span class="st">"white"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb92"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(train<span class="sc">$</span>pred_prob_global)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+4.074e-05 1.656e-02 5.460e-02 3.641e-01 9.106e-01 9.999e-01 </code></pre>
+</div>
+</div>
+<p>Los valores de <strong>alpha</strong> y <strong>beta</strong> dependen mucho de la forma de la distribución y de la dispersión de los datos (la varibale <code>pred_prob_global</code> )</p>
+<p><strong>Método cuantiles</strong></p>
+<p><sup><u>APRIORI</u></sup></p>
+<p>El x1, es el valor de la mediana, es decir, el valor que divide los datos en dos mitades. X2 es el percentil 90, es decIr, el valor por debajo del cual se encuentra el 90% de las predicciones</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb94"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" aria-hidden="true" tabindex="-1"></a>x1 <span class="ot">=</span> <span class="fu">quantile</span>(train<span class="sc">$</span>pred_prob_global, <span class="fl">0.5</span>)</span>
+<span id="cb94-2"><a href="#cb94-2" aria-hidden="true" tabindex="-1"></a>x2 <span class="ot">=</span> <span class="fu">quantile</span>(train<span class="sc">$</span>pred_prob_global, <span class="fl">0.9</span>)</span>
+<span id="cb94-3"><a href="#cb94-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La mitad de las predicciones globales están por debajo de "</span>, x1, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La mitad de las predicciones globales están por debajo de  0.05459521 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb96"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"El 90% de las predicciones están por debajo de"</span>, x2, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>El 90% de las predicciones están por debajo de 0.9701162 </code></pre>
+</div>
+</div>
+<p>Creamos una distribución Beta a pertir de los cuantiles elegidos</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Por ejemplo, elige dos puntos de la distribución</span></span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>cuantil1 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">p =</span> <span class="fl">0.5</span>, <span class="at">x =</span> x1)  <span class="co"># mediana supuesta</span></span>
+<span id="cb98-3"><a href="#cb98-3" aria-hidden="true" tabindex="-1"></a>cuantil2 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">p =</span> <span class="fl">0.9</span>, <span class="at">x =</span> x2)  <span class="co"># 90% cuantil supuesta</span></span>
+<span id="cb98-4"><a href="#cb98-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-5"><a href="#cb98-5" aria-hidden="true" tabindex="-1"></a><span class="co">#selección de parámetros</span></span>
+<span id="cb98-6"><a href="#cb98-6" aria-hidden="true" tabindex="-1"></a>prior <span class="ot">&lt;-</span> <span class="fu">beta.select</span>(cuantil1, cuantil2)</span>
+<span id="cb98-7"><a href="#cb98-7" aria-hidden="true" tabindex="-1"></a>alpha1 <span class="ot">&lt;-</span> prior[<span class="dv">1</span>] <span class="co">#0.21</span></span>
+<span id="cb98-8"><a href="#cb98-8" aria-hidden="true" tabindex="-1"></a>beta1  <span class="ot">&lt;-</span> prior[<span class="dv">2</span>] <span class="co">#0.45</span></span>
+<span id="cb98-9"><a href="#cb98-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb98-10"><a href="#cb98-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Nuestro alpha a priori calculado con los cuantiles tiene un valor de"</span>, alpha1, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Nuestro alpha a priori calculado con los cuantiles tiene un valor de 0.14 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb100"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Nuestro beta a priori calculado con los cuantiles tiene un valor de"</span>, beta1, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Nuestro beta a priori calculado con los cuantiles tiene un valor de 0.33 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb102"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dbeta</span>(x, alpha1, beta1), <span class="at">from=</span><span class="dv">0</span>, <span class="at">to=</span><span class="dv">1</span>, <span class="at">col=</span><span class="st">"blue"</span>, <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">ylab=</span><span class="st">"Densidad"</span>, <span class="at">xlab=</span><span class="fu">expression</span>(theta), <span class="at">main=</span><span class="st">"Prior Beta (media y varianza)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-35-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Nuestra creencia inicial sobre la probbailidad de cáncer maligno se define como una Beta (0.21, 0.45)</p>
+<p><sup><u>VEROSIMILITUD</u></sup></p>
+<p>Representa la información que proviene de los datos</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb103"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb103-1"><a href="#cb103-1" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length =</span> <span class="dv">100</span>)</span>
+<span id="cb103-2"><a href="#cb103-2" aria-hidden="true" tabindex="-1"></a>ne <span class="ot">&lt;-</span> <span class="fu">sum</span>(test_1<span class="sc">$</span>pred_nitida <span class="sc">==</span> <span class="dv">1</span>) <span class="co">#x calcualda antes </span></span>
+<span id="cb103-3"><a href="#cb103-3" aria-hidden="true" tabindex="-1"></a>nf <span class="ot">&lt;-</span> n_test <span class="sc">-</span> ne</span>
+<span id="cb103-4"><a href="#cb103-4" aria-hidden="true" tabindex="-1"></a>verosimilitud <span class="ot">&lt;-</span> <span class="fu">dbeta</span>(p, ne <span class="sc">+</span> <span class="dv">1</span>, nf <span class="sc">+</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb104"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb104-1"><a href="#cb104-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p, <span class="fu">dbeta</span>(p, alpha1, beta1), <span class="at">type=</span><span class="st">"l"</span>, <span class="at">col=</span><span class="st">"blue"</span>, <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">ylab=</span><span class="st">"Densidad"</span>, <span class="at">xlab=</span><span class="fu">expression</span>(theta), <span class="at">cex.axis=</span> <span class="fl">0.7</span>, <span class="at">cex.lab =</span> <span class="fl">0.8</span>)</span>
+<span id="cb104-2"><a href="#cb104-2" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(p, verosimilitud, <span class="at">col=</span><span class="st">"purple"</span>, <span class="at">lwd=</span><span class="dv">2</span>)</span>
+<span id="cb104-3"><a href="#cb104-3" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, <span class="at">legend=</span><span class="fu">c</span>(<span class="st">"Prior"</span>, <span class="st">"Verosimilitud"</span>), <span class="at">col=</span><span class="fu">c</span>(<span class="st">"blue"</span>,<span class="st">"purple"</span>), <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">cex =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-37-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p><sup><u>POSTERIOR</u></sup></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/clipboard-909301364.png" class="img-fluid figure-img" width="238"></p>
+</figure>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb105"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb105-1"><a href="#cb105-1" aria-hidden="true" tabindex="-1"></a>alpha1_1 <span class="ot">&lt;-</span> alpha1 <span class="sc">+</span> ne <span class="co">#suma de éxitos a la prior</span></span>
+<span id="cb105-2"><a href="#cb105-2" aria-hidden="true" tabindex="-1"></a>beta1_1 <span class="ot">&lt;-</span> beta1 <span class="sc">+</span> n_test <span class="sc">-</span> ne <span class="co">#suma de fracasos a la prior</span></span>
+<span id="cb105-3"><a href="#cb105-3" aria-hidden="true" tabindex="-1"></a>alpha1_1; beta1_1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 32.14</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 53.33</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb108"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb108-1"><a href="#cb108-1" aria-hidden="true" tabindex="-1"></a>aposteriori1 <span class="ot">&lt;-</span> <span class="fu">dbeta</span>(p, alpha1_1, beta1_1)</span>
+<span id="cb108-2"><a href="#cb108-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb108-3"><a href="#cb108-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p, aposteriori1, <span class="at">col=</span><span class="st">"red"</span>, <span class="at">type=</span><span class="st">"l"</span>, <span class="at">lwd=</span><span class="dv">2</span>,</span>
+<span id="cb108-4"><a href="#cb108-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">main=</span><span class="st">"Posterior Beta (método cuantiles)"</span>,</span>
+<span id="cb108-5"><a href="#cb108-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab=</span><span class="st">"densidad"</span>, <span class="at">xlab=</span><span class="fu">expression</span>(theta))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-38-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>VISUALIZACIÓN</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb109"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb109-1"><a href="#cb109-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p, aposteriori1, <span class="at">col=</span><span class="st">"red"</span>, <span class="at">type=</span><span class="st">"l"</span>, <span class="at">lwd=</span><span class="dv">2</span>,</span>
+<span id="cb109-2"><a href="#cb109-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">main=</span><span class="st">"Posterior Beta (cuantiles)"</span>,</span>
+<span id="cb109-3"><a href="#cb109-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab=</span><span class="st">"densidad"</span>, <span class="at">xlab=</span><span class="fu">expression</span>(theta),</span>
+<span id="cb109-4"><a href="#cb109-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">cex.axis=</span><span class="fl">0.8</span>,   </span>
+<span id="cb109-5"><a href="#cb109-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">cex.lab=</span><span class="fl">0.9</span>,    </span>
+<span id="cb109-6"><a href="#cb109-6" aria-hidden="true" tabindex="-1"></a>     <span class="at">cex.main=</span><span class="dv">1</span>)</span>
+<span id="cb109-7"><a href="#cb109-7" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(p, <span class="fu">dbeta</span>(p, alpha1, beta1), <span class="at">col=</span><span class="st">"blue"</span>, <span class="at">lwd=</span><span class="dv">2</span>)    </span>
+<span id="cb109-8"><a href="#cb109-8" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(p, <span class="fu">dbeta</span>(p, ne<span class="sc">+</span><span class="dv">1</span>, nf<span class="sc">+</span><span class="dv">1</span>), <span class="at">col=</span><span class="st">"purple"</span>, <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">lty=</span><span class="dv">2</span>)</span>
+<span id="cb109-9"><a href="#cb109-9" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, <span class="at">legend=</span><span class="fu">c</span>(<span class="st">"Prior"</span>,<span class="st">"Verosimilitud"</span>,<span class="st">"Posterior"</span>), <span class="at">col=</span><span class="fu">c</span>(<span class="st">"blue"</span>,<span class="st">"purple"</span>,<span class="st">"red"</span>), <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">lty=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">1</span>), <span class="at">cex=</span><span class="fl">0.8</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-39-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Nuestra prior es muy plana, es decir, con valores alpha y beta muy pequeños, por ellos la posterior es indéntica a la verosimilitud</p>
+<ol start="2" type="1">
+<li><strong>Método Media y Varianza</strong></li>
+</ol>
+<p><sup><u>APRIORI</u></sup></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb110"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb110-1"><a href="#cb110-1" aria-hidden="true" tabindex="-1"></a>m <span class="ot">&lt;-</span> <span class="fu">mean</span>(train<span class="sc">$</span>pred_prob_global)</span>
+<span id="cb110-2"><a href="#cb110-2" aria-hidden="true" tabindex="-1"></a>V <span class="ot">&lt;-</span> <span class="fu">var</span>(train<span class="sc">$</span>pred_prob_global)</span>
+<span id="cb110-3"><a href="#cb110-3" aria-hidden="true" tabindex="-1"></a>alpha2 <span class="ot">&lt;-</span> m<span class="sc">*</span>((m<span class="sc">*</span>(<span class="dv">1</span><span class="sc">-</span>m)<span class="sc">/</span>V)<span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb110-4"><a href="#cb110-4" aria-hidden="true" tabindex="-1"></a>beta2  <span class="ot">&lt;-</span> (<span class="dv">1</span><span class="sc">-</span>m)<span class="sc">*</span>((m<span class="sc">*</span>(<span class="dv">1</span><span class="sc">-</span>m)<span class="sc">/</span>V)<span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb110-5"><a href="#cb110-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb110-6"><a href="#cb110-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb110-7"><a href="#cb110-7" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Tenemos una media de"</span>, m, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Tenemos una media de 0.3641247 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb112"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb112-1"><a href="#cb112-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Tenemos una varianza de"</span>, V, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Tenemos una varianza de 0.1876708 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb114"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb114-1"><a href="#cb114-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Nuestro alpha a priori calculado con la media y varianza tiene un valor de"</span>, alpha2, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Nuestro alpha a priori calculado con la media y varianza tiene un valor de 0.08511232 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb116"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb116-1"><a href="#cb116-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Nuestro alpha a priori calculado con la media y la varianza tiene un valor de"</span>, beta2, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Nuestro alpha a priori calculado con la media y la varianza tiene un valor de 0.1486326 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb118"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb118-1"><a href="#cb118-1" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dbeta</span>(x, alpha2, beta2), <span class="at">from=</span><span class="dv">0</span>, <span class="at">to=</span><span class="dv">1</span>, <span class="at">col=</span><span class="st">"blue"</span>, <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">ylab=</span><span class="st">"Densidad"</span>, <span class="at">xlab=</span><span class="fu">expression</span>(theta), <span class="at">main=</span><span class="st">"Prior Beta (media y varianza)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-41-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>En ambos métodos observamos que la distribución tiene alta dispersión</p>
+<p><sup><u>VEROSIMILITUD</u></sup></p>
+<p>Igual que la de antes, debido a que se basa en nuestros datos. Y nuestros datos no cambian.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb119"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb119-1"><a href="#cb119-1" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length =</span> <span class="dv">100</span>)</span>
+<span id="cb119-2"><a href="#cb119-2" aria-hidden="true" tabindex="-1"></a>ne <span class="ot">&lt;-</span> <span class="fu">sum</span>(test_1<span class="sc">$</span>pred_nitida <span class="sc">==</span> <span class="dv">1</span>) <span class="co">#x calcualda antes </span></span>
+<span id="cb119-3"><a href="#cb119-3" aria-hidden="true" tabindex="-1"></a>nf <span class="ot">&lt;-</span> n_test <span class="sc">-</span> ne</span>
+<span id="cb119-4"><a href="#cb119-4" aria-hidden="true" tabindex="-1"></a>verosimilitud <span class="ot">&lt;-</span> <span class="fu">dbeta</span>(p, ne <span class="sc">+</span> <span class="dv">1</span>, nf <span class="sc">+</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><sup><u>PASTERIOR</u></sup></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/clipboard-3415777966.png" class="img-fluid figure-img" width="267"></p>
+</figure>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb120"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb120-1"><a href="#cb120-1" aria-hidden="true" tabindex="-1"></a>alpha2_2 <span class="ot">&lt;-</span> alpha2 <span class="sc">+</span> ne</span>
+<span id="cb120-2"><a href="#cb120-2" aria-hidden="true" tabindex="-1"></a>beta2_2 <span class="ot">&lt;-</span> beta2 <span class="sc">+</span> n_test <span class="sc">-</span> ne</span>
+<span id="cb120-3"><a href="#cb120-3" aria-hidden="true" tabindex="-1"></a>alpha2_2; beta2_2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 32.08511</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 53.14863</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb123"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a>aposteriori2 <span class="ot">&lt;-</span> <span class="fu">dbeta</span>(p, alpha2_2, beta2_2)</span>
+<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb123-3"><a href="#cb123-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p, aposteriori2, <span class="at">col =</span><span class="st">"red"</span>, <span class="at">type=</span> <span class="st">"l"</span>, </span>
+<span id="cb123-4"><a href="#cb123-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"A posteriori 2"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-43-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>VISUALIZACIÓN</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb124"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb124-1"><a href="#cb124-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p, aposteriori2, <span class="at">col=</span><span class="st">"red"</span>, <span class="at">type=</span><span class="st">"l"</span>, <span class="at">lwd=</span><span class="dv">2</span>,</span>
+<span id="cb124-2"><a href="#cb124-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">main=</span><span class="st">"Posterior Beta (media/varianza)"</span>,</span>
+<span id="cb124-3"><a href="#cb124-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab=</span><span class="st">"densidad"</span>, <span class="at">xlab=</span><span class="fu">expression</span>(theta),</span>
+<span id="cb124-4"><a href="#cb124-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">cex.axis=</span><span class="fl">0.8</span>,   </span>
+<span id="cb124-5"><a href="#cb124-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">cex.lab=</span><span class="fl">0.9</span>,    </span>
+<span id="cb124-6"><a href="#cb124-6" aria-hidden="true" tabindex="-1"></a>     <span class="at">cex.main=</span><span class="dv">1</span>)</span>
+<span id="cb124-7"><a href="#cb124-7" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(p, <span class="fu">dbeta</span>(p, alpha1, beta1), <span class="at">col=</span><span class="st">"blue"</span>, <span class="at">lwd=</span><span class="dv">2</span>)    </span>
+<span id="cb124-8"><a href="#cb124-8" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(p, <span class="fu">dbeta</span>(p, ne<span class="sc">+</span><span class="dv">1</span>, nf<span class="sc">+</span><span class="dv">1</span>), <span class="at">col=</span><span class="st">"purple"</span>, <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">lty=</span><span class="dv">2</span>)</span>
+<span id="cb124-9"><a href="#cb124-9" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, <span class="at">legend=</span><span class="fu">c</span>(<span class="st">"Prior"</span>,<span class="st">"Verosimilitud"</span>,<span class="st">"Posterior"</span>), <span class="at">col=</span><span class="fu">c</span>(<span class="st">"blue"</span>,<span class="st">"purple"</span>,<span class="st">"red"</span>), <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">lty=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">1</span>), <span class="at">cex=</span><span class="fl">0.8</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Breast-Cancer-Classification-Using-Machine-Learning-and-Bayesian-Inference_files/figure-html/unnamed-chunk-44-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb125"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb125-1"><a href="#cb125-1" aria-hidden="true" tabindex="-1"></a>theta_test2 <span class="ot">&lt;-</span> <span class="fu">mean</span>(test_2<span class="sc">$</span>diagnosis <span class="sc">==</span> <span class="st">"M"</span>)</span>
+<span id="cb125-2"><a href="#cb125-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb125-3"><a href="#cb125-3" aria-hidden="true" tabindex="-1"></a>theta_post1 <span class="ot">&lt;-</span> alpha1_1 <span class="sc">/</span> (alpha1_1 <span class="sc">+</span> beta1_1)</span>
+<span id="cb125-4"><a href="#cb125-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb125-5"><a href="#cb125-5" aria-hidden="true" tabindex="-1"></a>theta_post2 <span class="ot">&lt;-</span> alpha2_2 <span class="sc">/</span> (alpha2_2 <span class="sc">+</span> beta2_2)</span>
+<span id="cb125-6"><a href="#cb125-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb125-7"><a href="#cb125-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb125-8"><a href="#cb125-8" aria-hidden="true" tabindex="-1"></a>err1 <span class="ot">&lt;-</span> <span class="fu">abs</span>(theta_post1 <span class="sc">-</span> theta_test2)</span>
+<span id="cb125-9"><a href="#cb125-9" aria-hidden="true" tabindex="-1"></a>err2 <span class="ot">&lt;-</span> <span class="fu">abs</span>(theta_post2 <span class="sc">-</span> theta_test2)</span>
+<span id="cb125-10"><a href="#cb125-10" aria-hidden="true" tabindex="-1"></a>err1; err2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.006990757</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.007389112</code></pre>
+</div>
+</div>
+</section>
+<section id="c.-haz-una-estimación-de-theta-puntual-por-intervalos-y-por-simulación.-escoge-las-alphas-y-betas-del-paso-anterior-que-menos-error-tengan-con-la-probabilidad-encontrada-de-cáncer-maligno-en-test_2" class="level6">
+<h6 class="anchored" data-anchor-id="c.-haz-una-estimación-de-theta-puntual-por-intervalos-y-por-simulación.-escoge-las-alphas-y-betas-del-paso-anterior-que-menos-error-tengan-con-la-probabilidad-encontrada-de-cáncer-maligno-en-test_2">C. Haz una estimación de theta puntual, por intervalos y por simulación. Escoge las alphas y betas del paso anterior que menos error tengan con la probabilidad encontrada de cáncer maligno en test_2</h6>
+<p>Elegiremos las <strong>alphas</strong> y <strong>betas</strong> mediante el <strong>método de los cuantiles</strong> porque produce el <strong>error</strong> absoluto más <strong>pequeño.</strong></p>
+<p><u>La estimación puntual :</u></p>
+<p>En Bayes la estimación puntual se obtiene a partir de la distribución a poserior</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/clipboard-1253171364.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/clipboard-679392540.png" class="img-fluid figure-img" width="212"></p>
+</figure>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb128"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb128-1"><a href="#cb128-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Media a posteriori</span></span>
+<span id="cb128-2"><a href="#cb128-2" aria-hidden="true" tabindex="-1"></a>(media_apost <span class="ot">&lt;-</span> alpha1_1 <span class="sc">/</span> (alpha1_1 <span class="sc">+</span> beta1_1))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.3760384</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb130"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb130-1"><a href="#cb130-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Moda a posteriori</span></span>
+<span id="cb130-2"><a href="#cb130-2" aria-hidden="true" tabindex="-1"></a>(moda_apost <span class="ot">&lt;-</span> (alpha1_1 <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> (alpha1_1 <span class="sc">+</span> beta1_1 <span class="sc">-</span> <span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.3730682</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb132"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb132-1"><a href="#cb132-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mediana a posteriori</span></span>
+<span id="cb132-2"><a href="#cb132-2" aria-hidden="true" tabindex="-1"></a>(mediana_apost <span class="ot">&lt;-</span> <span class="fu">qbeta</span>(<span class="fl">0.5</span>, alpha1_1, beta1_1))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.3750671</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb134"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb134-1"><a href="#cb134-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La media posteriori calculada por estimación puntual es de "</span>, media_apost, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La media posteriori calculada por estimación puntual es de  0.3760384 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb136"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb136-1"><a href="#cb136-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La moda posteriori calculada por estimación puntual es de "</span>, moda_apost, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La moda posteriori calculada por estimación puntual es de  0.3730682 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb138"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb138-1"><a href="#cb138-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La mediana posteriori calculada por estimación puntual es de "</span>, mediana_apost, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La mediana posteriori calculada por estimación puntual es de  0.3750671 </code></pre>
+</div>
+</div>
+<p>Los tres estimadores (<strong>media</strong>, <strong>moda</strong> y <strong>mediana</strong>) presentan valores muy próximos entre sí (≈0.371–0.376), lo que indica que la distribución posterior es <strong>alta y estrecha</strong>, es decir, está muy concentrada alrededor de su valor central.<br>
+</p>
+<p>Dado el tamaño muestral de <em>test_1</em> (n = 85), la verosimilitud domina claramente sobre el prior, de modo que la estimación bayesiana de θ coincide prácticamente con la proporción empírica observada de casos positivos en el conjunto <em>test_1</em> (~0.376). Esto confirma la <strong>consistencia del análisis bayesiano</strong> y respalda la fiabilidad del estimador obtenido.</p>
+<p><u>Estimación por intervalos:</u></p>
+<p>La estimación por intervalos en el enfoque bayesiano se basa en los <strong>intervalos de credibilidad</strong>, que representan el rango de valores donde es razonable que se encuentre el parámetro desconocido θ , dados los datos observados y la información previa.</p>
+<p>A partir de la distribución a posterior podemos calcular distintos intervalos creíbles al 95%:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/clipboard-1416442915.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+<p><strong>INTERVALO CREÍBLE DE COLAS IGUALES:</strong></p>
+<p>Este intervalo deja un 2.5% de probabilidad en cada cola de la distribución posterior</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/clipboard-1277149315.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb140"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb140-1"><a href="#cb140-1" aria-hidden="true" tabindex="-1"></a>r <span class="ot">&lt;-</span> <span class="fl">0.95</span></span>
+<span id="cb140-2"><a href="#cb140-2" aria-hidden="true" tabindex="-1"></a>IC_colas <span class="ot">&lt;-</span> <span class="fu">qbeta</span>(<span class="fu">c</span>((<span class="dv">1</span><span class="sc">-</span>r)<span class="sc">/</span><span class="dv">2</span> , <span class="dv">1</span><span class="sc">-</span>(<span class="dv">1</span><span class="sc">-</span>r)<span class="sc">/</span><span class="dv">2</span>), alpha1_1, beta1_1)</span>
+<span id="cb140-3"><a href="#cb140-3" aria-hidden="true" tabindex="-1"></a>IC_colas</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.2769751 0.4805984</code></pre>
+</div>
+</div>
+<p><strong>INTERVALO HPD (Highest Posterior Density Interval):</strong></p>
+<p>El intervalo HPD recoge el conjunto de valores de θ con mayor densidad posterior acumulando el 95% de la probabilidad total.<br>
+</p>
+<p>Es el intervalo más corto posible con ese nivel de credibilidad:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb142"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb142-1"><a href="#cb142-1" aria-hidden="true" tabindex="-1"></a>IC_HPD <span class="ot">&lt;-</span> <span class="fu">hdi</span>(qbeta, <span class="at">credMass =</span> r, <span class="at">shape1 =</span> alpha1_1, <span class="at">shape2 =</span> beta1_1)</span>
+<span id="cb142-2"><a href="#cb142-2" aria-hidden="true" tabindex="-1"></a>IC_HPD</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    lower     upper 
+0.2751039 0.4785837 
+attr(,"credMass")
+[1] 0.95</code></pre>
+</div>
+</div>
+<p>Ambos intervalos obtienen valores muy similares, aproximadamente. Dados los datos observados y la infromación previa, existe un 95% de probabilidad de que el parametro θ se encuentre dentro de ese rango</p>
+<p>La similitud entre ambos intervalos (colas iguales y HPD) indica que la distribución posterior es <strong>prácticamente simétrica y poco sesgada</strong>, lo cual es coherente con los resultados de la estimación puntual.</p>
+<p><u>Estimación por simulación:</u></p>
+<p>Otra forma de obtener estimaciones de la distribución posterior consiste en utilizar <strong>métodos de simulación</strong>, generando un gran número de muestras de la distribución Beta(α1_1,β1_1) que describe la posterior del parámetro θ.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb144"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb144-1"><a href="#cb144-1" aria-hidden="true" tabindex="-1"></a>nsim <span class="ot">&lt;-</span> <span class="dv">1000000</span>  </span>
+<span id="cb144-2"><a href="#cb144-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1437</span>)  </span>
+<span id="cb144-3"><a href="#cb144-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-4"><a href="#cb144-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Parámetros a posteriori de tu posterior Beta (método cuantiles)</span></span>
+<span id="cb144-5"><a href="#cb144-5" aria-hidden="true" tabindex="-1"></a>shape1 <span class="ot">&lt;-</span> alpha1_1</span>
+<span id="cb144-6"><a href="#cb144-6" aria-hidden="true" tabindex="-1"></a>shape2 <span class="ot">&lt;-</span> beta1_1</span>
+<span id="cb144-7"><a href="#cb144-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-8"><a href="#cb144-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulación de la posterior</span></span>
+<span id="cb144-9"><a href="#cb144-9" aria-hidden="true" tabindex="-1"></a>p_post <span class="ot">&lt;-</span> <span class="fu">rbeta</span>(nsim, shape1, shape2)</span>
+<span id="cb144-10"><a href="#cb144-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-11"><a href="#cb144-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Resumen de la simulación</span></span>
+<span id="cb144-12"><a href="#cb144-12" aria-hidden="true" tabindex="-1"></a>media_post_simulada   <span class="ot">&lt;-</span> <span class="fu">mean</span>(p_post)</span>
+<span id="cb144-13"><a href="#cb144-13" aria-hidden="true" tabindex="-1"></a>varianza_post_simulada <span class="ot">&lt;-</span> <span class="fu">var</span>(p_post)</span>
+<span id="cb144-14"><a href="#cb144-14" aria-hidden="true" tabindex="-1"></a>mediana_post_simulada <span class="ot">&lt;-</span> <span class="fu">median</span>(p_post)</span>
+<span id="cb144-15"><a href="#cb144-15" aria-hidden="true" tabindex="-1"></a>intervalo_95_simulado <span class="ot">&lt;-</span> <span class="fu">quantile</span>(p_post, <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))</span>
+<span id="cb144-16"><a href="#cb144-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-17"><a href="#cb144-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb144-18"><a href="#cb144-18" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La media posteriori calculada por simulación es de "</span>, media_post_simulada, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La media posteriori calculada por simulación es de  0.3760242 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb146"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La varianza posteriori calculada por simulación es de "</span>, varianza_post_simulada, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La varianza posteriori calculada por simulación es de  0.002718365 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb148"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb148-1"><a href="#cb148-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"La mediana posteriori calculada por simulación es de "</span>, mediana_post_simulada, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La mediana posteriori calculada por simulación es de  0.375054 </code></pre>
+</div>
+</div>
+<p>La gran similitud entre los valores simulados y los valores teóricos (media, mediana, interrvalo de credibilidad …) confirma que la distribución posterior está bien caracterizada por el modelo Beta calculado analíticamente, y las estimaciones son estables y consistentes.</p>
+</section>
+<section id="d.-calcula-el-posible-sobreajuste-para-dos-modelos-train-vs-test_1-a-través-de-la-comparación-de-dos-proporciones-indepedientes.-calcula-el-factor-bayes-10-asociado-a-esto-donde-h0p1p2-no-hay-sobreajuste-y-h1-pi-p2-posible-sobreajuste." class="level6">
+<h6 class="anchored" data-anchor-id="d.-calcula-el-posible-sobreajuste-para-dos-modelos-train-vs-test_1-a-través-de-la-comparación-de-dos-proporciones-indepedientes.-calcula-el-factor-bayes-10-asociado-a-esto-donde-h0p1p2-no-hay-sobreajuste-y-h1-pi-p2-posible-sobreajuste.">D. Calcula el posible sobreajuste para dos modelos (train vs test_1) a través de la comparación de dos proporciones indepedientes. Calcula el factor bayes 10 asociado a esto, donde H0:p1=p2 (no hay sobreajuste) y H1: pi!= p2 (posible sobreajuste).</h6>
+<p>El <strong>sobreajuste</strong> ocurre cuando un modelo aprende demasiado bien los datos de entrenamiento y <strong>falla al generalizar</strong> a nuevos datos (test). Si <code>p1</code> (proporción de aciertos en train) es mucho mayor que <code>p2</code> (proporción de aciertos en test), hay indicios de sobreajuste. Si <code>p1</code> y <code>p2</code> tienen valores parecidos, el modelo generaliza bien y no hay sobreajuste.</p>
+<p><code>x1</code> y <code>x2</code> son los aciertos del conjunto de <em>train</em> y <em>test</em> respectivamente. Y <code>n_train</code> y <code>n_test</code> los tamaños de cada conjutno.</p>
+<p><strong>MODELO 1: SVM</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb150"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb150-1"><a href="#cb150-1" aria-hidden="true" tabindex="-1"></a>pred_train <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_svm, train)</span>
+<span id="cb150-2"><a href="#cb150-2" aria-hidden="true" tabindex="-1"></a>pred_test1 <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_svm, test_1)</span>
+<span id="cb150-3"><a href="#cb150-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb150-4"><a href="#cb150-4" aria-hidden="true" tabindex="-1"></a><span class="co"># TRAIN</span></span>
+<span id="cb150-5"><a href="#cb150-5" aria-hidden="true" tabindex="-1"></a>x1 <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred_train <span class="sc">==</span> train<span class="sc">$</span>diagnosis)</span>
+<span id="cb150-6"><a href="#cb150-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb150-7"><a href="#cb150-7" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TEST</span></span>
+<span id="cb150-8"><a href="#cb150-8" aria-hidden="true" tabindex="-1"></a>x2 <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred_test1 <span class="sc">==</span> test_1<span class="sc">$</span>diagnosis)</span>
+<span id="cb150-9"><a href="#cb150-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb150-10"><a href="#cb150-10" aria-hidden="true" tabindex="-1"></a>nf1 <span class="ot">&lt;-</span> n_train <span class="sc">-</span> x1 <span class="co"># fallos test</span></span>
+<span id="cb150-11"><a href="#cb150-11" aria-hidden="true" tabindex="-1"></a>nf2 <span class="ot">&lt;-</span> n_test <span class="sc">-</span> x2 <span class="co"># fallos test</span></span>
+<span id="cb150-12"><a href="#cb150-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb150-13"><a href="#cb150-13" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> alpha1</span>
+<span id="cb150-14"><a href="#cb150-14" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> beta1</span>
+<span id="cb150-15"><a href="#cb150-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb150-16"><a href="#cb150-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb150-17"><a href="#cb150-17" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> x1 <span class="sc">/</span> n_train <span class="co"># rendimiento en TRAIN</span></span>
+<span id="cb150-18"><a href="#cb150-18" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> x2 <span class="sc">/</span> n_test <span class="co"># rendimiento en </span><span class="al">TEST</span></span>
+<span id="cb150-19"><a href="#cb150-19" aria-hidden="true" tabindex="-1"></a>p1; p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.9874687</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.9764706</code></pre>
+</div>
+</div>
+<p>Podemos observar <strong>proporciones</strong> de aciertos <strong>similares</strong>, por lo que concluimos que el modelo <strong>no sobreajusta</strong>.</p>
+<p>Para el <strong>Factor Bayes</strong> es necesario el calculo de <strong>p0</strong>, proporción promedio de éxitos entre <em>train</em> y <em>test.</em> Si B10 &gt; 1 indica evidencia a favor de H1 (sobreajuste). Si B10 &lt; 1 indica evidencia a favor de H0 (no hay sobreajuste).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb153"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb153-1"><a href="#cb153-1" aria-hidden="true" tabindex="-1"></a><span class="co"># media de train y test</span></span>
+<span id="cb153-2"><a href="#cb153-2" aria-hidden="true" tabindex="-1"></a>p0 <span class="ot">&lt;-</span> (x1<span class="sc">/</span>n_train <span class="sc">+</span> x2<span class="sc">/</span>n_test)<span class="sc">/</span><span class="dv">2</span>  </span>
+<span id="cb153-3"><a href="#cb153-3" aria-hidden="true" tabindex="-1"></a><span class="co">#dato necesario para la función pbeta()</span></span>
+<span id="cb153-4"><a href="#cb153-4" aria-hidden="true" tabindex="-1"></a>data_test1 <span class="ot">&lt;-</span> <span class="fu">c</span>(x2, nf2)</span>
+<span id="cb153-5"><a href="#cb153-5" aria-hidden="true" tabindex="-1"></a><span class="co">#probabilidad a priori de H0</span></span>
+<span id="cb153-6"><a href="#cb153-6" aria-hidden="true" tabindex="-1"></a>prob <span class="ot">&lt;-</span> <span class="fl">0.5</span>  <span class="co"># usualmente 0.5 = sin sesgo</span></span>
+<span id="cb153-7"><a href="#cb153-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb153-8"><a href="#cb153-8" aria-hidden="true" tabindex="-1"></a>fbayes <span class="ot">&lt;-</span> <span class="fu">pbetat</span>(p0, prob, <span class="fu">c</span>(a, b), data_test1)</span>
+<span id="cb153-9"><a href="#cb153-9" aria-hidden="true" tabindex="-1"></a>B10 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> fbayes<span class="sc">$</span>bf  <span class="co"># Evidencia a favor de H1</span></span>
+<span id="cb153-10"><a href="#cb153-10" aria-hidden="true" tabindex="-1"></a>B10</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.0568644</code></pre>
+</div>
+</div>
+<p>El Factor Bayes es 0.057 &lt; 1 por lo que no hay diferencias significativas entre <em>train</em> y <em>test</em>.</p>
+<p>Repetimos el proceso con otro de nuestros modelos.</p>
+<p><strong>MODELO 2: KNN</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb155"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb155-1"><a href="#cb155-1" aria-hidden="true" tabindex="-1"></a>pred_train <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_knn, train)</span>
+<span id="cb155-2"><a href="#cb155-2" aria-hidden="true" tabindex="-1"></a>pred_test1 <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_knn, test_1)</span>
+<span id="cb155-3"><a href="#cb155-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb155-4"><a href="#cb155-4" aria-hidden="true" tabindex="-1"></a><span class="co"># TRAIN</span></span>
+<span id="cb155-5"><a href="#cb155-5" aria-hidden="true" tabindex="-1"></a>x1 <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred_train <span class="sc">==</span> train<span class="sc">$</span>diagnosis)</span>
+<span id="cb155-6"><a href="#cb155-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb155-7"><a href="#cb155-7" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TEST</span></span>
+<span id="cb155-8"><a href="#cb155-8" aria-hidden="true" tabindex="-1"></a>x2 <span class="ot">&lt;-</span> <span class="fu">sum</span>(pred_test1 <span class="sc">==</span> test_1<span class="sc">$</span>diagnosis)</span>
+<span id="cb155-9"><a href="#cb155-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb155-10"><a href="#cb155-10" aria-hidden="true" tabindex="-1"></a>nf1 <span class="ot">&lt;-</span> n_train <span class="sc">-</span> x1 <span class="co"># fallos test</span></span>
+<span id="cb155-11"><a href="#cb155-11" aria-hidden="true" tabindex="-1"></a>nf2 <span class="ot">&lt;-</span> n_test <span class="sc">-</span> x2  <span class="co"># fallos test</span></span>
+<span id="cb155-12"><a href="#cb155-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb155-13"><a href="#cb155-13" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> alpha1</span>
+<span id="cb155-14"><a href="#cb155-14" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> beta1</span>
+<span id="cb155-15"><a href="#cb155-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb155-16"><a href="#cb155-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb155-17"><a href="#cb155-17" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> x1 <span class="sc">/</span> n_train <span class="co"># rendimiento en TRAIN</span></span>
+<span id="cb155-18"><a href="#cb155-18" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> x2 <span class="sc">/</span> n_test <span class="co"># rendimiento en </span><span class="al">TEST</span></span>
+<span id="cb155-19"><a href="#cb155-19" aria-hidden="true" tabindex="-1"></a>p1; p2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.8270677</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.7764706</code></pre>
+</div>
+</div>
+<p>Podemos observar <strong>proporciones</strong> de aciertos <strong>similares</strong> (algo menos que el otro modelo), por lo que concluimos que el modelo <strong>no sobreajusta</strong>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb158"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb158-1"><a href="#cb158-1" aria-hidden="true" tabindex="-1"></a><span class="co"># media de train y test</span></span>
+<span id="cb158-2"><a href="#cb158-2" aria-hidden="true" tabindex="-1"></a>p0 <span class="ot">&lt;-</span> (x1<span class="sc">/</span>n_train <span class="sc">+</span> x2<span class="sc">/</span>n_test)<span class="sc">/</span><span class="dv">2</span>  </span>
+<span id="cb158-3"><a href="#cb158-3" aria-hidden="true" tabindex="-1"></a><span class="co">#dato necesario para la función pbeta()</span></span>
+<span id="cb158-4"><a href="#cb158-4" aria-hidden="true" tabindex="-1"></a>data_test1 <span class="ot">&lt;-</span> <span class="fu">c</span>(x2, nf2)</span>
+<span id="cb158-5"><a href="#cb158-5" aria-hidden="true" tabindex="-1"></a><span class="co">#probabilidad a priori de H0</span></span>
+<span id="cb158-6"><a href="#cb158-6" aria-hidden="true" tabindex="-1"></a>prob <span class="ot">&lt;-</span> <span class="fl">0.5</span>  <span class="co"># usualmente 0.5 = sin sesgo</span></span>
+<span id="cb158-7"><a href="#cb158-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb158-8"><a href="#cb158-8" aria-hidden="true" tabindex="-1"></a>fbayes <span class="ot">&lt;-</span> <span class="fu">pbetat</span>(p0, prob, <span class="fu">c</span>(a, b), data_test1)</span>
+<span id="cb158-9"><a href="#cb158-9" aria-hidden="true" tabindex="-1"></a>B10 <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> fbayes<span class="sc">$</span>bf  <span class="co"># Evidencia a favor de H1</span></span>
+<span id="cb158-10"><a href="#cb158-10" aria-hidden="true" tabindex="-1"></a>B10</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.0471709</code></pre>
+</div>
+</div>
+<p>El Factor Bayes es 0.047 &lt; 1 por lo que no hay diferencias significativas entre <em>train</em> y <em>test</em>.</p>
+<p>En conclusión, ambos modelos generalizan bien a datos nuevos.</p>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

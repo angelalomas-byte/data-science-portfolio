@@ -1,0 +1,883 @@
+---
+title: "Breast Cancer Classification Using Machine Learning and Bayesian Inference"
+author: "Ángela Lomas Anglada"
+format: html
+editor: visual
+---
+
+## DATASET
+
+**Variable dependiente y binaria:** `diagnosis` con dos posibles valores: `'Maligno'` y `'Benigno'` . Esta variable indica la presencia o ausencia de cáncer maligno en los pacientes.
+
+**Objetivo:** Estimar de manera precisa la probabilidad de un diagnóstico maligno usando métodos Bayesianos, complementando el análisis clásico.
+
+### LIBRERIAS
+
+```{r}
+library(readr)
+library(corrplot)
+library(ggplot2)
+library(caret)
+library(ggplot2)
+library(tidyr)
+library(xgboost)
+library(LearnBayes)
+library(HDInterval)
+```
+
+### DESCARGA DE DATOS:
+
+```{r}
+data <- read_csv("data.csv", show_col_types = FALSE)
+data <- data[, 1:(ncol(data)-1)]
+View(data)
+```
+
+R leía mal el data.csv y nos añadía una columna con nombre '...33' cuyos valores eran NAs, así que eliminamos esta columna para evitar problemas
+
+### BREVE EXPLORACIÓN:
+
+```{r}
+head(data)
+dim(data)
+summary(data)
+str(data)
+colSums(is.na(data))
+```
+
+Nuestro conjunto de datos `data` tiene **568 observaciones** y **32 variables.** Todas las columnas numéricas, no tienen valores faltantes. Como hemos comentado antes la variable dependiente `diagnosis` es bianria con valores `''M''` y `''B''`, tipo `character`. Es necesario codificar esta variable para usar los modelos, 0 = Benigno, 1 = Maligno.
+
+Convertimos la variable `diagnosis` a factor, nuestro evento de referencia, será benigno, enfermedad ausente y el otro nivel es nuestro evento de interés, enfermedad presente, maligno.
+
+```{r}
+data$diagnosis <- factor(data$diagnosis, levels = c("B", "M"))
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+ggplot(data, aes(x = diagnosis)) +
+  geom_bar(fill = c("lightgreen", "red")) +
+  geom_text(stat = "count", aes(label = ..count..), vjust = 0.5) +
+  labs(title = "Distribución de diagnósticos", x = "Diagnóstico", y = "Frecuencia") + theme_minimal()
+```
+
+Observamos que el equilibrio no es perfecto, pero tampoco es extremadamente desbalanceado. Hay más casos benignos, lo que es bastante común en este tipo de datasets.
+
+Visualizamos la correlación de variables, mediante la **matriz** **de correlaciones**. Los valores más oscuros nos muestran que esas variables tienen fuerte correlación y dependeindo del color, será una correlación positiva (azul) o en el caso contrario, correlación negativa (rojo).
+
+```{r}
+numeric_vars <- data[, sapply(data, is.numeric)]
+cor_matrix <- cor(numeric_vars)
+corrplot(cor_matrix, method = "color", tl.cex = 0.5, tl.col = "black",tl.srt = 45) 
+```
+
+Decido no tocar el tema de variables porque los modelos que aplicaremos son menos sensibles a la multicolinealidad que otros.
+
+### 0. DIVISIÓN DEL DATA SET
+
+El dataset se ha dividido en tres subconjuntos:
+
+-   **Train (70%):** Tendrá 398 observaciones. Se utiliza para entrenar los modelos de Machine Learning.
+
+-   **Test_1 (15%):** Tendrá 85 observaciones. Se utiliza para evaluar el rendimiento de los modelos.
+
+-   **Test_2 (15%):** Tendrá 85 observaciones. Se reserva para ejercicios posteriores del análisis bayesiano.
+
+Se ha realizado un **muestreo aleatorio estratificado** respecto a la variable `diagnosis`, de modo que la proporción de casos malignos y benignos se mantiene en los tres subconjuntos, evitando sesgos en el entrenamiento y evaluación.
+
+```{r}
+set.seed(123) #reproducibilidad
+
+#Train (70%)
+train_idx <- createDataPartition(data$diagnosis, p = 0.7, list = FALSE)
+train <- data[train_idx, ]
+
+#Resto (30%)
+rest <- data[-train_idx, ]
+
+#test_1 y test_2 (15% cada uno)
+test1_idx <- createDataPartition(rest$diagnosis, p = 0.5, list = FALSE)
+test_1 <- rest[test1_idx, ]
+test_2 <- rest[-test1_idx, ]
+```
+
+Comprobación de proporciones de la variable dependeinte
+
+```{r}
+prop.table(table(train$diagnosis))
+prop.table(table(test_1$diagnosis))
+prop.table(table(test_2$diagnosis))
+```
+
+### 1. AJUSTE DE 4 MODELOS
+
+Realizaremos un ***fine-tuning*** (ajuste fino), en *Machine Learning* consiste en buscar la **configuración óptima de un modelo ajustando sus hiperparámetros** para mejorar su rendimiento. El objetivo es **adaptar el modelo** a nuestro problema concreto, evitando el sobreajuste y aprovechando mejor la información disponible.
+
+Una vez obtenida la mejor versión de cada modelo, generaremos nuevas columnas en el dataset con sus **predicciones nítidas (0= benigno, 1= maligno)** y sus **predicciones probabilísticas** (probabilidad de maligno). En total, se añaden **ocho nuevas variables**, junto con la columna `type`, que identifica si cada observación pertenece a *train, test_1, test_2*.
+
+En nuestro caso, realizaremos el fine-tuning para los cuatro modelos: **Random Forest, XGBoost, SVM y KNN**. Para ello, usaremos **validación cruzada** (*cross-validation)* que permite evaluar distintas combinaciones de hiperparámetros y elegir la que **maximiza el rendimiento** dentro del conjunto de entrenamiento. Elegir correctamente los hiperparámetros es clave: determina la capacidad del modelo para **generalizar** y prevenir el **sobreajuste**.
+
+```{r}
+ctrl <- trainControl(method="cv", number=5, classProbs = TRUE)
+```
+
+Como hemos mencionado antes, el argumento `method= 'cv'`, indica que se usará **validación cruzada**. Este procedimiento consiste en dividir el conjunto de entrenamiento (*train*) en varios subconjuntos llamados *folds*. El modelo se entrena varias veces, dejando en cada iteración uno de esos *folds* fuera para validarlo. En nuestro caso, hemos especificado `number = 5`, por lo que se aplica una validación cruzada **de 5 folds**. Lo que implica que el conjunto *train* se divide en 5 partes iguales. El modelo se entrena 5 veces. En cada iteración, 4 partes se utilizan para entrenar y la parte restante para validar.
+
+![*Cross Validation with 5-folds*](cv5folds.avif)
+
+#### RANDOM FOREST:
+
+Es una **colección de múltiples árboles de decisión** , lo que lo hace menos sensible a los datos de entrenamiento y más robusto frente al sobreajuste.
+
+Primero, se crean **conjuntos de datos a partir de los datos originales** mediante un **muestreo aleatorio con reemplazo** (*bootstrapping*). Esto significa que, después de seleccionar una fila, ésta se vuelve a incluir en el conjunto. Cada nuevo conjunto tendrá la misma cantidad de filas que el original.
+
+Segundo, se entrena un **árbol de decisión independiente** en cada uno de estos conjuntos bootstrap. Durante el entrenamiento, se realiza una **selección aleatoria de características** (*feature selection*) para determinar qué variables considerar en cada división de los nodos, lo que aumenta la diversidad entre árboles y mejora la capacidad de generalización del modelo.
+
+Finalmente, se aplica **agregación** (*aggregation*). En el caso de clasificación, la predicción final se obtiene mediante **votación mayoritaria** de todos los árboles.
+
+```{r}
+model_rf <- train(
+  diagnosis ~ ., 
+  data = train,
+  method = "rf",
+  trControl = ctrl,
+  tuneLength = 5
+)
+```
+
+![Random Forest](Random_Forest.jpg)
+
+#### XGBOOSTING:
+
+Su nombre completo es **Extreme Gradient Boosting**, un algoritmo de **boosting** **basado en árboles de decisión**. Este algoritmo construye los árboles de forma **secuencial**, donde cada nuevo árbol intenta **corregir los errores de los árboles anteriores**.
+
+El proceso es el siguiente: primero hace una **predicción inicial** para todos los datos. Luego se comparan estas predicciones con las **etiquetas reales**, calculando los **residuos**, se construye un **árbol de decisión** que intenta predecir estos residuos. La predicción del nuevo árbol se **suma a la predicción anterior**, aplicando un **factor de aprendizaje** (*learning rate*) para que la actualización sea gradual.
+
+Este proceso se repite muchas veces, agregando **árbol tras árbol**. Para mejorar la **generalización**, se aplican **penalizaciones y restricciones** que evitan árboles demasiado complejos, controlando la **profundiad de los árboles, la cantidad mínima de observaciones un una hoja**, entre otros parámetros.
+
+La **predicción final** de cada observación es la **suma ponderada de las predicciones de todos los árboles**.
+
+```{r}
+model_xgb <- train(
+    diagnosis ~ .,
+    data = train,
+    method = "xgbTree",
+    trControl = ctrl,
+    tuneLength = 3,
+    verbosity = 0
+  )
+```
+
+![](XGBoosting.png){fig-align="center" width="345"}
+
+#### SUPPORT VECTOR MACHINES:
+
+El objetivo de **SVM** (**Support Vector Machines**) es encontrar un **hiperplano óptimo** que separe las clases de manera que el **margen** sea máximo. El margen es la **distancia entre el hiperplano y los puntos más cercanos de cada clase**, conocidos como **vectores de soporte**, que son los puntos críticos que definen la frontera de decisión.
+
+Los datos se representan en un **espacio n-dimensional**, donde n es el **número de características**. SVM busca un hiperplano que divida las clases de manera que la **distancia a los vectores de soporte** sea la mayor posible, lo que permite una **mejor generalización** en datos no vistos.
+
+```{r}
+model_svm <- train(
+  diagnosis ~ .,
+  data = train,
+  method = "svmRadial",
+  trControl = ctrl,
+  tuneLength = 10
+)
+```
+
+![](svm.webp){fig-align="center" width="314"}
+
+#### K-NEAREST NEIGHBORS
+
+KNN se basa en la **proximidad entre puntos** en el espacio de características. La predicción para un **nuevo punto** se realiza observando sus **k vecinos más cercanos** (los puntos más próximos en el espacio de características) y asignando la **clase más frecuente** entre ellos.
+
+El procedimiento es el siguiente:
+
+1.  Se define un valor **k**, que indica la **cantidad de vecinos** a considerar.
+
+2.  Se calcula la **distancia** entre el nuevo punto y todos los puntos del conjunto de entrenamiento. Las métricas de distancia más comunes son **Euclidiana** o **Manhattan**.
+
+3.  Se seleccionan los **k puntos más cercanos**.
+
+4.  Se asigna al nuevo punto la **clase más común** entre esos vecinos.
+
+```{r}
+model_knn <- train(
+  diagnosis ~ .,
+  data = train,
+  method = "knn",
+  trControl = ctrl,
+  tuneLength = 10
+  )
+```
+
+![](knn.png){fig-align="center" width="335"}
+
+###### PREDICCIONES DE TODOS LOS MODELOS
+
+Las predicciones nítidas consisten en asignar directamente una clase a cada observación según lo que el modelo considere más probable. Cada observación recibe un valor 0, Benigno, ausencia de cáncer maligno o 1, presencia de cáncer maligno
+
+```{r}
+data$pred_rf   <- ifelse(predict(model_rf, data) == "M", 1, 0)
+data$pred_xgb  <- ifelse(predict(model_xgb, data) == "M", 1, 0)
+data$pred_svm  <- ifelse(predict(model_svm, data) == "M", 1, 0)
+data$pred_knn  <- ifelse(predict(model_knn, data) == "M", 1, 0)
+```
+
+```{r}
+# Función para calcular porcentaje por clase
+calc_percent <- function(pred){
+  prop <- prop.table(table(pred)) * 100
+  return(prop)
+}
+
+# Random Forest
+calc_percent(data$pred_rf)
+# XGBoost
+calc_percent(data$pred_xgb)
+# SVM
+calc_percent(data$pred_svm)
+# KNN
+calc_percent(data$pred_knn)
+```
+
+Las **predicciones probabilísticas**,indican la probabilidad de que una observación pertenezca a cada clase según el modelo
+
+```{r}
+data$pred_prob_rf   <- predict(model_rf,  data, type = "prob")[, "M"]
+data$pred_prob_xgb  <- predict(model_xgb, data, type = "prob")[, "M"]
+data$pred_prob_svm  <- predict(model_svm, data, type = "prob")[, "M"]
+data$pred_prob_knn  <- predict(model_knn, data, type = "prob")[, "M"]
+```
+
+Creamos la columna `type` :
+
+```{r}
+data$type <- NA
+data$type[train_idx] <- "train"
+data$type[setdiff(1:nrow(data), train_idx)[test1_idx]] <- "test_1"
+data$type[setdiff(1:nrow(data), train_idx)[-test1_idx]] <- "test_2"
+
+table(data$type, data$diagnosis)
+```
+
+### 2. EVALUACIÓN EN TEST_1
+
+Ya hemos desarrollado varios modelos de Machine Learning para detectar casos de cáncer maligno en pacientes, a partir de los diagnósticos y predicciones de distints algoritmos.
+
+Vamos a hacer un análisis sobre el desempeño de los modelos sobre `test_1`
+
+**Sensibilidad (recall):** Veraderos positivos sobre todos los positivos. La probabilidad de detectar correctamente una clase. Será la proporción de casos malignos correctamente detectados por el modelo.
+
+![](images/clipboard-1336013388.png)
+
+**Especificidad:** Verdaderso negativos sobre todos los negativos. La probabilidad de detectar correctamente un caso no clase. Será la proporción de casos benignos correctamente identificados.
+
+![](images/clipboard-1500753035.png)
+
+```{r}
+idx_test1 <- which(data$type == "test_1")
+```
+
+```{r}
+# Niveles de factor que coinciden con diagnosis
+levels_diag <- levels(data$diagnosis) # c("B","M")
+
+# Convertir predicciones a factor
+preds <- list(
+  RF  = factor(ifelse(data$pred_rf == 1, "M", "B"), levels = levels_diag),
+  XGB = factor(ifelse(data$pred_xgb == 1, "M", "B"), levels = levels_diag),
+  SVM = factor(ifelse(data$pred_svm == 1, "M", "B"), levels = levels_diag),
+  KNN = factor(ifelse(data$pred_knn == 1, "M", "B"), levels = levels_diag)
+)
+
+# Referencia
+ref_test1 <- factor(data$diagnosis[idx_test1], levels = levels_diag)
+
+# Matrices de confusión
+cms <- lapply(preds, function(p) confusionMatrix(p[idx_test1], ref_test1, positive = "M"))
+
+# Extraer sensibilidad y especificidad
+df_metrics <- data.frame(
+  Modelo = names(cms),
+  Sensibilidad = sapply(cms, function(x) x$byClass["Sensitivity"]),
+  Especificidad = sapply(cms, function(x) x$byClass["Specificity"])
+)
+
+df_metrics
+```
+
+Suponiendo que los errores de los cuatro modelos (Random Forest, XGBoost, SVM y KNN) son independientes condicionados al diagnóstico, es decir, que no presentan correlación entre sí, se solicita:
+
+###### A. Calcula la sensibilidad (capacidad de detectar correctamnete un cáncer maligo) y la especificidad (capacidad de identificar correctamente un paciente benigno) conjunta de los modelos.
+
+![](images/clipboard-4060527341.png)![](images/clipboard-1625709434.png)
+
+```{r}
+sens_conjunta <- prod(df_metrics$Sensibilidad)
+spec_conjunta <- prod(df_metrics$Especificidad)
+
+cat("Sensibilidad conjunta:",sens_conjunta, "\n")
+cat("Especificidad conjunta:", spec_conjunta, "\n")
+```
+
+La **sensibilidad conjunta** es de **0.46875**. Esto significa que, si consideramos los cuatro modelos trabajando juntos bajo la suposición de independencia condicional de errores, la **probabilidad de que todos** los modelos **detecten** correctamente un **cáncer maligno** en una **misma observación** es del **46.9%**. Es decir, menos de la mitad de los casos malignos serían detectados simultáneamente por los cuatro modelos. Esto ocurre porque al multiplicar las sensibilidades individuales, cualquier modelo con sensibilidad menor a 1 reduce la probabilidad conjunta.
+
+La **especificidad conjunta** es de **0.8571**. Esto indica que, bajo la misma suposición de independencia de errores, la **probabilidad de que todos** los modelos **identifiquen** correctamente a un paciente **benigno** es del **85.7%**.
+
+###### B. ¿De qué modelo prescindirías de tu ensamblaje? Justifica tu respuesta.
+
+Para decidir qué modelo eliminar del ensamblaje, debemos fijarnos en su desempeño individual en términos de **sensibilidad** y **especificidad**, así como en cómo contribuye a la probabilidad conjunta de aciertos.
+
+Si observamos la tabla de métricas individuales (`df_metrics`), el modelo que presenta menor **sensibilidad** o menor **equilibrio general** aporta menos al objetivo principal de detectar casos malignos. Por ejemplo:
+
+-   Un modelo con **muy baja sensibilidad** no detecta correctamente suficientes casos malignos, reduciendo la efectividad conjunta.
+
+-   Un modelo con **especificidad muy alta pero sensibilidad muy baja** apenas aporta detecciones útiles de maligno, y su inclusión puede “arrastrar hacia abajo” la probabilidad de aciertos conjuntos.
+
+En nuestro caso, **KNN** tiene la **menor sensibilidad** (o menor equilibrio entre sensibilidad y especificidad). Por lo tanto, **prescindir de este modelo** podría mejorar la eficiencia del ensamblaje sin afectar significativamente la identificación de casos benignos.
+
+Si un modelo tiene poca sensibilidad o especificidad, reducirá las probabilidad de acierto del ensamblaje. La decisión se basa en qué modelo reduce más la sensibilidad y especificidad conjuntas. Al calcular la porbabilidad de maligno dado la alerta del ensamblaje podemos identificar qué modelo aporta poco o incluso empeora la precisión, y así justificar cuál descartamos.
+
+```{r}
+# Prevalencia de casos malignos en el dataset
+prevalence <- mean(data$diagnosis == "M")  # ~0.3732
+
+# Vector de sensibilidades y especificidades de cada modelo
+sens_vec <- df_metrics$Sensibilidad
+spec_vec <- df_metrics$Especificidad
+models   <- df_metrics$Modelo
+
+# Función para calcular el posterior del ensamble bajo independencia condicional
+posterior_ensemble <- function(sens, spec, prevalence) {
+  p_all_given_F <- prod(sens) #P(todos positivos|maligno)
+  p_all_given_notF <- prod(1 - spec) #P(todos positivos|benigno)
+  posterior <- (p_all_given_F * prevalence) / 
+               (p_all_given_F * prevalence + p_all_given_notF * (1 - prevalence))
+  list(
+    posterior = posterior,
+    p_all_given_F = p_all_given_F,
+    p_all_given_notF = p_all_given_notF
+  )
+}
+
+# Posterior con todos los modelos
+res_all <- posterior_ensemble(sens_vec, spec_vec, prevalence)
+
+# Leave-one-out: recalcular posterior dejando fuera un modelo 
+loo <- lapply(seq_along(models), function(i) {
+  res <- posterior_ensemble(sens_vec[-i], spec_vec[-i], prevalence)
+  data.frame(
+    ModelRemoved = models[i],
+    Posterior = res$posterior,
+    P_all_given_F = res$p_all_given_F,
+    P_all_given_notF = res$p_all_given_notF
+  )
+})
+loo <- do.call(rbind, loo)
+
+# Resultados
+cat("Sensibilidad conjunta:", res_all$p_all_given_F, "\n")
+cat("Especificidad conjunta:", prod(spec_vec), "\n")
+cat("Posterior P(M | todos positivos):", res_all$posterior, "\n\n")
+
+loo
+```
+
+La decisión depende del objetivo. Si buscamos **evitar falsos negativos**, la sensibilidad es el criterio clave. KNN presenta una sensibilidad muy baja (\~0.47), mientras que los demás modelos están cerca de 1. Como la sensibilidad del ensamble es el **producto** de las sensibilidades individuales, incluir KNN reduce mucho la capacidad de detectar todos los casos malignos.
+
+En términos de especificidad y de la probabilidad posterior, KNN sí aporta valor: su especificidad ayuda a que el posterior del ensamble sea muy alto (\~99.99%). El análisis leave-one-out confirma que retirar cualquier modelo disminuye ese posterior, aunque retirar KNN lo reduce menos que retirar XGB.
+
+**Conclusión:**
+
+-   Si priorizamos **certeza en los positivos** (minimizar falsos positivos), KNN puede mantenerse.
+
+-   Si priorizamos **sensibilidad** (no perder ningún maligno), entonces **KNN debe eliminarse**, pues es el único modelo que compromete la detección de casos malignos.
+
+Dado que nuestro objetivo es evitar falsos negativos, **descartamos KNN** del ensamble.
+
+###### C. Si tuvieras que escoger únicamente un modelo para detectar un cáncer “maligno” y no equivocarte, ¿Cuál escogerías? Justifica adecuadamente tu respuesta.
+
+El modelo con mayor probabilidad de maligno ante alerta positiva será el modelo más confiable para usar individualmente, porque maximiza la certeza de detectar maligno y minimiza falsos positivos.
+
+```{r}
+# Función que calcula el valor predictivo positivo individual
+vpp_individual <- function(sens, spec, prevalence) {
+  numerador   <- sens * prevalence
+  denominador <- numerador + (1 - spec) * (1 - prevalence)
+  numerador / denominador
+}
+
+# Aplicar la fórmula a cada modelo
+df_vpp <- df_metrics
+df_vpp$VPP <- mapply(
+  vpp_individual,
+  sens = df_metrics$Sensibilidad,
+  spec = df_metrics$Especificidad,
+  prevalence = prevalence
+)
+
+# Mostrar resultados ordenados del mejor al peor modelo individual
+df_vpp <- df_vpp[order(-df_vpp$VPP), ]
+df_vpp
+```
+
+El VPP se calcula combina sensibilidad, especificidad y prevalencia.
+
+1.  **Sensibilidad:** Todos los modelos excepto KNN detectan todos los casos malignos (sensibilidad = 1.0). KNN detecta menos de la mitad de los casos malignos (0.469), por lo que podría generar muchos falsos negativos si se usara solo.
+
+2.  **Especificidad y VPP:** Entre los modelos con sensibilidad perfecta, la diferencia radica en la especificidad:
+
+    -   **XGBoost (XGB)** tiene la mayor especificidad (0.981), lo que significa que casi todos los tumores benignos son clasificados correctamente. Su valor predictivo positivo (VPP ≈ 0.97) indica que casi el 97% de los casos que predice como malignos realmente lo son.
+    -   SVM y RF también tienen sensibilidad perfecta, pero su especificidad es menor, reduciendo su VPP (0.94 y 0.91 respectivamente).
+
+La decisión final es utilizar **XGBoost** como modelo individual para la detección de cáncer maligno.\
+Este modelo logra **sensibilidad perfecta**, evitando que se escape cualquier caso maligno, y además presenta la **mayor especificidad y el valor predictivo positivo (VPP) más alto** entre todas las alternativas analizadas.
+
+En conjunto, XGBoost es el modelo que mejor equilibra la detección completa de malignos con una correcta clasificación de los casos benignos, por lo que se selecciona como la opción óptima.
+
+### 3. ENFOQUE BAYESIANO
+
+###### A. Obtén una nueva variable (pred_prob_global) que sea la media ponderada de cada una de las pred_probs, donde los pesos se obtienen de acuerdo a lo que aporta cada modelo a la sensibilidad global claculada en el ejercicio 2, para todo el dataset.
+
+```{r}
+df_metrics
+```
+
+```{r}
+# Sensibilidades individuales
+sens_vec <- df_metrics$Sensibilidad
+names(sens_vec) <- df_metrics$Modelo
+```
+
+```{r}
+# Normalizar pesos
+# Normalizar sensibilidades para obtener pesos
+weights <- sens_vec / sum(sens_vec)
+weights
+sum(weights)
+# Crear pred_prob_global
+data$pred_prob_global <- 
+  weights["RF"] * data$pred_prob_rf +
+  weights["XGB"] * data$pred_prob_xgb +
+  weights["SVM"] * data$pred_prob_svm +
+  weights["KNN"] * data$pred_prob_knn
+
+head(data$pred_prob_global)
+```
+
+Para obtener una predicción probabilística global (`pred_prob_global`) a partir de los cuatro modelos, se calculó una media ponderada de las probabilidades individuales que cada modelo asigna a la clase “maligno”. Los **pesos** utilizados en esta media se basaron en la **contribución de cada modelo a la sensibilidad conjunta** calculada previamente, de manera que los modelos con mayor capacidad para detectar correctamente los casos malignos aportan más a la predicción global.
+
+De manera más específica, se normalizaron las sensibilidades individuales para que sumen uno, obteniendo así los pesos relativos de cada modelo. Posteriormente, la probabilidad global para cada observación se obtuvo multiplicando cada predicción probabilística individual por su peso correspondiente y sumando los resultados. Esto permite que la **predicción global refleje de forma equilibrada la fuerza de cada modelo, priorizando aquellos más efectivos en detectar casos malignos**.
+
+Como comprobación, se visualizaron las primeras filas de la nueva variable `pred_prob_global`, confirmando que se calculó correctamente.
+
+###### B. Representa la función a priori, a posteriori y de verosimilitud de theta, donde las nuevas observaciones son los resultados de probabilidad nítida en test_1 con el modelo beta-binomial, elicitando alpha y beta con, al menos de métodos distintos
+
+Vamos a usar la veriable construida en el anterior apartado, `pred_prob_global` y obtener de esta las predicciones nítidas mediante un umbral. La variable `pred_prob_global`, usa pesos proporcionales a la sensibilidad global. Como vamos a construir un Beta-Binomial, nesceitamos observaciones nítidas 0 (=tumos benigno)/1(=tumor maligno)
+
+```{r}
+test_1 <- data[idx_test1, ]
+test_1$pred_nitida <- ifelse(data$pred_prob_global[idx_test1] > 0.5, 1, 0)
+
+head(test_1)
+```
+
+```{r}
+idx_train <- which(data$type == "train")
+train <- data[idx_train, ]  # ya incluye pred_prob_global
+train$pred_nitida <- ifelse(data$pred_prob_global[idx_train] > 0.5, 1, 0)
+
+head(train)
+```
+
+```{r}
+# Parámetros binomiales
+x_test  <- sum(test_1$pred_nitida == 1)     # éxitos= casos predichos como malignos
+n_test  <- nrow(test_1)           # ensayos = total de obs
+
+cat("Nuestro test_1 tiene un tamaño de",n_test, "\n")
+cat("La cantidad de éxitos en test_1 es de",x_test, "\n")
+```
+
+```{r}
+# Parámetros binomiales
+x_train  <- sum(train$pred_nitida == 1)     # éxitos= casos predichos como malignos
+n_train  <- nrow(train)           # ensayos = total de obs
+
+cat("Nuestro train tiene un tamaño de",n_train, "\n")
+cat("La cantidad de éxitos en train es de",x_train, "\n")
+```
+
+```{r}
+hist(test_1$pred_prob_global, breaks=20, 
+     main="Distribución de pred_prob_global", 
+     xlab="Predicción global de maligno", 
+     col="skyblue", border="white")
+
+summary(test_1$pred_prob_global)
+```
+
+```{r}
+hist(train$pred_prob_global, breaks=20, 
+     main="Distribución de pred_prob_global", 
+     xlab="Predicción global de maligno", 
+     col="skyblue", border="white")
+
+summary(train$pred_prob_global)
+```
+
+Los valores de **alpha** y **beta** dependen mucho de la forma de la distribución y de la dispersión de los datos (la varibale `pred_prob_global` )
+
+**Método cuantiles**
+
+^[APRIORI]{.underline}^
+
+El x1, es el valor de la mediana, es decir, el valor que divide los datos en dos mitades. X2 es el percentil 90, es decIr, el valor por debajo del cual se encuentra el 90% de las predicciones
+
+```{r}
+x1 = quantile(train$pred_prob_global, 0.5)
+x2 = quantile(train$pred_prob_global, 0.9)
+cat("La mitad de las predicciones globales están por debajo de ", x1, "\n")
+cat("El 90% de las predicciones están por debajo de", x2, "\n")
+```
+
+Creamos una distribución Beta a pertir de los cuantiles elegidos
+
+```{r}
+# Por ejemplo, elige dos puntos de la distribución
+cuantil1 <- list(p = 0.5, x = x1)  # mediana supuesta
+cuantil2 <- list(p = 0.9, x = x2)  # 90% cuantil supuesta
+
+#selección de parámetros
+prior <- beta.select(cuantil1, cuantil2)
+alpha1 <- prior[1] #0.21
+beta1  <- prior[2] #0.45
+
+cat("Nuestro alpha a priori calculado con los cuantiles tiene un valor de", alpha1, "\n")
+cat("Nuestro beta a priori calculado con los cuantiles tiene un valor de", beta1, "\n")
+```
+
+```{r}
+curve(dbeta(x, alpha1, beta1), from=0, to=1, col="blue", lwd=2, ylab="Densidad", xlab=expression(theta), main="Prior Beta (media y varianza)")
+```
+
+Nuestra creencia inicial sobre la probbailidad de cáncer maligno se define como una Beta (0.21, 0.45)
+
+^[VEROSIMILITUD]{.underline}^
+
+Representa la información que proviene de los datos
+
+```{r}
+p <- seq(0, 1, length = 100)
+ne <- sum(test_1$pred_nitida == 1) #x calcualda antes 
+nf <- n_test - ne
+verosimilitud <- dbeta(p, ne + 1, nf + 1)
+```
+
+```{r}
+plot(p, dbeta(p, alpha1, beta1), type="l", col="blue", lwd=2, ylab="Densidad", xlab=expression(theta), cex.axis= 0.7, cex.lab = 0.8)
+lines(p, verosimilitud, col="purple", lwd=2)
+legend("topright", legend=c("Prior", "Verosimilitud"), col=c("blue","purple"), lwd=2, cex = 0.5)
+```
+
+^[POSTERIOR]{.underline}^
+
+![](images/clipboard-909301364.png){fig-align="center" width="238"}
+
+```{r}
+alpha1_1 <- alpha1 + ne #suma de éxitos a la prior
+beta1_1 <- beta1 + n_test - ne #suma de fracasos a la prior
+alpha1_1; beta1_1
+aposteriori1 <- dbeta(p, alpha1_1, beta1_1)
+
+plot(p, aposteriori1, col="red", type="l", lwd=2,
+     main="Posterior Beta (método cuantiles)",
+     ylab="densidad", xlab=expression(theta))
+```
+
+VISUALIZACIÓN
+
+```{r}
+plot(p, aposteriori1, col="red", type="l", lwd=2,
+     main="Posterior Beta (cuantiles)",
+     ylab="densidad", xlab=expression(theta),
+     cex.axis=0.8,   
+     cex.lab=0.9,    
+     cex.main=1)
+lines(p, dbeta(p, alpha1, beta1), col="blue", lwd=2)    
+lines(p, dbeta(p, ne+1, nf+1), col="purple", lwd=2, lty=2)
+legend("topright", legend=c("Prior","Verosimilitud","Posterior"), col=c("blue","purple","red"), lwd=2, lty=c(1,2,1), cex=0.8)
+```
+
+Nuestra prior es muy plana, es decir, con valores alpha y beta muy pequeños, por ellos la posterior es indéntica a la verosimilitud
+
+2.  **Método Media y Varianza**
+
+^[APRIORI]{.underline}^
+
+```{r}
+m <- mean(train$pred_prob_global)
+V <- var(train$pred_prob_global)
+alpha2 <- m*((m*(1-m)/V)-1)
+beta2  <- (1-m)*((m*(1-m)/V)-1)
+
+
+cat("Tenemos una media de", m, "\n")
+cat("Tenemos una varianza de", V, "\n")
+cat("Nuestro alpha a priori calculado con la media y varianza tiene un valor de", alpha2, "\n")
+cat("Nuestro alpha a priori calculado con la media y la varianza tiene un valor de", beta2, "\n")
+```
+
+```{r}
+curve(dbeta(x, alpha2, beta2), from=0, to=1, col="blue", lwd=2, ylab="Densidad", xlab=expression(theta), main="Prior Beta (media y varianza)")
+```
+
+En ambos métodos observamos que la distribución tiene alta dispersión
+
+^[VEROSIMILITUD]{.underline}^
+
+Igual que la de antes, debido a que se basa en nuestros datos. Y nuestros datos no cambian.
+
+```{r}
+p <- seq(0, 1, length = 100)
+ne <- sum(test_1$pred_nitida == 1) #x calcualda antes 
+nf <- n_test - ne
+verosimilitud <- dbeta(p, ne + 1, nf + 1)
+```
+
+^[PASTERIOR]{.underline}^
+
+![](images/clipboard-3415777966.png){fig-align="center" width="267"}
+
+```{r}
+alpha2_2 <- alpha2 + ne
+beta2_2 <- beta2 + n_test - ne
+alpha2_2; beta2_2
+aposteriori2 <- dbeta(p, alpha2_2, beta2_2)
+
+plot(p, aposteriori2, col ="red", type= "l", 
+     main = "A posteriori 2")
+```
+
+VISUALIZACIÓN
+
+```{r}
+plot(p, aposteriori2, col="red", type="l", lwd=2,
+     main="Posterior Beta (media/varianza)",
+     ylab="densidad", xlab=expression(theta),
+     cex.axis=0.8,   
+     cex.lab=0.9,    
+     cex.main=1)
+lines(p, dbeta(p, alpha1, beta1), col="blue", lwd=2)    
+lines(p, dbeta(p, ne+1, nf+1), col="purple", lwd=2, lty=2)
+legend("topright", legend=c("Prior","Verosimilitud","Posterior"), col=c("blue","purple","red"), lwd=2, lty=c(1,2,1), cex=0.8)  
+```
+
+```{r}
+theta_test2 <- mean(test_2$diagnosis == "M")
+
+theta_post1 <- alpha1_1 / (alpha1_1 + beta1_1)
+
+theta_post2 <- alpha2_2 / (alpha2_2 + beta2_2)
+
+
+err1 <- abs(theta_post1 - theta_test2)
+err2 <- abs(theta_post2 - theta_test2)
+err1; err2
+```
+
+###### C. Haz una estimación de theta puntual, por intervalos y por simulación. Escoge las alphas y betas del paso anterior que menos error tengan con la probabilidad encontrada de cáncer maligno en test_2
+
+Elegiremos las **alphas** y **betas** mediante el **método de los cuantiles** porque produce el **error** absoluto más **pequeño.**
+
+[La estimación puntual :]{.underline}
+
+En Bayes la estimación puntual se obtiene a partir de la distribución a poserior
+
+![](images/clipboard-1253171364.png){fig-align="center"}
+
+![](images/clipboard-679392540.png){fig-align="center" width="212"}
+
+```{r}
+# Media a posteriori
+(media_apost <- alpha1_1 / (alpha1_1 + beta1_1))
+
+# Moda a posteriori
+(moda_apost <- (alpha1_1 - 1) / (alpha1_1 + beta1_1 - 2))
+
+# Mediana a posteriori
+(mediana_apost <- qbeta(0.5, alpha1_1, beta1_1))
+
+
+cat("La media posteriori calculada por estimación puntual es de ", media_apost, "\n")
+cat("La moda posteriori calculada por estimación puntual es de ", moda_apost, "\n")
+cat("La mediana posteriori calculada por estimación puntual es de ", mediana_apost, "\n")
+
+```
+
+Los tres estimadores (**media**, **moda** y **mediana**) presentan valores muy próximos entre sí (≈0.371–0.376), lo que indica que la distribución posterior es **alta y estrecha**, es decir, está muy concentrada alrededor de su valor central.\
+
+Dado el tamaño muestral de *test_1* (n = 85), la verosimilitud domina claramente sobre el prior, de modo que la estimación bayesiana de θ coincide prácticamente con la proporción empírica observada de casos positivos en el conjunto *test_1* (\~0.376). Esto confirma la **consistencia del análisis bayesiano** y respalda la fiabilidad del estimador obtenido.
+
+[Estimación por intervalos:]{.underline}
+
+La estimación por intervalos en el enfoque bayesiano se basa en los **intervalos de credibilidad**, que representan el rango de valores donde es razonable que se encuentre el parámetro desconocido θ , dados los datos observados y la información previa.
+
+A partir de la distribución a posterior podemos calcular distintos intervalos creíbles al 95%:
+
+![](images/clipboard-1416442915.png){fig-align="center"}
+
+**INTERVALO CREÍBLE DE COLAS IGUALES:**
+
+Este intervalo deja un 2.5% de probabilidad en cada cola de la distribución posterior
+
+![](images/clipboard-1277149315.png){fig-align="center"}
+
+```{r}
+r <- 0.95
+IC_colas <- qbeta(c((1-r)/2 , 1-(1-r)/2), alpha1_1, beta1_1)
+IC_colas
+```
+
+**INTERVALO HPD (Highest Posterior Density Interval):**
+
+El intervalo HPD recoge el conjunto de valores de θ con mayor densidad posterior acumulando el 95% de la probabilidad total.\
+
+Es el intervalo más corto posible con ese nivel de credibilidad:
+
+```{r}
+IC_HPD <- hdi(qbeta, credMass = r, shape1 = alpha1_1, shape2 = beta1_1)
+IC_HPD
+```
+
+Ambos intervalos obtienen valores muy similares, aproximadamente. Dados los datos observados y la infromación previa, existe un 95% de probabilidad de que el parametro θ se encuentre dentro de ese rango
+
+La similitud entre ambos intervalos (colas iguales y HPD) indica que la distribución posterior es **prácticamente simétrica y poco sesgada**, lo cual es coherente con los resultados de la estimación puntual.
+
+[Estimación por simulación:]{.underline}
+
+Otra forma de obtener estimaciones de la distribución posterior consiste en utilizar **métodos de simulación**, generando un gran número de muestras de la distribución Beta(α1_1,β1_1) que describe la posterior del parámetro θ.
+
+```{r}
+nsim <- 1000000  
+set.seed(1437)  
+
+# Parámetros a posteriori de tu posterior Beta (método cuantiles)
+shape1 <- alpha1_1
+shape2 <- beta1_1
+
+# Simulación de la posterior
+p_post <- rbeta(nsim, shape1, shape2)
+
+# Resumen de la simulación
+media_post_simulada   <- mean(p_post)
+varianza_post_simulada <- var(p_post)
+mediana_post_simulada <- median(p_post)
+intervalo_95_simulado <- quantile(p_post, c(0.025, 0.975))
+
+
+cat("La media posteriori calculada por simulación es de ", media_post_simulada, "\n")
+cat("La varianza posteriori calculada por simulación es de ", varianza_post_simulada, "\n")
+cat("La mediana posteriori calculada por simulación es de ", mediana_post_simulada, "\n")
+```
+
+La gran similitud entre los valores simulados y los valores teóricos (media, mediana, interrvalo de credibilidad ...) confirma que la distribución posterior está bien caracterizada por el modelo Beta calculado analíticamente, y las estimaciones son estables y consistentes.
+
+###### D. Calcula el posible sobreajuste para dos modelos (train vs test_1) a través de la comparación de dos proporciones indepedientes. Calcula el factor bayes 10 asociado a esto, donde H0:p1=p2 (no hay sobreajuste) y H1: pi!= p2 (posible sobreajuste).
+
+El **sobreajuste** ocurre cuando un modelo aprende demasiado bien los datos de entrenamiento y **falla al generalizar** a nuevos datos (test). Si `p1` (proporción de aciertos en train) es mucho mayor que `p2` (proporción de aciertos en test), hay indicios de sobreajuste. Si `p1` y `p2` tienen valores parecidos, el modelo generaliza bien y no hay sobreajuste.
+
+`x1` y `x2` son los aciertos del conjunto de *train* y *test* respectivamente. Y `n_train` y `n_test` los tamaños de cada conjutno.
+
+**MODELO 1: SVM**
+
+```{r}
+pred_train <- predict(model_svm, train)
+pred_test1 <- predict(model_svm, test_1)
+
+# TRAIN
+x1 <- sum(pred_train == train$diagnosis)
+
+# TEST
+x2 <- sum(pred_test1 == test_1$diagnosis)
+
+nf1 <- n_train - x1 # fallos test
+nf2 <- n_test - x2 # fallos test
+
+a <- alpha1
+b <- beta1
+
+
+p1 <- x1 / n_train # rendimiento en TRAIN
+p2 <- x2 / n_test # rendimiento en TEST
+p1; p2
+```
+
+Podemos observar **proporciones** de aciertos **similares**, por lo que concluimos que el modelo **no sobreajusta**.
+
+Para el **Factor Bayes** es necesario el calculo de **p0**, proporción promedio de éxitos entre *train* y *test.* Si B10 \> 1 indica evidencia a favor de H1 (sobreajuste). Si B10 \< 1 indica evidencia a favor de H0 (no hay sobreajuste).
+
+```{r}
+# media de train y test
+p0 <- (x1/n_train + x2/n_test)/2  
+#dato necesario para la función pbeta()
+data_test1 <- c(x2, nf2)
+#probabilidad a priori de H0
+prob <- 0.5  # usualmente 0.5 = sin sesgo
+
+fbayes <- pbetat(p0, prob, c(a, b), data_test1)
+B10 <- 1 / fbayes$bf  # Evidencia a favor de H1
+B10
+```
+
+El Factor Bayes es 0.057 \< 1 por lo que no hay diferencias significativas entre *train* y *test*.
+
+Repetimos el proceso con otro de nuestros modelos.
+
+**MODELO 2: KNN**
+
+```{r}
+pred_train <- predict(model_knn, train)
+pred_test1 <- predict(model_knn, test_1)
+
+# TRAIN
+x1 <- sum(pred_train == train$diagnosis)
+
+# TEST
+x2 <- sum(pred_test1 == test_1$diagnosis)
+
+nf1 <- n_train - x1 # fallos test
+nf2 <- n_test - x2  # fallos test
+
+a <- alpha1
+b <- beta1
+
+
+p1 <- x1 / n_train # rendimiento en TRAIN
+p2 <- x2 / n_test # rendimiento en TEST
+p1; p2
+```
+
+Podemos observar **proporciones** de aciertos **similares** (algo menos que el otro modelo), por lo que concluimos que el modelo **no sobreajusta**.
+
+```{r}
+# media de train y test
+p0 <- (x1/n_train + x2/n_test)/2  
+#dato necesario para la función pbeta()
+data_test1 <- c(x2, nf2)
+#probabilidad a priori de H0
+prob <- 0.5  # usualmente 0.5 = sin sesgo
+
+fbayes <- pbetat(p0, prob, c(a, b), data_test1)
+B10 <- 1 / fbayes$bf  # Evidencia a favor de H1
+B10
+```
+
+El Factor Bayes es 0.047 \< 1 por lo que no hay diferencias significativas entre *train* y *test*.
+
+En conclusión, ambos modelos generalizan bien a datos nuevos.
