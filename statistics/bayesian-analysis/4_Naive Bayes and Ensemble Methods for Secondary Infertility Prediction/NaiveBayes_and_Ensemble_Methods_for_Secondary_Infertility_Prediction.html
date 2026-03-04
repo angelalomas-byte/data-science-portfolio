@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ángela Lomas Anglada">
+
+<title>Naive Bayes and Ensemble Methods for Secondary Infertility Prediction</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/clipboard/clipboard.min.js"></script>
+<script src="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/quarto-html/quarto.js"></script>
+<script src="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/quarto-html/popper.min.js"></script>
+<script src="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/quarto-html/anchor.min.js"></script>
+<link href="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Naive Bayes and Ensemble Methods for Secondary Infertility Prediction</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ángela Lomas Anglada </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="librerias" class="level2">
+<h2 class="anchored" data-anchor-id="librerias">LIBRERIAS</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(corrplot)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>corrplot 0.95 loaded</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: lattice</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(randomForest)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>randomForest 4.7-1.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Type rfNews() to see new features/changes/bug fixes.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'randomForest'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:ggplot2':
+
+    margin</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(xgboost)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(LearnBayes)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(HDInterval)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="dataset" class="level2">
+<h2 class="anchored" data-anchor-id="dataset">DATASET</h2>
+<p>Nuestra variable objetivo es de clase binaria (case: infertilidad si/no). Tenemos varias variables categóricas (parity, induced, spontaneous, education) y una variable continua, age.</p>
+<p>parity –&gt; número de embarazos previos</p>
+<p>age –&gt; edad de la mujer</p>
+<p>induced –&gt; numero de abortos inducidos (provocados) previos.</p>
+<p>education –&gt; nivel de educación de la mujer induced –&gt; nº de abortos inducidos previos</p>
+<ul>
+<li><strong>case (V objetivo):</strong> 1 –&gt; caso (tiene infertilidad secundaria) ; 0 –&gt; control (no tiene infertilidad)</li>
+</ul>
+<p>spontenaous –&gt; nº de abortos espontáneos previos</p>
+<p>stratum –&gt; identificador del grupo de emparejamiento de estudio</p>
+<p>pooled.started –&gt; estratos agrupados (pooled) para análisis estadísticos.</p>
+<p>El obejtivo de este trabajo será usar el modelo de Naive Bayes para evaluar cómo variables reproductivas y sociodemográfricas infulyen en la probabilidad de infertilidad secundaria.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(infert)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(infert)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  education age parity induced case spontaneous stratum pooled.stratum
+1    0-5yrs  26      6       1    1           2       1              3
+2    0-5yrs  42      1       1    1           0       2              1
+3    0-5yrs  39      6       2    1           0       3              4
+4    0-5yrs  34      4       2    1           0       4              2
+5   6-11yrs  35      3       1    1           1       5             32
+6   6-11yrs  36      4       2    1           1       6             36</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(infert)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   248 obs. of  8 variables:
+ $ education     : Factor w/ 3 levels "0-5yrs","6-11yrs",..: 1 1 1 1 2 2 2 2 2 2 ...
+ $ age           : num  26 42 39 34 35 36 23 32 21 28 ...
+ $ parity        : num  6 1 6 4 3 4 1 2 1 2 ...
+ $ induced       : num  1 1 2 2 1 2 0 0 0 0 ...
+ $ case          : num  1 1 1 1 1 1 1 1 1 1 ...
+ $ spontaneous   : num  2 0 0 0 1 1 0 0 1 0 ...
+ $ stratum       : int  1 2 3 4 5 6 7 8 9 10 ...
+ $ pooled.stratum: num  3 1 4 2 32 36 6 22 5 19 ...</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">View</span>(infert)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(infert<span class="sc">$</span>case)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+  0   1 
+165  83 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(<span class="fu">table</span>(infert<span class="sc">$</span>case))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        0         1 
+0.6653226 0.3346774 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(infert, <span class="fu">aes</span>(<span class="at">x =</span> infert<span class="sc">$</span>case)) <span class="sc">+</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">fill =</span> <span class="fu">c</span>(<span class="st">"lightgreen"</span>, <span class="st">"red"</span>)) <span class="sc">+</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="at">stat =</span> <span class="st">"count"</span>, <span class="fu">aes</span>(<span class="at">label =</span> ..count..), <span class="at">vjust =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Distribución de diagnósticos"</span>, <span class="at">x =</span> <span class="st">"Diagnóstico"</span>, <span class="at">y =</span> <span class="st">"Frecuencia"</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Use of `infert$case` is discouraged.
+ℹ Use `case` instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The dot-dot notation (`..count..`) was deprecated in ggplot2 3.4.0.
+ℹ Please use `after_stat(count)` instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Use of `infert$case` is discouraged.
+ℹ Use `case` instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="NaiveBayes_and_Ensemble_Methods_for_Secondary_Infertility_Prediction_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Hacemos una visualización con la proporción de casos que tenemos en ambas categorías, concluimos que son 165 mujeres las que no tienen fertilidad secundaria y 83 mujeres que sí la tienen. Es está muy desbalanceado.</p>
+<p>Nuestros prioris P(Y) podrían ser:</p>
+<p>P(case=1) = 0.355; P(case=0) = 0.665</p>
+</section>
+<section id="variables-factor" class="level2">
+<h2 class="anchored" data-anchor-id="variables-factor">VARIABLES FACTOR</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>infert<span class="sc">$</span>parity <span class="ot">&lt;-</span> <span class="fu">factor</span>(infert<span class="sc">$</span>parity)<span class="co">#, levels = c("1", "2", "3", "4", "5", "6"))</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="co">#0,1,2</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>infert<span class="sc">$</span>induced <span class="ot">&lt;-</span> <span class="fu">factor</span>(infert<span class="sc">$</span>induced, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0"</span>,<span class="st">"1"</span>, <span class="st">"2"</span>))</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>infert<span class="sc">$</span>case <span class="ot">&lt;-</span> <span class="fu">factor</span>(infert<span class="sc">$</span>case, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0"</span>, <span class="st">"1"</span>))</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>infert<span class="sc">$</span>spontaneous <span class="ot">&lt;-</span> <span class="fu">factor</span>(infert<span class="sc">$</span>spontaneous, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0"</span>, <span class="st">"1"</span>, <span class="st">"2"</span>))</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="co">#infert$stratum &lt;- factor(infert$stratum)</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="co">#infert$pooled.stratum &lt;- factor(infert$pooled.stratum)</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>infert<span class="sc">$</span>age_group <span class="ot">&lt;-</span> <span class="fu">cut</span>(infert<span class="sc">$</span>age,</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>                        <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">25</span>, <span class="dv">30</span>, <span class="dv">35</span>, <span class="dv">40</span>, <span class="dv">45</span>),</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>                        <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"21-25"</span>, <span class="st">"26-30"</span>, <span class="st">"31-35"</span>, <span class="st">"36-40"</span>, <span class="st">"41-44"</span>),</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>                        <span class="at">right =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a><span class="fu">View</span>(infert)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Las variables fueron transformadas a factores para permitir el uso de Naive Bayes. La edad la hemos discretizado para tener intervalos más interpretables. No pasaremos las variables de stratum y pooled.stratum a factor porque son marcadores de grupos de emparejamiento en el estudio, no son características biológicas o clínicas que vayan a afectar en la predicción de infertilidad.</p>
+</section>
+<section id="división-train-test" class="level2">
+<h2 class="anchored" data-anchor-id="división-train-test">DIVISIÓN TRAIN TEST</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>) <span class="co">#reproducibilidad</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Train (70%)</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>train_idx <span class="ot">&lt;-</span> <span class="fu">createDataPartition</span>(infert<span class="sc">$</span>case, <span class="at">p =</span> <span class="fl">0.7</span>, <span class="at">list =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> infert[train_idx, ]</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="co">#Resto (30%)</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> infert[<span class="sc">-</span>train_idx, ]</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a><span class="co">#train y test solo con las variables que usaremos:</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>train_nb <span class="ot">&lt;-</span> <span class="fu">subset</span>(train, <span class="at">select =</span> <span class="sc">-</span><span class="fu">c</span>(stratum, pooled.stratum))</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>test_nb  <span class="ot">&lt;-</span> <span class="fu">subset</span>(test,  <span class="at">select =</span> <span class="sc">-</span><span class="fu">c</span>(stratum, pooled.stratum))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(<span class="fu">table</span>(train<span class="sc">$</span>case))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        0         1 
+0.6628571 0.3371429 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(<span class="fu">table</span>(test<span class="sc">$</span>case))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        0         1 
+0.6712329 0.3287671 </code></pre>
+</div>
+</div>
+</section>
+<section id="modelos" class="level2">
+<h2 class="anchored" data-anchor-id="modelos">MODELOS:</h2>
+<section id="ajuste-naive-bayes" class="level3">
+<h3 class="anchored" data-anchor-id="ajuste-naive-bayes">AJUSTE NAIVE BAYES:</h3>
+<p>Configuramos el trainControl para hacer validación cruzada de 5-folds, calcular probabilidades de clase, evaluar métricas con twoClassSummary y guardar las predicciones finales. Esto nso permitirá comparar modelos y ajustar hiperparámetros de forma consistente.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>train_control <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"cv"</span>,         </span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">number =</span> <span class="dv">5</span>,            </span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">classProbs =</span> <span class="cn">TRUE</span>,    </span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">summaryFunction =</span> twoClassSummary,</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">savePredictions =</span> <span class="st">"final"</span>, </span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#sampling = "smote"</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Definimos la grid de hiperparámetros para Naive Bayes, para poder probar combinaciones y seleccionar la mejor. Laplace tiene valores entre 0-2 para evitar probabilidades 0. Usaremos el Naive Bayes clásico y el factor de ajuste de varianza será 1, para tener un modelo simple e interpretable.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>grid_nb <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">laplace   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="fl">1.5</span>, <span class="dv">2</span>),</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">usekernel =</span> <span class="cn">FALSE</span>,   <span class="co"># Naive Bayes clásico</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">adjust    =</span> <span class="dv">1</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Entrenamos el modelo con train(), que porbará todos los valores de Laplace en la grid usando cross-validation:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(train<span class="sc">$</span>case)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "0" "1"</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>train<span class="sc">$</span>case <span class="ot">&lt;-</span> <span class="fu">factor</span>(train<span class="sc">$</span>case, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"No"</span>, <span class="st">"Yes"</span>))</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>test<span class="sc">$</span>case  <span class="ot">&lt;-</span> <span class="fu">factor</span>(test<span class="sc">$</span>case,  <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"No"</span>, <span class="st">"Yes"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Finalmente entrenamos un Naive Bayes dejando fuera las variables de estratificación</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>nb_model <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  case <span class="sc">~</span> . <span class="sc">-</span> stratum <span class="sc">-</span> pooled.stratum, </span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> train,</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"naive_bayes"</span>, </span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> train_control,</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneGrid =</span> grid_nb,</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">metric =</span> <span class="st">"Sens"</span></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>nb_model<span class="sc">$</span>bestTune</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  laplace usekernel adjust
+1       0     FALSE      1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>nb_model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Naive Bayes 
+
+175 samples
+  8 predictor
+  2 classes: 'No', 'Yes' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold) 
+Summary of sample sizes: 139, 141, 140, 140, 140 
+Resampling results across tuning parameters:
+
+  laplace  ROC        Sens       Spec     
+  0.0      0.6019228  0.6876812  0.4166667
+  0.5      0.6019228  0.6876812  0.4166667
+  1.0      0.6019228  0.6876812  0.4166667
+  1.5      0.6019228  0.6876812  0.4166667
+  2.0      0.6019228  0.6876812  0.4166667
+
+Tuning parameter 'usekernel' was held constant at a value of FALSE
+
+Tuning parameter 'adjust' was held constant at a value of 1
+Sens was used to select the optimal model using the largest value.
+The final values used for the model were laplace = 0, usekernel = FALSE
+ and adjust = 1.</code></pre>
+</div>
+</div>
+<p>Elegimos que la metric fuera ‘Sens’ porque queremos priorizar detectar correctamente los casos de infertilidad secundaria, esta decisión se debe a que no detectar un caso real de infertilidad puede tener consecuancias más graves que un falso positivo y por ello vamos a maximizar la capacidad del modelo para identificar los verdaderos positivos.</p>
+<p>El mejor modelo según Sens fue el Naive Bayes clásico con un suavizado de 0.5, con un Naive Bayes clásico, es decir, sin kernel y sin ajustar la varianza.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>best_nb <span class="ot">&lt;-</span> nb_model<span class="sc">$</span>finalModel</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>best_nb</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+================================= Naive Bayes ==================================
+
+Call:
+naive_bayes.default(x = x, y = y, laplace = param$laplace, usekernel = FALSE)
+
+-------------------------------------------------------------------------------- 
+ 
+Laplace smoothing: 0
+
+-------------------------------------------------------------------------------- 
+ 
+A priori probabilities: 
+
+       No       Yes 
+0.6628571 0.3371429 
+
+-------------------------------------------------------------------------------- 
+ 
+Tables: 
+
+-------------------------------------------------------------------------------- 
+:: education6-11yrs (Gaussian) 
+-------------------------------------------------------------------------------- 
+                
+education6-11yrs        No       Yes
+            mean 0.4827586 0.4915254
+            sd   0.5018706 0.5042195
+
+-------------------------------------------------------------------------------- 
+:: education12+ yrs (Gaussian) 
+-------------------------------------------------------------------------------- 
+                
+education12+ yrs        No       Yes
+            mean 0.4827586 0.4745763
+            sd   0.5018706 0.5036396
+
+-------------------------------------------------------------------------------- 
+:: age (Gaussian) 
+-------------------------------------------------------------------------------- 
+      
+age           No       Yes
+  mean 31.655172 31.355932
+  sd    5.049500  5.429049
+
+-------------------------------------------------------------------------------- 
+:: parity2 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity2        No       Yes
+   mean 0.3103448 0.3220339
+   sd   0.4646419 0.4712667
+
+-------------------------------------------------------------------------------- 
+:: parity3 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity3        No       Yes
+   mean 0.1724138 0.1016949
+   sd   0.3793785 0.3048411
+
+--------------------------------------------------------------------------------
+
+# ... and 11 more tables
+
+--------------------------------------------------------------------------------</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>best_nb<span class="sc">$</span>apriori   <span class="co"># Priori P(Y)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>NULL</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>best_nb<span class="sc">$</span>tables    <span class="co"># P(X|Y) para cada variable</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>-------------------------------------------------------------------------------- 
+:: education6-11yrs (Gaussian) 
+-------------------------------------------------------------------------------- 
+                
+education6-11yrs        No       Yes
+            mean 0.4827586 0.4915254
+            sd   0.5018706 0.5042195
+
+-------------------------------------------------------------------------------- 
+:: education12+ yrs (Gaussian) 
+-------------------------------------------------------------------------------- 
+                
+education12+ yrs        No       Yes
+            mean 0.4827586 0.4745763
+            sd   0.5018706 0.5036396
+
+-------------------------------------------------------------------------------- 
+:: age (Gaussian) 
+-------------------------------------------------------------------------------- 
+      
+age           No       Yes
+  mean 31.655172 31.355932
+  sd    5.049500  5.429049
+
+-------------------------------------------------------------------------------- 
+:: parity2 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity2        No       Yes
+   mean 0.3103448 0.3220339
+   sd   0.4646419 0.4712667
+
+-------------------------------------------------------------------------------- 
+:: parity3 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity3        No       Yes
+   mean 0.1724138 0.1016949
+   sd   0.3793785 0.3048411
+
+-------------------------------------------------------------------------------- 
+:: parity4 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity4         No        Yes
+   mean 0.06034483 0.06779661
+   sd   0.23915769 0.25355451
+
+-------------------------------------------------------------------------------- 
+:: parity5 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity5         No        Yes
+   mean 0.02586207 0.01694915
+   sd   0.15941234 0.13018891
+
+-------------------------------------------------------------------------------- 
+:: parity6 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity6         No        Yes
+   mean 0.01724138 0.03389831
+   sd   0.13073429 0.18252082
+
+-------------------------------------------------------------------------------- 
+:: induced1 (Gaussian) 
+-------------------------------------------------------------------------------- 
+        
+induced1        No       Yes
+    mean 0.2758621 0.2881356
+    sd   0.4488867 0.4567821
+
+-------------------------------------------------------------------------------- 
+:: induced2 (Gaussian) 
+-------------------------------------------------------------------------------- 
+        
+induced2        No       Yes
+    mean 0.1120690 0.1355932
+    sd   0.3168198 0.3452948
+
+-------------------------------------------------------------------------------- 
+:: spontaneous1 (Gaussian) 
+-------------------------------------------------------------------------------- 
+            
+spontaneous1        No       Yes
+        mean 0.2413793 0.3389831
+        sd   0.4297763 0.4774274
+
+-------------------------------------------------------------------------------- 
+:: spontaneous2 (Gaussian) 
+-------------------------------------------------------------------------------- 
+            
+spontaneous2         No        Yes
+        mean 0.06896552 0.25423729
+        sd   0.25449483 0.43916929
+
+-------------------------------------------------------------------------------- 
+:: age_group26-30 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group26-30        No       Yes
+          mean 0.3017241 0.3728814
+          sd   0.4609975 0.4877218
+
+-------------------------------------------------------------------------------- 
+:: age_group31-35 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group31-35        No       Yes
+          mean 0.3275862 0.2711864
+          sd   0.4713692 0.4483882
+
+-------------------------------------------------------------------------------- 
+:: age_group36-40 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group36-40        No       Yes
+          mean 0.2155172 0.1694915
+          sd   0.4129646 0.3784060
+
+-------------------------------------------------------------------------------- 
+:: age_group41-44 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group41-44         No        Yes
+          mean 0.03448276 0.06779661
+          sd   0.18325722 0.25355451
+
+--------------------------------------------------------------------------------</code></pre>
+</div>
+</div>
+<p>Para la interpretación de la priori (probabilidad marginal de la clase), podemos observar que P(case=No) = 66%, la mayotía de las mujeres no tienen infertilidad secundaria y para P(case= Yes) = 34% lo que significa que alrededor de un tercio tienen infertilidad secundaria. Otras interpetaciones interesantes podrían resultar interesantes son que las mujeres con más abortos espontáneos tienen mayor probabilidad de infertilidad secundaria. Fijándonos en la variable spontaneous2, observamos que las mujeres con 2 abortos espontáneos previos tienen mayor reisgo de infertilidad secundaria debido a que aumenta la probabilidad de esta, P(spontaneous = 2| No) = 7% y la P(spontaneous = 2| Yes) = 25% . En cuanto a parity2, que el 31% de as mujeres sin infertilidad secundaria tiene dos embarazos previos y el 34% de las muejeres con infertilidad secundaria tienen dos embarazos previos, la desviación nos muestra mucho solapamiento entre clases. Esta variable por si sola no permite distinguir claramente entre mujeres con y sin infertilidad secundaria</p>
+<section id="evaluación-naive-bayes" class="level5">
+<h5 class="anchored" data-anchor-id="evaluación-naive-bayes">EVALUACIÓN NAIVE BAYES</h5>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Predecir clases</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>pred_class <span class="ot">&lt;-</span> <span class="fu">predict</span>(nb_model, <span class="at">newdata =</span> test)</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Predecir probabilidades</span></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>pred_prob <span class="ot">&lt;-</span> <span class="fu">predict</span>(nb_model, <span class="at">newdata =</span> test, <span class="at">type =</span> <span class="st">"prob"</span>)</span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Matriz de confusión</span></span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>conf <span class="ot">&lt;-</span> <span class="fu">confusionMatrix</span>(pred_class, test<span class="sc">$</span>case)</span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>conf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Confusion Matrix and Statistics
+
+          Reference
+Prediction No Yes
+       No  35  14
+       Yes 14  10
+                                          
+               Accuracy : 0.6164          
+                 95% CI : (0.4952, 0.7279)
+    No Information Rate : 0.6712          
+    P-Value [Acc &gt; NIR] : 0.8683          
+                                          
+                  Kappa : 0.131           
+                                          
+ Mcnemar's Test P-Value : 1.0000          
+                                          
+            Sensitivity : 0.7143          
+            Specificity : 0.4167          
+         Pos Pred Value : 0.7143          
+         Neg Pred Value : 0.4167          
+             Prevalence : 0.6712          
+         Detection Rate : 0.4795          
+   Detection Prevalence : 0.6712          
+      Balanced Accuracy : 0.5655          
+                                          
+       'Positive' Class : No              
+                                          </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sensibilidad y especificidad</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>conf<span class="sc">$</span>byClass[<span class="st">"Sensitivity"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sensitivity 
+  0.7142857 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>conf<span class="sc">$</span>byClass[<span class="st">"Specificity"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Specificity 
+  0.4166667 </code></pre>
+</div>
+</div>
+<p>Evaluando la matriz de confusión podemos observar que tenemos 35 casos correctamente predicho como ‘No’ (TN), 10 casos correctamente predichos como ‘Yes’ (TP), 14 FN, es decir, la mujer tiene infertilidad pero se predijo que ‘No’ y 14 FP, es decir, se predijo infertilidad en la mujer pero realmente no la tiene. Obteniendo así un Accuracy de 0.616, es decir, que nuestro modelo acierta en un 61.6% de los casos. La sensibilidad es de 0.714, es decir, el modelo detecta correctamente el 71.4% de los casos ‘No’, predice moderadamente bien los infértiles y una especificidad de 0.417, es decir, solo predice correctamente el 41.7% de los ‘Yes’, infertilidad. El modelo predice mejor en el caso de una mujer sin infertilidad que sí la tiene. Por ello podemos concluir dado estos resultados que el modelo es algo sesgado hacia la clase mayoritaria (No infertilidad), y es más confiable prediciendo casos negativos que positivos. Dado estos resultados y lo visto durante el curso, vermos si combiando con otros modelos podemos hacer una mejora.</p>
+<p>Aunque como veremos más adelante en el resto de modelos hemos ajustado en la función de trainControl() un sampling = “smote”, en este modelo no lo haremos debido a que si lo hicieramos, el efecto del SMOTE para equilibar las clases fue inesperado y decidimos no incluirlo, el motivo es que Naive Bayes es un modelo probabilístico que se basa en la distribución a priori de las plases P(Y) y las probabilidades condicionales P(X|Y). Smote altera artificialmente la proporción de la clase minoritaria, lo que cambia la expectativa del modelo sobre la frecuencia de los casos ‘Yes’. Por ello Naive Bayes sobreestima la probabilidad de la clase minoritaria, aumentando así la sensibilidad a costa de la especificidad.</p>
+</section>
+</section>
+</section>
+<section id="otros-modelos" class="level2">
+<h2 class="anchored" data-anchor-id="otros-modelos">OTROS MODELOS:</h2>
+<p>Vamos a ajustar también dos modelos, en este caso Random Forest y XGBoost, en ellos sí que usaremos el sampling = “smote” ya que no son modelos que dependan de las probabilidades a priori.</p>
+<section id="random-forest" class="level3">
+<h3 class="anchored" data-anchor-id="random-forest">RANDOM FOREST</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Control de entrenamiento</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>train_control_rf <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"cv"</span>,</span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">number =</span> <span class="dv">5</span>,</span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">sampling =</span> <span class="st">"smote"</span>, <span class="co">#balanceamos las clases</span></span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">classProbs =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">summaryFunction =</span> twoClassSummary</span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a><span class="co">#probaremos mtry = 2,4,6, serán las variables que RF considerará en cada split de un árbol</span></span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>grid_rf <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(</span>
+<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">mtry =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>)</span>
+<span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Entrenar modelo</span></span>
+<span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb52-15"><a href="#cb52-15" aria-hidden="true" tabindex="-1"></a>rf_model <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb52-16"><a href="#cb52-16" aria-hidden="true" tabindex="-1"></a>  case <span class="sc">~</span> . <span class="sc">-</span> stratum <span class="sc">-</span> pooled.stratum,</span>
+<span id="cb52-17"><a href="#cb52-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> train,</span>
+<span id="cb52-18"><a href="#cb52-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"rf"</span>,</span>
+<span id="cb52-19"><a href="#cb52-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> train_control_rf,</span>
+<span id="cb52-20"><a href="#cb52-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneGrid =</span> grid_rf,</span>
+<span id="cb52-21"><a href="#cb52-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">metric =</span> <span class="st">"Sen"</span></span>
+<span id="cb52-22"><a href="#cb52-22" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in train.default(x, y, weights = w, ...): The metric "Sen" was not in
+the result set. ROC will be used instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: recipes</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cargando paquete requerido: dplyr</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:xgboost':
+
+    slice</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:randomForest':
+
+    combine</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Adjuntando el paquete: 'recipes'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:stats':
+
+    step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mejor configuración</span></span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>rf_model<span class="sc">$</span>bestTune</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  mtry
+2    4</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>rf_model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Random Forest 
+
+175 samples
+  8 predictor
+  2 classes: 'No', 'Yes' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold) 
+Summary of sample sizes: 140, 140, 139, 140, 141 
+Addtional sampling using SMOTE
+
+Resampling results across tuning parameters:
+
+  mtry  ROC        Sens       Spec     
+  2     0.5299325  0.8086957  0.1696970
+  4     0.5391277  0.7489130  0.2893939
+  6     0.5389671  0.7231884  0.2893939
+
+ROC was used to select the optimal model using the largest value.
+The final value used for the model was mtry = 4.</code></pre>
+</div>
+</div>
+<p>Inicialmente nuestro mejor Random Forest entrenaba con mtry = 2, pero nuestro dataset no estaba balanceado por lo que obteníamos una sensibilidad muy alta y una especificidad muy baja, como este modelo favorecía demasiado a la clase mayoritaria decidimos aplicar smote para balancear las clases en el entrenamiento. Tras ellos la mtry cambió a 4, por lo que se consideran más variables en cada split. Se selecciona este mtry porque es el maximiza la sansibilidad, equilibrando así mejor la especificidad y sensibilidad.</p>
+</section>
+<section id="xgboost" class="level3">
+<h3 class="anchored" data-anchor-id="xgboost">XGBoost</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Control de entrenamiento</span></span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>train_control_xgb <span class="ot">&lt;-</span> <span class="fu">trainControl</span>(</span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"cv"</span>,</span>
+<span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">number =</span> <span class="dv">5</span>,</span>
+<span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">classProbs =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">summaryFunction =</span> twoClassSummary,</span>
+<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">sampling =</span> <span class="st">'smote'</span></span>
+<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb67-9"><a href="#cb67-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-10"><a href="#cb67-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Grid de hiperparámetros</span></span>
+<span id="cb67-11"><a href="#cb67-11" aria-hidden="true" tabindex="-1"></a>grid_xgb <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(</span>
+<span id="cb67-12"><a href="#cb67-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">nrounds =</span> <span class="fu">c</span>(<span class="dv">50</span>, <span class="dv">100</span>),</span>
+<span id="cb67-13"><a href="#cb67-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_depth =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">6</span>),</span>
+<span id="cb67-14"><a href="#cb67-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">eta =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.3</span>),</span>
+<span id="cb67-15"><a href="#cb67-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="dv">0</span>,</span>
+<span id="cb67-16"><a href="#cb67-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">colsample_bytree =</span> <span class="fl">0.8</span>,</span>
+<span id="cb67-17"><a href="#cb67-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">min_child_weight =</span> <span class="dv">1</span>,</span>
+<span id="cb67-18"><a href="#cb67-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">subsample =</span> <span class="fl">0.8</span></span>
+<span id="cb67-19"><a href="#cb67-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb67-20"><a href="#cb67-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb67-21"><a href="#cb67-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Entrenar modelo</span></span>
+<span id="cb67-22"><a href="#cb67-22" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb67-23"><a href="#cb67-23" aria-hidden="true" tabindex="-1"></a>xgb_model <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
+<span id="cb67-24"><a href="#cb67-24" aria-hidden="true" tabindex="-1"></a>  case <span class="sc">~</span> . <span class="sc">-</span> stratum <span class="sc">-</span> pooled.stratum,</span>
+<span id="cb67-25"><a href="#cb67-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> train,</span>
+<span id="cb67-26"><a href="#cb67-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"xgbTree"</span>,</span>
+<span id="cb67-27"><a href="#cb67-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">trControl =</span> train_control_xgb,</span>
+<span id="cb67-28"><a href="#cb67-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">tuneGrid =</span> grid_xgb,</span>
+<span id="cb67-29"><a href="#cb67-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">metric =</span> <span class="st">"Sens"</span></span>
+<span id="cb67-30"><a href="#cb67-30" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:40] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:41] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:42] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:43] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:44] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:45] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.
+[12:09:45] WARNING: src/c_api/c_api.cc:935: `ntree_limit` is deprecated, use `iteration_range` instead.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mejor configuración</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>xgb_model<span class="sc">$</span>bestTune</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  nrounds max_depth eta gamma colsample_bytree min_child_weight subsample
+2     100         2 0.1     0              0.8                1       0.8</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>xgb_model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>eXtreme Gradient Boosting 
+
+175 samples
+  8 predictor
+  2 classes: 'No', 'Yes' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold) 
+Summary of sample sizes: 140, 140, 139, 140, 141 
+Addtional sampling using SMOTE
+
+Resampling results across tuning parameters:
+
+  eta  max_depth  nrounds  ROC        Sens       Spec     
+  0.1  2           50      0.6169549  0.7572464  0.3742424
+  0.1  2          100      0.5879584  0.7659420  0.3409091
+  0.1  4           50      0.5524813  0.7224638  0.3227273
+  0.1  4          100      0.5005654  0.7402174  0.2560606
+  0.1  6           50      0.5203777  0.7307971  0.2742424
+  0.1  6          100      0.4813818  0.7054348  0.2560606
+  0.3  2           50      0.5476326  0.7315217  0.3227273
+  0.3  2          100      0.5217446  0.7144928  0.3060606
+  0.3  4           50      0.4866765  0.7394928  0.2727273
+  0.3  4          100      0.4649896  0.7228261  0.3060606
+  0.3  6           50      0.4770916  0.7061594  0.2393939
+  0.3  6          100      0.4555857  0.6797101  0.2227273
+
+Tuning parameter 'gamma' was held constant at a value of 0
+Tuning
+
+Tuning parameter 'min_child_weight' was held constant at a value of 1
+
+Tuning parameter 'subsample' was held constant at a value of 0.8
+Sens was used to select the optimal model using the largest value.
+The final values used for the model were nrounds = 100, max_depth = 2, eta
+ = 0.1, gamma = 0, colsample_bytree = 0.8, min_child_weight = 1 and subsample
+ = 0.8.</code></pre>
+</div>
+</div>
+<p>En este modelo empleamos un 5-fold cross-validation dividiendo el conjutno de entrenamiento en 5 partes, donde entrena en 4 y valida en una reiteradas veces. En cuanto al grid de hiperparámetros, estas serán todas las combinaciones posibles que probará. Eligirá aquel modelo cuya Sensibilidad sea más alta. El modelo ‘óptimo’ según la sensibilidad fue el de nrounds = 100, max_depth = 2, árboles poco profundas… es decir, XGBoost prefiere un modelo simple y conservador.</p>
+<p>Como ha ocurrido con los anteriores modelos al aplicar el ‘smote’ en el samplign nuestro modelo ha mejorado. Ahora la mejor combinación ha alcanzado un ROC de 0.616, superando así al RF, una Sensibilidad de 0.76 y una Especificidad de 0.37, más equilibrada que antes.</p>
+<p>Evaluación e interpretación de ambos modelos:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Predicciones</span></span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>pred_rf <span class="ot">&lt;-</span> <span class="fu">predict</span>(rf_model, <span class="at">newdata =</span> test)</span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>pred_xgb <span class="ot">&lt;-</span> <span class="fu">predict</span>(xgb_model, <span class="at">newdata =</span> test)</span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Matrices de confusión</span></span>
+<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>conf_rf <span class="ot">&lt;-</span> <span class="fu">confusionMatrix</span>(pred_rf, test<span class="sc">$</span>case)</span>
+<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>conf_xgb <span class="ot">&lt;-</span> <span class="fu">confusionMatrix</span>(pred_xgb, test<span class="sc">$</span>case)</span>
+<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb73-9"><a href="#cb73-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Sensibilidad y especificidad</span></span>
+<span id="cb73-10"><a href="#cb73-10" aria-hidden="true" tabindex="-1"></a>conf_rf<span class="sc">$</span>byClass[<span class="fu">c</span>(<span class="st">"Sensitivity"</span>,<span class="st">"Specificity"</span>)]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sensitivity Specificity 
+  0.7551020   0.5833333 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>conf_xgb<span class="sc">$</span>byClass[<span class="fu">c</span>(<span class="st">"Sensitivity"</span>,<span class="st">"Specificity"</span>)]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sensitivity Specificity 
+  0.6734694   0.6250000 </code></pre>
+</div>
+</div>
+<p>En Random Forest la sensibilidad es de 0.755, lo que indica que el modelo identifica correctamente el 75.5% de las muejres con infertilidad secundaria (case= Yes), la especificidad de este es de 0.583, es decir, el modelo identifica correctamente el 58.3% de las mujeres sin infertilidad (case= No). El XGBoost, tiene una sensibilidad de 0.694, es decir que el modelo detecta correctamente el 69.4% de los pasos positivos (case= Yes) y una especificidad de 0.625, lo que significa que el modelo identificaa bien el 62.5% de los controles (case= No)</p>
+</section>
+</section>
+<section id="conclusión" class="level1">
+<h1>CONCLUSIÓN:</h1>
+<p>Se entrenaron tres modelos de clasificación (Naive Bayes, Random Forest y XGBoost) para predecir la infertilidad secundaria a partir de variables reproductivas y sociodemográficas. El dataset presentaba un <strong>desbalance moderado</strong> entre casos positivos (Yes, 34%) y negativos (No, 66%).</p>
+<ol type="1">
+<li><p><strong>Naive Bayes</strong> mostró limitaciones inherentes al modelo probabilístico: la sensibilidad y especificidad fueron moderadas y, al aplicar SMOTE, se produjo un <strong>efecto adverso</strong> (sensibilidad casi 1 pero especificidad 0), porque la alteración artificial de la proporción de clases afecta directamente a las probabilidades a priori que el modelo utiliza. Por ello, se eligió no aplicar SMOTE y se priorizó la <strong>sensibilidad</strong> para maximizar la detección de casos positivos, dado que los falsos negativos tienen mayor coste clínico. Variables como <code>spontaneous2</code> mostraron relación clara con el riesgo de infertilidad, mientras que otras, como <code>parity2</code>, presentan <strong>solapamiento entre clases</strong>, limitando su poder predictivo individual.</p></li>
+<li><p><strong>Random Forest</strong> y <strong>XGBoost</strong> se beneficiaron del <strong>balanceo SMOTE</strong>, alcanzando un mejor desempeño general. Random Forest logró una <strong>sensibilidad de 0.755</strong> y especificidad de 0.583, mientras que XGBoost obtuvo una <strong>sensibilidad de 0.694</strong> y especificidad de 0.625. Esto refleja que ambos modelos, especialmente RF, logran un <strong>mejor equilibrio entre detectar casos positivos y negativos</strong>, superando al Naive Bayes en términos de capacidad predictiva.</p></li>
+</ol>
+<p>La mejor estrategia para predecir infertilidad secundaria podría ser un enfoque híbrido: usar inicialmente <strong>Naive Bayes</strong> para identificar a las mujeres con mayor probabilidad de ser casos (priorizando la sensibilidad y evitando falsos negativos) y, posteriormente, aplicar <strong>Random Forest o XGBoost</strong> solo a los casos positivos para refinar la predicción y reducir los falsos positivos. Este enfoque aprovecha las fortalezas de cada modelo y permite un equilibrio más adecuado entre sensibilidad y especificidad, adaptándose mejor a las necesidades clínicas del problema.</p>
+</section>
+<section id="uso-del-naive-bayes" class="level1">
+<h1>USO DEL NAIVE BAYES:</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>best_nb<span class="sc">$</span>levels <span class="co">#Niveles de la variable objetivo</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "No"  "Yes"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a>best_nb<span class="sc">$</span>apriori <span class="co">#Proporción de No vs Yes en el entrenamiento</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>NULL</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>best_nb<span class="sc">$</span>tables <span class="co">#Probabilidades condicionales P(X|Y) para cada variable</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>-------------------------------------------------------------------------------- 
+:: education6-11yrs (Gaussian) 
+-------------------------------------------------------------------------------- 
+                
+education6-11yrs        No       Yes
+            mean 0.4827586 0.4915254
+            sd   0.5018706 0.5042195
+
+-------------------------------------------------------------------------------- 
+:: education12+ yrs (Gaussian) 
+-------------------------------------------------------------------------------- 
+                
+education12+ yrs        No       Yes
+            mean 0.4827586 0.4745763
+            sd   0.5018706 0.5036396
+
+-------------------------------------------------------------------------------- 
+:: age (Gaussian) 
+-------------------------------------------------------------------------------- 
+      
+age           No       Yes
+  mean 31.655172 31.355932
+  sd    5.049500  5.429049
+
+-------------------------------------------------------------------------------- 
+:: parity2 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity2        No       Yes
+   mean 0.3103448 0.3220339
+   sd   0.4646419 0.4712667
+
+-------------------------------------------------------------------------------- 
+:: parity3 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity3        No       Yes
+   mean 0.1724138 0.1016949
+   sd   0.3793785 0.3048411
+
+-------------------------------------------------------------------------------- 
+:: parity4 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity4         No        Yes
+   mean 0.06034483 0.06779661
+   sd   0.23915769 0.25355451
+
+-------------------------------------------------------------------------------- 
+:: parity5 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity5         No        Yes
+   mean 0.02586207 0.01694915
+   sd   0.15941234 0.13018891
+
+-------------------------------------------------------------------------------- 
+:: parity6 (Gaussian) 
+-------------------------------------------------------------------------------- 
+       
+parity6         No        Yes
+   mean 0.01724138 0.03389831
+   sd   0.13073429 0.18252082
+
+-------------------------------------------------------------------------------- 
+:: induced1 (Gaussian) 
+-------------------------------------------------------------------------------- 
+        
+induced1        No       Yes
+    mean 0.2758621 0.2881356
+    sd   0.4488867 0.4567821
+
+-------------------------------------------------------------------------------- 
+:: induced2 (Gaussian) 
+-------------------------------------------------------------------------------- 
+        
+induced2        No       Yes
+    mean 0.1120690 0.1355932
+    sd   0.3168198 0.3452948
+
+-------------------------------------------------------------------------------- 
+:: spontaneous1 (Gaussian) 
+-------------------------------------------------------------------------------- 
+            
+spontaneous1        No       Yes
+        mean 0.2413793 0.3389831
+        sd   0.4297763 0.4774274
+
+-------------------------------------------------------------------------------- 
+:: spontaneous2 (Gaussian) 
+-------------------------------------------------------------------------------- 
+            
+spontaneous2         No        Yes
+        mean 0.06896552 0.25423729
+        sd   0.25449483 0.43916929
+
+-------------------------------------------------------------------------------- 
+:: age_group26-30 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group26-30        No       Yes
+          mean 0.3017241 0.3728814
+          sd   0.4609975 0.4877218
+
+-------------------------------------------------------------------------------- 
+:: age_group31-35 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group31-35        No       Yes
+          mean 0.3275862 0.2711864
+          sd   0.4713692 0.4483882
+
+-------------------------------------------------------------------------------- 
+:: age_group36-40 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group36-40        No       Yes
+          mean 0.2155172 0.1694915
+          sd   0.4129646 0.3784060
+
+-------------------------------------------------------------------------------- 
+:: age_group41-44 (Gaussian) 
+-------------------------------------------------------------------------------- 
+              
+age_group41-44         No        Yes
+          mean 0.03448276 0.06779661
+          sd   0.18325722 0.25355451
+
+--------------------------------------------------------------------------------</code></pre>
+</div>
+</div>
+<p>Como ya hemos observado antes el modelo espera que aproximadamente 2 de cada 3 mujeres no tengan infertilidad y 1 de cada 3 sí. En cuanto a las variables educativas, las medias son casi idénticas entre No y Yes. Además la sd es alta, 0.5 ya que es una variable bianria. Con esto podemos decir que el nivel educativo por sí solo no distingue bien a las muejres con y sin infertilidad secundaria. En cuanto a age, la edad tiene un efecto leve pero nada determinante, hay mayor cantidad de mujeres con infertilidad en grupos de 26-30 años y menos en 31-31 y 36-40 años. En cuento al numero de embarazos previos, la variable parity tiene un ligero solapamiento, sobre todo para 2 embarazos previos (ya comentado antes), para valores más altos, existen difernecias leves pero los grupos son pequeños. Por lo que parity sola no permite distinguir claramente la infertilidad, aunque aporta infromación importente. En cuanto a la variable abortos inducidos, existe muy poca difernecia entre clases, por lo que es poco predictiva por sí sola. En la variable spontaneous, sí que se nota un patrón, mujeres con dos abortos espontáneos previos tienen mucha más probabilidad de infertilidad secundaria, esto se puede deber a que los abortos espontáneos repetidos pueden indicar problemas reproductivos.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

@@ -1,0 +1,315 @@
+---
+title: "Naive Bayes and Ensemble Methods for Secondary Infertility Prediction"
+author: "Ángela Lomas Anglada"
+format: html
+editor: visual
+---
+
+## LIBRERIAS
+
+```{r}
+library(readr)
+library(corrplot)
+library(ggplot2)
+library(caret)
+library(ggplot2)
+library(tidyr)
+library(randomForest)
+library(xgboost)
+library(LearnBayes)
+library(HDInterval)
+```
+
+## DATASET
+
+Nuestra variable objetivo es de clase binaria (case: infertilidad si/no). Tenemos varias variables categóricas (parity, induced, spontaneous, education) y una variable continua, age.
+
+parity --\> número de embarazos previos
+
+age --\> edad de la mujer
+
+induced –\> numero de abortos inducidos (provocados) previos.
+
+education --\> nivel de educación de la mujer induced --\> nº de abortos inducidos previos
+
+-   **case (V objetivo):** 1 --\> caso (tiene infertilidad secundaria) ; 0 --\> control (no tiene infertilidad)
+
+spontenaous --\> nº de abortos espontáneos previos
+
+stratum --\> identificador del grupo de emparejamiento de estudio
+
+pooled.started –\> estratos agrupados (pooled) para análisis estadísticos.
+
+El obejtivo de este trabajo será usar el modelo de Naive Bayes para evaluar cómo variables reproductivas y sociodemográfricas infulyen en la probabilidad de infertilidad secundaria.
+
+```{r}
+data(infert)
+head(infert)
+str(infert)
+View(infert)
+```
+
+```{r}
+table(infert$case)
+prop.table(table(infert$case))
+```
+
+```{r}
+ggplot(infert, aes(x = infert$case)) +
+  geom_bar(fill = c("lightgreen", "red")) +
+  geom_text(stat = "count", aes(label = ..count..), vjust = 0.5) +
+  labs(title = "Distribución de diagnósticos", x = "Diagnóstico", y = "Frecuencia") + theme_minimal()
+```
+
+Hacemos una visualización con la proporción de casos que tenemos en ambas categorías, concluimos que son 165 mujeres las que no tienen fertilidad secundaria y 83 mujeres que sí la tienen. Es está muy desbalanceado.
+
+Nuestros prioris P(Y) podrían ser:
+
+P(case=1) = 0.355; P(case=0) = 0.665
+
+## VARIABLES FACTOR
+
+```{r}
+infert$parity <- factor(infert$parity)#, levels = c("1", "2", "3", "4", "5", "6"))
+#0,1,2
+infert$induced <- factor(infert$induced, levels = c("0","1", "2"))
+infert$case <- factor(infert$case, levels = c("0", "1"))
+infert$spontaneous <- factor(infert$spontaneous, levels = c("0", "1", "2"))
+#infert$stratum <- factor(infert$stratum)
+#infert$pooled.stratum <- factor(infert$pooled.stratum)
+infert$age_group <- cut(infert$age,
+                        breaks = c(20, 25, 30, 35, 40, 45),
+                        labels = c("21-25", "26-30", "31-35", "36-40", "41-44"),
+                        right = TRUE)
+View(infert)
+```
+
+Las variables fueron transformadas a factores para permitir el uso de Naive Bayes. La edad la hemos discretizado para tener intervalos más interpretables. No pasaremos las variables de stratum y pooled.stratum a factor porque son marcadores de grupos de emparejamiento en el estudio, no son características biológicas o clínicas que vayan a afectar en la predicción de infertilidad.
+
+## DIVISIÓN TRAIN TEST
+
+```{r}
+set.seed(123) #reproducibilidad
+
+#Train (70%)
+train_idx <- createDataPartition(infert$case, p = 0.7, list = FALSE)
+train <- infert[train_idx, ]
+
+#Resto (30%)
+test <- infert[-train_idx, ]
+
+#train y test solo con las variables que usaremos:
+train_nb <- subset(train, select = -c(stratum, pooled.stratum))
+test_nb  <- subset(test,  select = -c(stratum, pooled.stratum))
+```
+
+```{r}
+prop.table(table(train$case))
+prop.table(table(test$case))
+```
+
+## MODELOS:
+
+### AJUSTE NAIVE BAYES:
+
+Configuramos el trainControl para hacer validación cruzada de 5-folds, calcular probabilidades de clase, evaluar métricas con twoClassSummary y guardar las predicciones finales. Esto nso permitirá comparar modelos y ajustar hiperparámetros de forma consistente.
+
+```{r}
+train_control <- trainControl(
+  method = "cv",         
+  number = 5,            
+  classProbs = TRUE,    
+  summaryFunction = twoClassSummary,
+  savePredictions = "final", 
+  #sampling = "smote"
+)
+```
+
+Definimos la grid de hiperparámetros para Naive Bayes, para poder probar combinaciones y seleccionar la mejor. Laplace tiene valores entre 0-2 para evitar probabilidades 0. Usaremos el Naive Bayes clásico y el factor de ajuste de varianza será 1, para tener un modelo simple e interpretable.
+
+```{r}
+grid_nb <- expand.grid(
+  laplace   = c(0, 0.5, 1, 1.5, 2),
+  usekernel = FALSE,   # Naive Bayes clásico
+  adjust    = 1
+)
+```
+
+Entrenamos el modelo con train(), que porbará todos los valores de Laplace en la grid usando cross-validation:
+
+```{r}
+levels(train$case)
+```
+
+```{r}
+train$case <- factor(train$case, levels = c(0, 1), labels = c("No", "Yes"))
+test$case  <- factor(test$case,  levels = c(0, 1), labels = c("No", "Yes"))
+```
+
+Finalmente entrenamos un Naive Bayes dejando fuera las variables de estratificación
+
+```{r}
+nb_model <- train(
+  case ~ . - stratum - pooled.stratum, 
+  data = train,
+  method = "naive_bayes", 
+  trControl = train_control,
+  tuneGrid = grid_nb,
+  metric = "Sens"
+)
+```
+
+```{r}
+nb_model$bestTune
+nb_model
+```
+
+Elegimos que la metric fuera 'Sens' porque queremos priorizar detectar correctamente los casos de infertilidad secundaria, esta decisión se debe a que no detectar un caso real de infertilidad puede tener consecuancias más graves que un falso positivo y por ello vamos a maximizar la capacidad del modelo para identificar los verdaderos positivos.
+
+El mejor modelo según Sens fue el Naive Bayes clásico con un suavizado de 0.5, con un Naive Bayes clásico, es decir, sin kernel y sin ajustar la varianza.
+
+```{r}
+best_nb <- nb_model$finalModel
+best_nb
+
+best_nb$apriori   # Priori P(Y)
+best_nb$tables    # P(X|Y) para cada variable
+```
+
+Para la interpretación de la priori (probabilidad marginal de la clase), podemos observar que P(case=No) = 66%, la mayotía de las mujeres no tienen infertilidad secundaria y para P(case= Yes) = 34% lo que significa que alrededor de un tercio tienen infertilidad secundaria. Otras interpetaciones interesantes podrían resultar interesantes son que las mujeres con más abortos espontáneos tienen mayor probabilidad de infertilidad secundaria. Fijándonos en la variable spontaneous2, observamos que las mujeres con 2 abortos espontáneos previos tienen mayor reisgo de infertilidad secundaria debido a que aumenta la probabilidad de esta, P(spontaneous = 2\| No) = 7% y la P(spontaneous = 2\| Yes) = 25% . En cuanto a parity2, que el 31% de as mujeres sin infertilidad secundaria tiene dos embarazos previos y el 34% de las muejeres con infertilidad secundaria tienen dos embarazos previos, la desviación nos muestra mucho solapamiento entre clases. Esta variable por si sola no permite distinguir claramente entre mujeres con y sin infertilidad secundaria
+
+##### EVALUACIÓN NAIVE BAYES
+
+```{r}
+# Predecir clases
+pred_class <- predict(nb_model, newdata = test)
+# Predecir probabilidades
+pred_prob <- predict(nb_model, newdata = test, type = "prob")
+# Matriz de confusión
+conf <- confusionMatrix(pred_class, test$case)
+conf
+# Sensibilidad y especificidad
+conf$byClass["Sensitivity"]
+conf$byClass["Specificity"]
+```
+
+Evaluando la matriz de confusión podemos observar que tenemos 35 casos correctamente predicho como 'No' (TN), 10 casos correctamente predichos como 'Yes' (TP), 14 FN, es decir, la mujer tiene infertilidad pero se predijo que 'No' y 14 FP, es decir, se predijo infertilidad en la mujer pero realmente no la tiene. Obteniendo así un Accuracy de 0.616, es decir, que nuestro modelo acierta en un 61.6% de los casos. La sensibilidad es de 0.714, es decir, el modelo detecta correctamente el 71.4% de los casos 'No', predice moderadamente bien los infértiles y una especificidad de 0.417, es decir, solo predice correctamente el 41.7% de los 'Yes', infertilidad. El modelo predice mejor en el caso de una mujer sin infertilidad que sí la tiene. Por ello podemos concluir dado estos resultados que el modelo es algo sesgado hacia la clase mayoritaria (No infertilidad), y es más confiable prediciendo casos negativos que positivos. Dado estos resultados y lo visto durante el curso, vermos si combiando con otros modelos podemos hacer una mejora.
+
+Aunque como veremos más adelante en el resto de modelos hemos ajustado en la función de trainControl() un sampling = "smote", en este modelo no lo haremos debido a que si lo hicieramos, el efecto del SMOTE para equilibar las clases fue inesperado y decidimos no incluirlo, el motivo es que Naive Bayes es un modelo probabilístico que se basa en la distribución a priori de las plases P(Y) y las probabilidades condicionales P(X\|Y). Smote altera artificialmente la proporción de la clase minoritaria, lo que cambia la expectativa del modelo sobre la frecuencia de los casos 'Yes'. Por ello Naive Bayes sobreestima la probabilidad de la clase minoritaria, aumentando así la sensibilidad a costa de la especificidad.
+
+## OTROS MODELOS:
+
+Vamos a ajustar también dos modelos, en este caso Random Forest y XGBoost, en ellos sí que usaremos el sampling = "smote" ya que no son modelos que dependan de las probabilidades a priori.
+
+### RANDOM FOREST
+
+```{r}
+# Control de entrenamiento
+train_control_rf <- trainControl(
+  method = "cv",
+  number = 5,
+  sampling = "smote", #balanceamos las clases
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary
+)
+#probaremos mtry = 2,4,6, serán las variables que RF considerará en cada split de un árbol
+grid_rf <- expand.grid(
+  mtry = c(2, 4, 6)
+)
+# Entrenar modelo
+set.seed(123)
+rf_model <- train(
+  case ~ . - stratum - pooled.stratum,
+  data = train,
+  method = "rf",
+  trControl = train_control_rf,
+  tuneGrid = grid_rf,
+  metric = "Sen"
+)
+# Mejor configuración
+rf_model$bestTune
+rf_model
+```
+
+Inicialmente nuestro mejor Random Forest entrenaba con mtry = 2, pero nuestro dataset no estaba balanceado por lo que obteníamos una sensibilidad muy alta y una especificidad muy baja, como este modelo favorecía demasiado a la clase mayoritaria decidimos aplicar smote para balancear las clases en el entrenamiento. Tras ellos la mtry cambió a 4, por lo que se consideran más variables en cada split. Se selecciona este mtry porque es el maximiza la sansibilidad, equilibrando así mejor la especificidad y sensibilidad.
+
+### XGBoost
+
+```{r}
+# Control de entrenamiento
+train_control_xgb <- trainControl(
+  method = "cv",
+  number = 5,
+  classProbs = TRUE,
+  summaryFunction = twoClassSummary,
+  sampling = 'smote'
+)
+
+# Grid de hiperparámetros
+grid_xgb <- expand.grid(
+  nrounds = c(50, 100),
+  max_depth = c(2, 4, 6),
+  eta = c(0.1, 0.3),
+  gamma = 0,
+  colsample_bytree = 0.8,
+  min_child_weight = 1,
+  subsample = 0.8
+)
+
+# Entrenar modelo
+set.seed(123)
+xgb_model <- train(
+  case ~ . - stratum - pooled.stratum,
+  data = train,
+  method = "xgbTree",
+  trControl = train_control_xgb,
+  tuneGrid = grid_xgb,
+  metric = "Sens"
+)
+
+# Mejor configuración
+xgb_model$bestTune
+xgb_model
+```
+
+En este modelo empleamos un 5-fold cross-validation dividiendo el conjutno de entrenamiento en 5 partes, donde entrena en 4 y valida en una reiteradas veces. En cuanto al grid de hiperparámetros, estas serán todas las combinaciones posibles que probará. Eligirá aquel modelo cuya Sensibilidad sea más alta. El modelo 'óptimo' según la sensibilidad fue el de nrounds = 100, max_depth = 2, árboles poco profundas... es decir, XGBoost prefiere un modelo simple y conservador.
+
+Como ha ocurrido con los anteriores modelos al aplicar el 'smote' en el samplign nuestro modelo ha mejorado. Ahora la mejor combinación ha alcanzado un ROC de 0.616, superando así al RF, una Sensibilidad de 0.76 y una Especificidad de 0.37, más equilibrada que antes.
+
+Evaluación e interpretación de ambos modelos:
+
+```{r}
+# Predicciones
+pred_rf <- predict(rf_model, newdata = test)
+pred_xgb <- predict(xgb_model, newdata = test)
+
+# Matrices de confusión
+conf_rf <- confusionMatrix(pred_rf, test$case)
+conf_xgb <- confusionMatrix(pred_xgb, test$case)
+
+# Sensibilidad y especificidad
+conf_rf$byClass[c("Sensitivity","Specificity")]
+conf_xgb$byClass[c("Sensitivity","Specificity")]
+```
+
+En Random Forest la sensibilidad es de 0.755, lo que indica que el modelo identifica correctamente el 75.5% de las muejres con infertilidad secundaria (case= Yes), la especificidad de este es de 0.583, es decir, el modelo identifica correctamente el 58.3% de las mujeres sin infertilidad (case= No). El XGBoost, tiene una sensibilidad de 0.694, es decir que el modelo detecta correctamente el 69.4% de los pasos positivos (case= Yes) y una especificidad de 0.625, lo que significa que el modelo identificaa bien el 62.5% de los controles (case= No)
+
+# CONCLUSIÓN:
+
+Se entrenaron tres modelos de clasificación (Naive Bayes, Random Forest y XGBoost) para predecir la infertilidad secundaria a partir de variables reproductivas y sociodemográficas. El dataset presentaba un **desbalance moderado** entre casos positivos (Yes, 34%) y negativos (No, 66%).
+
+1.  **Naive Bayes** mostró limitaciones inherentes al modelo probabilístico: la sensibilidad y especificidad fueron moderadas y, al aplicar SMOTE, se produjo un **efecto adverso** (sensibilidad casi 1 pero especificidad 0), porque la alteración artificial de la proporción de clases afecta directamente a las probabilidades a priori que el modelo utiliza. Por ello, se eligió no aplicar SMOTE y se priorizó la **sensibilidad** para maximizar la detección de casos positivos, dado que los falsos negativos tienen mayor coste clínico. Variables como `spontaneous2` mostraron relación clara con el riesgo de infertilidad, mientras que otras, como `parity2`, presentan **solapamiento entre clases**, limitando su poder predictivo individual.
+
+2.  **Random Forest** y **XGBoost** se beneficiaron del **balanceo SMOTE**, alcanzando un mejor desempeño general. Random Forest logró una **sensibilidad de 0.755** y especificidad de 0.583, mientras que XGBoost obtuvo una **sensibilidad de 0.694** y especificidad de 0.625. Esto refleja que ambos modelos, especialmente RF, logran un **mejor equilibrio entre detectar casos positivos y negativos**, superando al Naive Bayes en términos de capacidad predictiva.
+
+La mejor estrategia para predecir infertilidad secundaria podría ser un enfoque híbrido: usar inicialmente **Naive Bayes** para identificar a las mujeres con mayor probabilidad de ser casos (priorizando la sensibilidad y evitando falsos negativos) y, posteriormente, aplicar **Random Forest o XGBoost** solo a los casos positivos para refinar la predicción y reducir los falsos positivos. Este enfoque aprovecha las fortalezas de cada modelo y permite un equilibrio más adecuado entre sensibilidad y especificidad, adaptándose mejor a las necesidades clínicas del problema.
+
+# USO DEL NAIVE BAYES:
+
+```{r}
+best_nb$levels #Niveles de la variable objetivo
+best_nb$apriori #Proporción de No vs Yes en el entrenamiento
+best_nb$tables #Probabilidades condicionales P(X|Y) para cada variable
+```
+
+Como ya hemos observado antes el modelo espera que aproximadamente 2 de cada 3 mujeres no tengan infertilidad y 1 de cada 3 sí. En cuanto a las variables educativas, las medias son casi idénticas entre No y Yes. Además la sd es alta, 0.5 ya que es una variable bianria. Con esto podemos decir que el nivel educativo por sí solo no distingue bien a las muejres con y sin infertilidad secundaria. En cuanto a age, la edad tiene un efecto leve pero nada determinante, hay mayor cantidad de mujeres con infertilidad en grupos de 26-30 años y menos en 31-31 y 36-40 años. En cuento al numero de embarazos previos, la variable parity tiene un ligero solapamiento, sobre todo para 2 embarazos previos (ya comentado antes), para valores más altos, existen difernecias leves pero los grupos son pequeños. Por lo que parity sola no permite distinguir claramente la infertilidad, aunque aporta infromación importente. En cuanto a la variable abortos inducidos, existe muy poca difernecia entre clases, por lo que es poco predictiva por sí sola. En la variable spontaneous, sí que se nota un patrón, mujeres con dos abortos espontáneos previos tienen mucha más probabilidad de infertilidad secundaria, esto se puede deber a que los abortos espontáneos repetidos pueden indicar problemas reproductivos.
